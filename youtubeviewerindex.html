@@ -685,8 +685,9 @@
         <h1>Youtube Viewer (and Looper)</h1>
 
         <!-- Clipboard Button -->
-        <div style="text-align: center; margin-bottom: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+        <div style="text-align: center; margin-bottom: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; align-items: center;">
             <button id="loadDefaultBtn" class="jump-btn" style="display: none; background: linear-gradient(45deg, #4CAF50, #45a049); font-size: 13px; padding: 10px 19px;">🎬 Load Default</button>
+            <input type="text" id="accessCodeInput" placeholder="123" autocomplete="off" value="" style="width: 80px; padding: 8px 12px; font-size: 14px; border: 2px solid rgb(255, 152, 0); border-radius: 6px; background: rgb(42, 42, 42); color: white; outline: none;">
             <button id="loadYouTubeClipboardBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); font-size: 13px; padding: 10px 19px;">📋 Paste Media + Times</button>
             <button id="copyShareableLinkBtn" class="jump-btn" style="display: none; background: linear-gradient(45deg, #9C27B0, #7B1FA2); font-size: 13px; padding: 10px 19px;">🔗 Copy Shareable Link</button>
             <button id="cleanTranscriptBtn" class="jump-btn" style="background: linear-gradient(45deg, #2196F3, #1976D2); font-size: 13px; padding: 10px 19px;">✨ Clean & Copy Transcript</button>
@@ -815,7 +816,6 @@
             <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 15px; align-items: center;">
                 <button id="loadCloudBtn" class="paste-btn" onclick="loadLinksFromCloud()" style="background: linear-gradient(45deg, #2196F3, #1976D2);">☁️ Load Cloud</button>
                 <button id="saveCloudBtn" class="paste-btn" onclick="saveLinksToCloud()" style="background: linear-gradient(45deg, #4CAF50, #45a049);">💾 Save to Cloud</button>
-                <input type="text" id="accessCodeInput" placeholder="123" autocomplete="off" value="" style="width: 80px; padding: 8px 12px; font-size: 14px; border: 2px solid rgb(255, 152, 0); border-radius: 6px; background: rgb(42, 42, 42); color: white; outline: none;">
                 <button id="getYTTitleBtn" class="paste-btn" onclick="getAndAppendYouTubeTitle()" style="background: linear-gradient(45deg, #E91E63, #C2185B);">🎬 Get YT Title</button>
             </div>
             <div id="cloud-section" style="background: #2a2a2a; color: #fff; padding: 15px; border-radius: 8px; font-size: 1em; line-height: 1.6; white-space: pre-wrap; min-height: 100px;"></div>
