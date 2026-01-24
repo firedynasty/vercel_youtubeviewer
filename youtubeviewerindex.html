@@ -1112,6 +1112,33 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
         let cloudLinksContent = '';
 
         // Populate cloud-section with clickable URLs (similar to text-section)
+        // Parse cloud content into array of {name, url} objects
+        function parseCloudLinks() {
+            const lines = cloudLinksContent.split('\n').map(l => l.trim()).filter(l => l);
+            const entries = [];
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                if (line.startsWith('http://') || line.startsWith('https://')) {
+                    // URL without a name before it
+                    entries.push({ name: '', url: line });
+                } else if (i + 1 < lines.length) {
+                    const nextLine = lines[i + 1];
+                    if (nextLine.startsWith('http://') || nextLine.startsWith('https://')) {
+                        // This is a name, next is URL
+                        entries.push({ name: line, url: nextLine });
+                        i++; // Skip the URL line
+                    }
+                }
+            }
+            return entries;
+        }
+
+        // Rebuild cloud content from entries array
+        function rebuildCloudContent(entries) {
+            return entries.map(e => e.name ? `${e.name}\n${e.url}` : e.url).join('\n');
+        }
+
         function populateCloudLinks() {
             const container = document.getElementById('cloud-section');
             if (!cloudLinksContent.trim()) {
@@ -1119,55 +1146,98 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                 return;
             }
 
-            const lines = cloudLinksContent.split('\n');
+            const entries = parseCloudLinks();
             container.innerHTML = '';
 
-            lines.forEach((line, index) => {
-                const trimmedLine = line.trim();
+            entries.forEach((entry, index) => {
+                // Create row container
+                const row = document.createElement('div');
+                row.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 8px; margin-bottom: 5px; background: rgba(255,255,255,0.05); border-radius: 6px; flex-wrap: wrap;';
+                row.dataset.index = index;
 
-                if (trimmedLine.startsWith('http://') || trimmedLine.startsWith('https://')) {
-                    const span = document.createElement('span');
-                    span.textContent = trimmedLine;
-                    span.style.cssText = 'cursor: pointer; color: #64B5F6; text-decoration: underline; transition: all 0.2s ease;';
-                    span.dataset.url = trimmedLine;
+                // Name span (editable on click)
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = entry.name || '(no name)';
+                nameSpan.style.cssText = 'color: #FFC107; font-weight: 600; min-width: 100px; cursor: pointer;';
+                nameSpan.title = 'Click to edit name';
+                nameSpan.addEventListener('click', function() {
+                    const newName = prompt('Edit name:', entry.name);
+                    if (newName !== null) {
+                        entry.name = newName;
+                        cloudLinksContent = rebuildCloudContent(parseCloudLinks().map((e, i) => i === index ? entry : e));
+                        populateCloudLinks();
+                        // Auto-save if access code present
+                        const accessCode = document.getElementById('accessCodeInput').value.trim();
+                        if (accessCode) saveLinksToCloud();
+                    }
+                });
 
-                    span.addEventListener('mouseenter', function() {
-                        this.style.color = '#FF6B35';
-                        this.style.background = 'rgba(255, 107, 53, 0.2)';
-                    });
-                    span.addEventListener('mouseleave', function() {
-                        this.style.color = '#64B5F6';
-                        this.style.background = 'transparent';
-                    });
+                // URL span (clickable to load video)
+                const urlSpan = document.createElement('span');
+                urlSpan.textContent = entry.url.length > 50 ? entry.url.substring(0, 50) + '...' : entry.url;
+                urlSpan.style.cssText = 'flex: 1; color: #64B5F6; text-decoration: underline; cursor: pointer; min-width: 150px;';
+                urlSpan.title = entry.url;
+                urlSpan.addEventListener('click', async function() {
+                    try {
+                        await navigator.clipboard.writeText(entry.url);
+                        urlSpan.textContent = '✅ Loading...';
+                        urlSpan.style.color = '#4CAF50';
+                        document.getElementById('loadYouTubeClipboardBtn').click();
+                        setTimeout(() => {
+                            urlSpan.textContent = entry.url.length > 50 ? entry.url.substring(0, 50) + '...' : entry.url;
+                            urlSpan.style.color = '#64B5F6';
+                        }, 1500);
+                    } catch (err) {
+                        console.error('Failed to copy URL:', err);
+                    }
+                });
+                urlSpan.addEventListener('mouseenter', function() {
+                    this.style.color = '#FF6B35';
+                    this.style.background = 'rgba(255, 107, 53, 0.2)';
+                });
+                urlSpan.addEventListener('mouseleave', function() {
+                    this.style.color = '#64B5F6';
+                    this.style.background = 'transparent';
+                });
 
-                    span.addEventListener('click', async function() {
-                        const url = this.dataset.url;
-                        try {
-                            await navigator.clipboard.writeText(url);
-                            const originalText = this.textContent;
-                            this.textContent = '✅ Copied & Loading...';
-                            this.style.color = '#4CAF50';
+                // Edit button
+                const editBtn = document.createElement('button');
+                editBtn.textContent = '✏️';
+                editBtn.style.cssText = 'padding: 4px 8px; border: none; border-radius: 4px; background: #2196F3; color: white; cursor: pointer; font-size: 12px;';
+                editBtn.title = 'Edit name';
+                editBtn.addEventListener('click', function() {
+                    const newName = prompt('Edit name:', entry.name);
+                    if (newName !== null) {
+                        const allEntries = parseCloudLinks();
+                        allEntries[index].name = newName;
+                        cloudLinksContent = rebuildCloudContent(allEntries);
+                        populateCloudLinks();
+                        const accessCode = document.getElementById('accessCodeInput').value.trim();
+                        if (accessCode) saveLinksToCloud();
+                    }
+                });
 
-                            setTimeout(() => {
-                                this.textContent = originalText;
-                                this.style.color = '#64B5F6';
-                            }, 1500);
+                // Delete button
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '🗑️';
+                deleteBtn.style.cssText = 'padding: 4px 8px; border: none; border-radius: 4px; background: #f44336; color: white; cursor: pointer; font-size: 12px;';
+                deleteBtn.title = 'Delete entry';
+                deleteBtn.addEventListener('click', function() {
+                    if (confirm(`Delete "${entry.name || entry.url}"?`)) {
+                        const allEntries = parseCloudLinks();
+                        allEntries.splice(index, 1);
+                        cloudLinksContent = rebuildCloudContent(allEntries);
+                        populateCloudLinks();
+                        const accessCode = document.getElementById('accessCodeInput').value.trim();
+                        if (accessCode) saveLinksToCloud();
+                    }
+                });
 
-                            document.getElementById('loadYouTubeClipboardBtn').click();
-                        } catch (err) {
-                            console.error('Failed to copy URL:', err);
-                        }
-                    });
-
-                    container.appendChild(span);
-                } else if (trimmedLine) {
-                    const textNode = document.createTextNode(trimmedLine);
-                    container.appendChild(textNode);
-                }
-
-                if (trimmedLine || index < lines.length - 1) {
-                    container.appendChild(document.createElement('br'));
-                }
+                row.appendChild(nameSpan);
+                row.appendChild(urlSpan);
+                row.appendChild(editBtn);
+                row.appendChild(deleteBtn);
+                container.appendChild(row);
             });
         }
 
