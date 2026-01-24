@@ -243,6 +243,7 @@ export function useTTS() {
     // State
     isPlaying,
     currentSentenceIndex,
+    currentSentenceText,
     sentences,
     speed,
     language,
