@@ -1,0 +1,4159 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Viewer (Looper)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 25px;
+            padding: 35px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 25px;
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, #FF6B35, #F7931E);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 2px solid rgba(255, 107, 53, 0.2);
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            color: #FF6B35;
+            margin-bottom: 15px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .paste-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .paste-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(76, 175, 80, 0.4);
+        }
+
+        .youtube-container {
+            position: relative;
+            width: 100%;
+            height: 0;
+            padding-bottom: 56.25%;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .youtube-container iframe,
+        .youtube-container #youtube-player {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 10px;
+        }
+
+        .media-container {
+            position: relative;
+            width: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #000;
+            display: none;
+        }
+
+        .media-container video,
+        .media-container audio {
+            width: 100%;
+            border-radius: 10px;
+        }
+
+        .media-container audio {
+            height: 60px;
+        }
+
+        .time-offset-control {
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 152, 0, 0.1));
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .time-offset-control h4 {
+            color: #FFC107;
+            margin: 0 0 10px 0;
+            font-size: 1.1rem;
+        }
+
+        .time-input {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border: 2px solid rgba(255, 193, 7, 0.5);
+            border-radius: 8px;
+            font-size: 1rem;
+            width: 80px;
+            text-align: center;
+            font-family: monospace;
+        }
+
+        .time-input:focus {
+            outline: none;
+            border-color: #FFC107;
+            box-shadow: 0 0 5px rgba(255, 193, 7, 0.3);
+        }
+
+        .jump-btn {
+            padding: 8px 16px;
+            background: linear-gradient(45deg, #FF5722, #E64A19);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-left: 10px;
+        }
+
+        .jump-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 87, 34, 0.4);
+        }
+
+        .time-btn {
+            padding: 6px 12px;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .time-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+        }
+
+        .time-btn.active {
+            border: 3px solid #FFD700;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+        }
+
+        .current-time-display {
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            padding: 4px 0;
+            margin-top: 3px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: none;
+        }
+
+        .time-label {
+            color: #4CAF50;
+            margin-right: 6px;
+        }
+
+        .time-value {
+            color: #4CAF50;
+            background: transparent;
+            padding: 0;
+            border-radius: 0;
+            border: none;
+            min-width: 60px;
+            display: inline-block;
+            font-weight: 700;
+        }
+
+        .status-display {
+            text-align: center;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            font-weight: 600;
+            display: none;
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid #4CAF50;
+            color: #4CAF50;
+        }
+
+        #loopTimerStatus {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid #4CAF50;
+            border-radius: 8px;
+            color: #4CAF50;
+            font-family: monospace;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 20px;
+            }
+        }
+
+        /* Memorize Component Styles */
+        .memorize-container {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            color: #333;
+        }
+
+        .memorize-btn-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .memorize-btn {
+            padding: 10px 16px;
+            font-family: inherit;
+            font-size: 13px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.2s;
+            font-weight: 600;
+        }
+        .memorize-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        .memorize-btn-primary { background: linear-gradient(45deg, #FF6B35, #F7931E); color: #fff; }
+        .memorize-btn-secondary { background: #666; color: #fff; }
+        .memorize-btn-success { background: linear-gradient(45deg, #4CAF50, #45a049); color: #fff; }
+        .memorize-btn-warning { background: linear-gradient(45deg, #ff9800, #e68900); color: #fff; }
+        .memorize-btn-danger { background: linear-gradient(45deg, #f44336, #d32f2f); color: #fff; }
+
+        .memorize-info-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 15px;
+            background: #e8e8e8;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .memorize-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .memorize-input {
+            padding: 10px 15px;
+            font-size: 14px;
+            font-family: inherit;
+            background: #fff;
+            border: 2px solid #ddd;
+            color: #333;
+            border-radius: 6px;
+            width: 150px;
+        }
+        .memorize-input:focus {
+            outline: none;
+            border-color: #FF6B35;
+        }
+
+        .memorize-content-display {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            max-height: 250px;
+            overflow-y: auto;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            margin-top: 15px;
+        }
+        .memorize-content-display.full {
+            max-height: 400px;
+        }
+
+        .memorize-line {
+            display: flex;
+            padding: 3px 0;
+        }
+        .memorize-line-num {
+            color: #999;
+            min-width: 35px;
+            text-align: right;
+            margin-right: 12px;
+            user-select: none;
+        }
+        .memorize-line-text {
+            flex: 1;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .memorize-line.highlighted {
+            background: #e3f2fd;
+            border-left: 3px solid #2196F3;
+            padding-left: 10px;
+            margin-left: -10px;
+        }
+
+        .memorize-selected-text {
+            background: #e3f2fd;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+            font-size: 16px;
+            line-height: 1.8;
+            min-height: 80px;
+        }
+        .memorize-selected-text .memorize-line {
+            padding: 4px 0;
+        }
+
+        .memorize-commands {
+            background: #e8e8e8;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 11px;
+            color: #666;
+        }
+        .memorize-commands code {
+            color: #FF6B35;
+            background: #fff;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .memorize-hidden { display: none; }
+
+        .memorize-toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .memorize-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .memorize-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .memorize-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #4CAF50;
+            transition: .3s;
+            border-radius: 24px;
+        }
+        .memorize-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .memorize-switch input:checked + .memorize-slider {
+            background-color: #ff6b6b;
+        }
+        .memorize-switch input:checked + .memorize-slider:before {
+            transform: translateX(20px);
+        }
+        .memorize-toggle-label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .memorize-speed-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .memorize-speed-control label {
+            color: #666;
+            font-size: 12px;
+        }
+        .memorize-select {
+            padding: 6px 10px;
+            font-family: inherit;
+            font-size: 12px;
+            background: #fff;
+            border: 2px solid #ddd;
+            color: #333;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .memorize-select:focus {
+            outline: none;
+            border-color: #FF6B35;
+        }
+
+        .memorize-status {
+            text-align: center;
+            padding: 10px;
+            background: #e3f2fd;
+            border-radius: 6px;
+            margin-top: 10px;
+            color: #1976D2;
+            font-weight: 600;
+        }
+
+        /* Toggle Slider Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider-toggle {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ddd;
+            transition: .4s;
+            border-radius: 26px;
+        }
+
+        .slider-toggle:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        input:checked + .slider-toggle {
+            background: linear-gradient(45deg, #FF5722, #E64A19);
+        }
+
+        input:checked + .slider-toggle:before {
+            transform: translateX(24px);
+        }
+
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .toggle-label {
+            font-size: 0.9em;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        /* Compact Metronome */
+        .metronome-section {
+            background: #2f2f2f;
+            border-radius: 8px;
+            padding: 10px 15px;
+            margin-top: 10px;
+        }
+
+        .metronome-section .counter {
+            text-align: center;
+            padding: 8px 0;
+            background: #404040;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .metronome-section .counter .dot {
+            width: 12px;
+            height: 12px;
+            display: inline-block;
+            margin: 0 6px;
+            background: #FFF;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .metronome-section .counter .dot.active {
+            background: #5ec2ff;
+        }
+
+        .metronome-section .controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            color: #FFF;
+            font-size: 12px;
+        }
+
+        .metronome-section .controls label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .metronome-section .controls input[type="text"] {
+            width: 40px;
+            border: 0;
+            text-align: center;
+            padding: 4px;
+            background: #FFF;
+            color: #222;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .metronome-section .controls .bpm-minus,
+        .metronome-section .controls .bpm-plus {
+            cursor: pointer;
+            padding: 0 5px;
+            color: #222;
+        }
+
+        .metronome-section .controls .bpm-minus:hover,
+        .metronome-section .controls .bpm-plus:hover {
+            color: #FA6900;
+        }
+
+        .metronome-section .controls .bpm-wrapper {
+            background: #FFF;
+            padding: 2px 5px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+        }
+
+        .metronome-section .play-btn,
+        .metronome-section .tap-btn {
+            padding: 6px 15px;
+            border: 0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            min-width: auto;
+            flex: none;
+        }
+
+        .metronome-section .play-btn {
+            background: #D6E26D;
+            color: #3d430d;
+        }
+
+        .metronome-section .play-btn:hover {
+            background: #e8efad;
+        }
+
+        .metronome-section .tap-btn {
+            background: #888;
+            color: #fbfbfb;
+        }
+
+        .metronome-section .tap-btn:hover {
+            background: #959595;
+        }
+
+        .metronome-section .timer-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .metronome-section .timer-group input[type="checkbox"] {
+            display: none;
+        }
+
+        .metronome-section .timer-group input[type="checkbox"] + label {
+            display: inline-block;
+            height: 12px;
+            width: 12px;
+            background: #FFF;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .metronome-section .timer-group input[type="checkbox"]:checked + label:before {
+            content: "";
+            display: inline-block;
+            width: 3px;
+            height: 6px;
+            background: #F38630;
+            position: absolute;
+            top: 0;
+            left: 2px;
+            transform: skewX(30deg);
+        }
+
+        .metronome-section .timer-group input[type="checkbox"]:checked + label:after {
+            content: "";
+            display: inline-block;
+            width: 3px;
+            height: 10px;
+            background: #F38630;
+            position: absolute;
+            top: 0;
+            left: 6px;
+            transform: skewX(-30deg);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Youtube Viewer (and Looper)</h1>
+
+        <!-- Clipboard Button -->
+        <div style="text-align: center; margin-bottom: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+            <button id="loadDefaultBtn" class="jump-btn" style="display: none; background: linear-gradient(45deg, #4CAF50, #45a049); font-size: 13px; padding: 10px 19px;">🎬 Load Default</button>
+            <button id="loadYouTubeClipboardBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); font-size: 13px; padding: 10px 19px;">📋 Paste Media + Times</button>
+            <button id="copyShareableLinkBtn" class="jump-btn" style="display: none; background: linear-gradient(45deg, #9C27B0, #7B1FA2); font-size: 13px; padding: 10px 19px;">🔗 Copy Shareable Link</button>
+            <button id="cleanTranscriptBtn" class="jump-btn" style="background: linear-gradient(45deg, #2196F3, #1976D2); font-size: 13px; padding: 10px 19px;">✨ Clean & Copy Transcript</button>
+            <button id="restoreTranscriptBtn" class="jump-btn" style="background: linear-gradient(45deg, #00BCD4, #0097A7); font-size: 13px; padding: 10px 19px;">📄 Restore Prev. Pasted Trans.</button>
+            <a id="textProcessorLink" href="processedText.html" class="jump-btn" style="background: linear-gradient(45deg, #E91E63, #C2185B); font-size: 13px; padding: 10px 19px; text-decoration: none; color: white;">📝 Text Processor</a>
+        </div>
+
+        <!-- Time Controls -->
+        <div class="time-offset-control">
+            <h4>⏰ Time Controls</h4>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+                <label for="customTimesInput" style="color: #FFC107; font-weight: 600;">Add Media + Times:</label>
+                <input type="text" id="customTimesInput" class="time-input" placeholder="URL (YouTube/Dropbox/etc), 1:15,2:00,3:10" style="width: 280px;">
+                <button id="addTimesBtn" class="jump-btn" style="background: linear-gradient(45deg, #2196F3, #1976D2);">➕ Add</button>
+                <button id="clearTimesBtn" class="jump-btn" style="display: none; background: linear-gradient(45deg, #f44336, #d32f2f); font-size: 12px; padding: 8px 16px;">🗑️ Clear All</button>
+                <button id="copyCurrentStateBtn" class="jump-btn" style="background: linear-gradient(45deg, #8BC34A, #689F38); font-size: 12px; padding: 8px 16px;">📋 Copy URL+Times</button>
+            </div>
+        </div>
+
+        <!-- Saved Times Section (directly above video) -->
+        <div style="margin-bottom: 5px; padding: 10px; background: rgba(255, 193, 7, 0.05); border-radius: 10px;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px;">
+                <label style="color: #FFC107; font-weight: 600; font-size: 1rem; margin: 0;">⚡ Saved Times:</label>
+                <button id="clearSavedTimesBtn" class="time-btn" style="background: linear-gradient(45deg, #f44336, #d32f2f); padding: 4px 10px; font-size: 10px;">🗑️ Clear</button>
+            </div>
+            <div id="savedTimesButtons" style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+                <!-- Buttons will be loaded from localStorage or default video -->
+            </div>
+        </div>
+
+        <!-- YouTube Video Section -->
+        <div class="youtube-section">
+            <div class="youtube-container" id="youtubeContainer">
+                <div id="youtube-player"></div>
+            </div>
+
+            <!-- HTML5 Media Player (for Dropbox videos/audio) -->
+            <div class="media-container" id="mediaContainer">
+                <video id="html5-player" controls controlsList="nodownload">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+
+            <div class="media-container" id="audioContainer">
+                <audio id="audio-player" controls controlsList="nodownload">
+                    Your browser does not support the audio tag.
+                </audio>
+            </div>
+
+            <!-- Current Time Display (below video players) -->
+            <div class="current-time-display" id="currentTimeDisplay" style="display: none;">
+                <label style="color: #FFC107; font-weight: 600; font-size: 12px;">🔄 Loop to:</label>
+                <input type="text" id="loopStartTime" class="time-input" placeholder="0:01" value="0:01" style="width: 65px; text-align: center; font-size: 12px; padding: 4px 6px; margin-right: 15px;">
+                <span class="time-label">Current Time:</span>
+                <span class="time-value" id="currentTimeValue">--:--</span>
+                <button id="timer30sBtn" class="jump-btn" style="background: linear-gradient(45deg, #00BCD4, #0097A7); margin-left: 15px; padding: 6px 12px; font-size: 12px;">⏱️ 30s</button>
+                <button id="timer60sBtn" class="jump-btn" style="background: linear-gradient(45deg, #8BC34A, #689F38); margin-left: 10px; padding: 6px 12px; font-size: 12px;">⏱️ 1m</button>
+                <button id="timer3minBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); margin-left: 10px; padding: 6px 12px; font-size: 12px;">⏱️ 3m</button>
+                <select id="timerCustomSelect" style="margin-left: 10px; padding: 5px 8px; font-size: 12px; border-radius: 6px; border: 2px solid #9C27B0; background: linear-gradient(45deg, #E1BEE7, #CE93D8); cursor: pointer; font-weight: 600;">
+                    <option value="">⏱️ Custom</option>
+                    <option value="35">35s</option>
+                    <option value="40">40s</option>
+                    <option value="45">45s</option>
+                    <option value="50">50s</option>
+                </select>
+                <span style="margin-left: 15px; color: #9C27B0; font-size: 12px; font-weight: 600;">🔄 Repeat:</span>
+                <label style="margin-left: 8px; cursor: pointer; font-size: 12px;">
+                    <input type="radio" name="timerRepeat" value="1" style="cursor: pointer;"> 1 time
+                </label>
+                <label style="margin-left: 10px; cursor: pointer; font-size: 12px;">
+                    <input type="radio" name="timerRepeat" value="8" checked style="cursor: pointer;"> 8 times
+                </label>
+                <label style="margin-left: 10px; cursor: pointer; font-size: 12px;">
+                    <input type="radio" name="timerRepeat" value="50" style="cursor: pointer;"> 50 times
+                </label>
+            </div>
+        </div>
+
+        <!-- Status Display -->
+        <div class="status-display" id="statusDisplay"></div>
+
+        <!-- Compact Metronome -->
+        <div class="metronome-section">
+            <div class="counter" id="metronomeCounter">
+                <div class="dot active"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="controls">
+                <label>BPM:
+                    <span class="bpm-wrapper">
+                        <span class="bpm-minus">−</span>
+                        <input type="text" value="60" class="bpm-input" id="metronomeBpm">
+                        <span class="bpm-plus">+</span>
+                    </span>
+                </label>
+                <label>Beat: <input type="text" value="4" class="ts-top" id="metronomeBeat"></label>
+                <div class="timer-group">
+                    <input type="checkbox" id="metronome-timer-check">
+                    <label for="metronome-timer-check"></label>
+                    Timer: <input type="text" value="60" class="timer" id="metronomeTimer">
+                </div>
+                <button class="tap-btn" id="metronomeTap">Tap</button>
+                <button class="play-btn" id="metronomePlay">Play</button>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="section" style="margin-top: 30px;">
+            <h3 class="section-title">Quick Links</h3>
+            <button class="paste-btn" onclick="pasteQuickLinks()" style="margin-bottom: 15px; background: linear-gradient(45deg, #8B5CF6, #7C3AED);">📋 Paste Links from Clipboard</button>
+            <div class="toggle-group">
+                <label class="switch">
+                    <input type="checkbox" id="autoTimerToggle">
+                    <span class="slider-toggle"></span>
+                </label>
+                <span class="toggle-label" id="autoTimerLabel">Normal Mode</span>
+            </div>
+            <div id="text-section" style="background: #f5f5f5; padding: 15px; border-radius: 8px; font-size: 1em; line-height: 1.6; white-space: pre-wrap;"></div>
+        </div>
+
+        <!-- Cloud Links Section -->
+        <div class="section" style="margin-top: 30px;">
+            <h3 class="section-title">Cloud Links</h3>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 15px; align-items: center;">
+                <button id="loadCloudBtn" class="paste-btn" onclick="loadLinksFromCloud()" style="background: linear-gradient(45deg, #2196F3, #1976D2);">☁️ Load Cloud</button>
+                <button id="saveCloudBtn" class="paste-btn" onclick="saveLinksToCloud()" style="background: linear-gradient(45deg, #4CAF50, #45a049);">💾 Save to Cloud</button>
+                <input type="text" id="accessCodeInput" placeholder="123" autocomplete="off" value="" style="width: 80px; padding: 8px 12px; font-size: 14px; border: 2px solid rgb(255, 152, 0); border-radius: 6px; background: rgb(42, 42, 42); color: white; outline: none;">
+                <button id="getYTTitleBtn" class="paste-btn" onclick="getAndAppendYouTubeTitle()" style="background: linear-gradient(45deg, #E91E63, #C2185B);">🎬 Get YT Title</button>
+            </div>
+            <div id="cloud-section" style="background: #2a2a2a; color: #fff; padding: 15px; border-radius: 8px; font-size: 1em; line-height: 1.6; white-space: pre-wrap; min-height: 100px;"></div>
+        </div>
+    </div>
+
+    <!-- YouTube IFrame Player API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+        // Template for quick links
+        let template_for_copy_and_paste = `worship
+https://www.youtube.com/watch?v=pofqoHG3rhk,4:35
+basketballhighlights3
+https://www.youtube.com/watch?v=pkECNBsubI0
+v3
+https://www.youtube.com/watch?v=bSpcxCOP5YI
+basketballpostplay
+https://www.youtube.com/watch?v=zKXYMpfaaV4
+basketballshooting2
+https://www.youtube.com/shorts/1-uRpqp9PDQ
+basketballshooting3
+https://www.youtube.com/shorts/9BBvE3Jom5w
+koreanPianst
+https://www.youtube.com/watch?v=IocXZk8aw-g
+calmMusic
+https://www.youtube.com/watch?v=f-i_nJLG2Is
+codingMusic
+https://www.youtube.com/watch?v=M5QY2_8704o
+shedeur
+https://www.youtube.com/watch?v=cKBpf3Sz-8U
+camOnSheduer
+https://www.youtube.com/watch?v=XeDuDqFI2c0
+patrickOnShedeur
+https://www.youtube.com/watch?v=ZV3jB6bVS54
+chillWorkMusic
+https://www.youtube.com/watch?v=dheqxLgg-qg&t=958s
+indianMusic
+https://www.youtube.com/watch?v=KPtAsf-FAYM&list=OLAK5uy_mRsgu8J1TyBRQP7lf430PcRNZkerf6I8I&index=2
+indianPlaylist
+https://music.youtube.com/playlist?list=OLAK5uy_kh5igPOnxZhbSkb_W65c0kS68NPhPEYQE
+proverbs
+https://www.youtube.com/watch?v=FCwXdqwKcPU
+aSoaringPlaylist
+https://www.youtube.com/watch?v=aRwhkBAeheM&list=PLTM3OGPCnb3z2OzulvWwYBfCoUSfzU3qV&index=1
+baroque60Playlist
+https://www.youtube.com/watch?v=-utT-BD0obk&list=RDFo0K_n3VLG4&index=2
+baroqueBrainPower
+https://www.youtube.com/watch?v=UFXhwgY7mug&t=505s
+gregorianChant
+https://www.youtube.com/watch?v=xERuXyDeVqc&t=973s
+gregorianChantWoman
+https://www.youtube.com/watch?v=gn6gXCW_quc
+bachBrainPower
+https://www.youtube.com/watch?v=VmImA0YKsJg&t=4309s
+readingMusic
+https://www.youtube.com/watch?v=WAVO1_7cABU
+Deep Focus Study - 40Hz Gamma Binaural Beats (Focus)
+https://www.youtube.com/watch?v=0l0mK7Pr6sQ
+adHD
+https://www.youtube.com/watch?v=zxaXwxJRs4Q
+music, raindrops like Chopin
+https://www.youtube.com/watch?v=bPEKvHLSh04
+music like IU, Eng Sub
+https://www.youtube.com/watch?v=I8ur49b4rco&list=PLPPwbTwxv7cQa1sR7I29LSr9mkaKMKpcy
+epic music
+https://www.youtube.com/watch?v=rJ8sLgHxa88
+Rok Nardin trailer,
+https://www.youtube.com/watch?v=cRy5RpOIYkw
+lincoln park
+https://www.youtube.com/watch?v=-pAu40lToXQ&t=2640s
+Mozart, epic
+https://www.youtube.com/watch?v=orq_81Phc_I
+Skillet + JeremyCamp
+https://www.youtube.com/watch?v=lIpPpULpVYQ
+Kitaro - The Classics Collection | Volume 2
+https://www.youtube.com/watch?v=ziceYG5yW1c
+Georgian monks
+https://www.youtube.com/watch?v=gn6gXCW_quc&t=1211s
+Russina orthdox
+https://www.youtube.com/watch?v=QmDENB0kpkQ
+Tchaikovsky
+https://www.youtube.com/watch?v=DmM4i7rj_3g
+nice music
+https://www.youtube.com/watch?v=OWz7HiR6H-0&t=4594s
+mozart requieum
+https://www.youtube.com/watch?v=Dp2SJN4UiE4
+SSoly Pianist
+https://www.youtube.com/watch?v=Enakoe8xTg8
+NF
+https://www.youtube.com/watch?v=Kyng8yYwvwg?0:01
+Mozart effect
+https://www.youtube.com/watch?v=qT9neos0YDk&t=890s
+Hebrew Genesis 1
+https://www.youtube.com/watch?v=D1ge6-3R_8s&t=19s
+cateen, piano
+https://www.youtube.com/watch?v=bPEKvHLSh04
+Ssoly kiss
+https://www.youtube.com/watch?v=Qu04jLH5_Ts
+Philip Rivers returning at 44
+https://www.youtube.com/watch?v=tydobfGQbrY
+Gallery and the Boys
+https://www.youtube.com/watch?v=d94XmzyR-ts
+Saban, Discipline, and Value
+https://www.youtube.com/watch?v=MQosgoHNHRE
+Classic Gospel
+https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIjn4q&index=1`;
+
+        // Populate text-section with clickable URLs
+        function populateQuickLinks() {
+            const container = document.getElementById('text-section');
+            const lines = template_for_copy_and_paste.split('\n');
+
+            container.innerHTML = ''; // Clear existing content
+
+            lines.forEach((line, index) => {
+                const trimmedLine = line.trim();
+
+                // Check if the line is a URL
+                if (trimmedLine.startsWith('http://') || trimmedLine.startsWith('https://')) {
+                    // Create clickable span for URL
+                    const span = document.createElement('span');
+                    span.textContent = trimmedLine;
+                    span.style.cssText = 'cursor: pointer; color: #2196F3; text-decoration: underline; transition: all 0.2s ease;';
+                    span.dataset.url = trimmedLine;
+
+                    // Hover effects
+                    span.addEventListener('mouseenter', function() {
+                        this.style.color = '#FF6B35';
+                        this.style.background = 'rgba(255, 107, 53, 0.1)';
+                    });
+                    span.addEventListener('mouseleave', function() {
+                        this.style.color = '#2196F3';
+                        this.style.background = 'transparent';
+                    });
+
+                    // Click to copy and auto-load
+                    span.addEventListener('click', async function() {
+                        const url = this.dataset.url;
+                        const autoTimerToggle = document.getElementById('autoTimerToggle');
+
+                        try {
+                            await navigator.clipboard.writeText(url);
+
+                            // Visual feedback
+                            const originalText = this.textContent;
+                            const originalColor = this.style.color;
+                            this.textContent = '✅ Loading...';
+                            this.style.color = '#4CAF50';
+
+                            setTimeout(() => {
+                                this.textContent = originalText;
+                                this.style.color = originalColor;
+                            }, 1500);
+
+                            // Check if Auto Timer mode is ON
+                            if (autoTimerToggle && autoTimerToggle.checked) {
+                                // Select the 50 times radio button
+                                const radio50 = document.querySelector('input[name="timerRepeat"][value="50"]');
+                                if (radio50) {
+                                    radio50.checked = true;
+                                }
+
+                                // Extract timestamp from URL (e.g., &t=958s or ?t=505s)
+                                let startSeconds = 0;
+                                const timeMatch = url.match(/[?&]t=(\d+)s?/);
+                                if (timeMatch) {
+                                    startSeconds = parseInt(timeMatch[1], 10);
+                                }
+
+                                // Auto-trigger the "Paste Media + Times" button
+                                document.getElementById('loadYouTubeClipboardBtn').click();
+
+                                // Wait for video to load, then seek to timestamp and start timer
+                                setTimeout(() => {
+                                    // Jump to the extracted timestamp
+                                    if (startSeconds > 0) {
+                                        jumpToYouTubeTime(startSeconds);
+                                    }
+
+                                    // Trigger the 30s timer button after a short delay
+                                    setTimeout(() => {
+                                        const timer30sBtn = document.getElementById('timer30sBtn');
+                                        if (timer30sBtn) {
+                                            timer30sBtn.click();
+                                        }
+                                    }, 500);
+                                }, 1500);
+                            } else {
+                                // Normal mode - just load the video
+                                document.getElementById('loadYouTubeClipboardBtn').click();
+                            }
+                        } catch (err) {
+                            console.error('Failed to copy URL:', err);
+                            showStatus('Failed to copy URL', 'error');
+                        }
+                    });
+
+                    container.appendChild(span);
+                } else {
+                    // Regular text (label)
+                    const textNode = document.createTextNode(trimmedLine);
+                    container.appendChild(textNode);
+                }
+
+                // Add line break after each line (except the last)
+                if (index < lines.length - 1) {
+                    container.appendChild(document.createElement('br'));
+                }
+            });
+        }
+
+        // Initialize quick links on page load
+        populateQuickLinks();
+
+        // Auto Timer toggle event listener
+        const autoTimerToggle = document.getElementById('autoTimerToggle');
+        if (autoTimerToggle) {
+            autoTimerToggle.addEventListener('change', function() {
+                const label = document.getElementById('autoTimerLabel');
+                if (this.checked) {
+                    label.textContent = 'Auto Timer Mode (50x)';
+                    label.style.color = '#FF5722';
+                    label.style.fontWeight = '600';
+                } else {
+                    label.textContent = 'Normal Mode';
+                    label.style.color = '#495057';
+                    label.style.fontWeight = '500';
+                }
+            });
+        }
+
+        // Paste quick links from clipboard (format: "name, url" or "name,url")
+        function pasteQuickLinks() {
+            navigator.clipboard.readText()
+                .then(text => {
+                    if (!text.trim()) {
+                        alert('Clipboard is empty. Please copy some links first.');
+                        return;
+                    }
+
+                    const lines = text.split('\n');
+                    let parsedContent = '';
+                    let linkCount = 0;
+
+                    lines.forEach(line => {
+                        const trimmedLine = line.trim();
+
+                        // Skip empty lines
+                        if (!trimmedLine) return;
+
+                        // Check if line contains a URL (has http:// or https://)
+                        if (trimmedLine.includes('http://') || trimmedLine.includes('https://')) {
+                            // Try to parse "name, url" or "name,url" format
+                            const commaIndex = trimmedLine.indexOf(',');
+                            if (commaIndex > 0) {
+                                const name = trimmedLine.substring(0, commaIndex).trim();
+                                const url = trimmedLine.substring(commaIndex + 1).trim();
+
+                                if (url.startsWith('http://') || url.startsWith('https://')) {
+                                    parsedContent += name + '\n' + url + '\n';
+                                    linkCount++;
+                                }
+                            } else if (trimmedLine.startsWith('http://') || trimmedLine.startsWith('https://')) {
+                                // Just a URL without a name
+                                parsedContent += trimmedLine + '\n';
+                                linkCount++;
+                            }
+                        }
+                        // Skip lines that don't contain URLs (treat as notes)
+                    });
+
+                    if (linkCount === 0) {
+                        alert('No valid links found. Expected format: "name, url" (e.g., "notion, https://www.notion.so")');
+                        return;
+                    }
+
+                    // Update the template and re-populate
+                    template_for_copy_and_paste = parsedContent.trim();
+                    populateQuickLinks();
+
+                    console.log(`Loaded ${linkCount} links from clipboard`);
+                })
+                .catch(err => {
+                    console.error('Failed to read clipboard contents:', err);
+                    alert('Unable to access clipboard. Please check browser permissions or paste manually.');
+                });
+        }
+
+        // ============================================
+        // CLOUD STORAGE FUNCTIONS (Vercel Blob)
+        // ============================================
+
+        const CLOUD_LINKS_FILENAME = 'youtube_quick_links.txt';
+        let cloudLinksContent = '';
+
+        // Populate cloud-section with clickable URLs (similar to text-section)
+        function populateCloudLinks() {
+            const container = document.getElementById('cloud-section');
+            if (!cloudLinksContent.trim()) {
+                container.innerHTML = '<span style="color: #888;">No cloud links. Load from cloud or paste & save.</span>';
+                return;
+            }
+
+            const lines = cloudLinksContent.split('\n');
+            container.innerHTML = '';
+
+            lines.forEach((line, index) => {
+                const trimmedLine = line.trim();
+
+                if (trimmedLine.startsWith('http://') || trimmedLine.startsWith('https://')) {
+                    const span = document.createElement('span');
+                    span.textContent = trimmedLine;
+                    span.style.cssText = 'cursor: pointer; color: #64B5F6; text-decoration: underline; transition: all 0.2s ease;';
+                    span.dataset.url = trimmedLine;
+
+                    span.addEventListener('mouseenter', function() {
+                        this.style.color = '#FF6B35';
+                        this.style.background = 'rgba(255, 107, 53, 0.2)';
+                    });
+                    span.addEventListener('mouseleave', function() {
+                        this.style.color = '#64B5F6';
+                        this.style.background = 'transparent';
+                    });
+
+                    span.addEventListener('click', async function() {
+                        const url = this.dataset.url;
+                        try {
+                            await navigator.clipboard.writeText(url);
+                            const originalText = this.textContent;
+                            this.textContent = '✅ Copied & Loading...';
+                            this.style.color = '#4CAF50';
+
+                            setTimeout(() => {
+                                this.textContent = originalText;
+                                this.style.color = '#64B5F6';
+                            }, 1500);
+
+                            document.getElementById('loadYouTubeClipboardBtn').click();
+                        } catch (err) {
+                            console.error('Failed to copy URL:', err);
+                        }
+                    });
+
+                    container.appendChild(span);
+                } else if (trimmedLine) {
+                    const textNode = document.createTextNode(trimmedLine);
+                    container.appendChild(textNode);
+                }
+
+                if (trimmedLine || index < lines.length - 1) {
+                    container.appendChild(document.createElement('br'));
+                }
+            });
+        }
+
+        // Load links from Vercel Blob
+        async function loadLinksFromCloud() {
+            const loadBtn = document.getElementById('loadCloudBtn');
+            loadBtn.textContent = '⏳ Loading...';
+            loadBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/files');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const files = data.files || {};
+
+                if (files[CLOUD_LINKS_FILENAME]) {
+                    cloudLinksContent = files[CLOUD_LINKS_FILENAME];
+                    populateCloudLinks();
+                    loadBtn.textContent = '✓ Loaded!';
+                    loadBtn.style.background = 'linear-gradient(45deg, #4CAF50, #45a049)';
+                    console.log('✓ Loaded cloud links');
+                } else {
+                    cloudLinksContent = '';
+                    populateCloudLinks();
+                    loadBtn.textContent = '☁️ No file';
+                    console.log('No cloud links file found');
+                }
+
+                setTimeout(() => {
+                    loadBtn.textContent = '☁️ Load Cloud';
+                    loadBtn.style.background = 'linear-gradient(45deg, #2196F3, #1976D2)';
+                    loadBtn.disabled = false;
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error loading from cloud:', error);
+                loadBtn.textContent = '❌ Error';
+                setTimeout(() => {
+                    loadBtn.textContent = '☁️ Load Cloud';
+                    loadBtn.style.background = 'linear-gradient(45deg, #2196F3, #1976D2)';
+                    loadBtn.disabled = false;
+                }, 2000);
+            }
+        }
+
+        // Save links to Vercel Blob
+        async function saveLinksToCloud() {
+            const accessCode = document.getElementById('accessCodeInput').value.trim();
+            if (!accessCode) {
+                alert('Please enter access code');
+                return false;
+            }
+
+            const saveBtn = document.getElementById('saveCloudBtn');
+            saveBtn.textContent = '⏳ Saving...';
+            saveBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/files', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        filename: CLOUD_LINKS_FILENAME,
+                        content: cloudLinksContent,
+                        accessCode: accessCode
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert('Invalid access code');
+                        saveBtn.textContent = '❌ Invalid Code';
+                    } else {
+                        throw new Error(data.error || 'Failed to save');
+                    }
+                } else {
+                    saveBtn.textContent = '✓ Saved!';
+                    saveBtn.style.background = 'linear-gradient(45deg, #4CAF50, #45a049)';
+                    console.log('✓ Saved cloud links');
+                }
+
+                setTimeout(() => {
+                    saveBtn.textContent = '💾 Save to Cloud';
+                    saveBtn.style.background = 'linear-gradient(45deg, #4CAF50, #45a049)';
+                    saveBtn.disabled = false;
+                }, 2000);
+
+                return response.ok;
+
+            } catch (error) {
+                console.error('Error saving to cloud:', error);
+                saveBtn.textContent = '❌ Error';
+                setTimeout(() => {
+                    saveBtn.textContent = '💾 Save to Cloud';
+                    saveBtn.style.background = 'linear-gradient(45deg, #4CAF50, #45a049)';
+                    saveBtn.disabled = false;
+                }, 2000);
+                return false;
+            }
+        }
+
+        // Append current video + title to cloud links and auto-save
+        async function appendToCloudAndSave(title, url) {
+            const accessCode = document.getElementById('accessCodeInput').value.trim();
+            if (!accessCode) return; // Only append if access code is present
+
+            // Append to cloud content
+            const newEntry = title + '\n' + url;
+            if (cloudLinksContent.trim()) {
+                cloudLinksContent = cloudLinksContent.trim() + '\n' + newEntry;
+            } else {
+                cloudLinksContent = newEntry;
+            }
+
+            // Update the UI
+            populateCloudLinks();
+
+            // Auto-save to cloud
+            await saveLinksToCloud();
+        }
+
+        // Get YouTube video title using IFrame API and append to cloud
+        async function getAndAppendYouTubeTitle() {
+            if (!player || !playerReady || typeof player.getVideoData !== 'function') {
+                showStatus('No YouTube video loaded', 'error');
+                return;
+            }
+
+            const videoData = player.getVideoData();
+            const title = videoData.title || 'Untitled';
+            const videoId = videoData.video_id;
+            const url = `https://www.youtube.com/watch?v=${videoId}`;
+
+            // Copy to clipboard
+            const entry = title + '\n' + url;
+            try {
+                await navigator.clipboard.writeText(entry);
+                showStatus(`Copied: ${title}`, 'success');
+            } catch (err) {
+                console.error('Failed to copy:', err);
+            }
+
+            // Append to cloud and save
+            await appendToCloudAndSave(title, url);
+        }
+
+        // Auto-load cloud links on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                loadLinksFromCloud();
+            }, 1000);
+        });
+    </script>
+    <script>
+        // ===== IndexedDB Wrapper Class =====
+        class IndexedDBWrapper {
+            constructor() {
+                this.dbConnections = new Map();
+                this.availableKeys = new Set();
+                this.DB_VERSION = 1;
+                this.STORE_NAME = 'content';
+            }
+
+            async openDatabase(databaseName) {
+                if (this.dbConnections.has(databaseName)) {
+                    return this.dbConnections.get(databaseName);
+                }
+
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(databaseName, this.DB_VERSION);
+
+                    request.onerror = () => reject(new Error(`Failed to open database: ${request.error?.message}`));
+
+                    request.onsuccess = () => {
+                        const db = request.result;
+                        this.dbConnections.set(databaseName, db);
+
+                        db.onclose = () => this.dbConnections.delete(databaseName);
+                        db.onerror = (event) => console.error(`Database error for ${databaseName}:`, event);
+
+                        resolve(db);
+                    };
+
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+
+                        if (!db.objectStoreNames.contains(this.STORE_NAME)) {
+                            const store = db.createObjectStore(this.STORE_NAME, { keyPath: 'key' });
+                            store.createIndex('timestamp', 'timestamp', { unique: false });
+                            store.createIndex('dataType', 'dataType', { unique: false });
+                        }
+                    };
+                });
+            }
+
+            async set(databaseName, key, data) {
+                const db = await this.openDatabase(databaseName);
+
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([this.STORE_NAME], 'readwrite');
+                    const store = transaction.objectStore(this.STORE_NAME);
+
+                    const record = {
+                        key,
+                        data,
+                        timestamp: Date.now(),
+                        dataType: typeof data,
+                        lastModified: new Date().toISOString()
+                    };
+
+                    const request = store.put(record);
+                    request.onsuccess = () => {
+                        console.log(`✓ Saved: ${databaseName}/${key}`);
+                        resolve();
+                    };
+                    request.onerror = () => reject(new Error(`Save failed: ${request.error?.message}`));
+                });
+            }
+
+            async get(databaseName, key) {
+                const db = await this.openDatabase(databaseName);
+
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([this.STORE_NAME], 'readonly');
+                    const store = transaction.objectStore(this.STORE_NAME);
+                    const request = store.get(key);
+
+                    request.onsuccess = () => {
+                        const result = request.result;
+
+                        resolve({
+                            exists: () => !!result,
+                            val: () => result ? result.data : null,
+                            key: () => key,
+                            ref: { key }
+                        });
+                    };
+
+                    request.onerror = () => reject(new Error(`Get failed: ${request.error?.message}`));
+                });
+            }
+
+            async delete(databaseName, key) {
+                const db = await this.openDatabase(databaseName);
+
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([this.STORE_NAME], 'readwrite');
+                    const store = transaction.objectStore(this.STORE_NAME);
+                    const request = store.delete(key);
+
+                    request.onsuccess = () => {
+                        console.log(`✓ Deleted: ${databaseName}/${key}`);
+                        resolve();
+                    };
+                    request.onerror = () => reject(new Error(`Delete failed: ${request.error?.message}`));
+                });
+            }
+
+            async getAllKeys(databaseName) {
+                const db = await this.openDatabase(databaseName);
+
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([this.STORE_NAME], 'readonly');
+                    const store = transaction.objectStore(this.STORE_NAME);
+                    const request = store.getAllKeys();
+
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(new Error(`Get keys failed: ${request.error?.message}`));
+                });
+            }
+        }
+
+        // Initialize IndexedDB wrapper
+        const indexedDBWrapper = new IndexedDBWrapper();
+        const DB_NAME = 'basketballStorage';
+        const SAVED_TIMES_KEY = 'youtubelichess';
+
+        // Extract YouTube video ID from URL
+        function extractVideoId(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+
+        // Default basketball tutorial video with times
+        const defaultVideo = "https://www.youtube.com/watch?v=DYM8HNXMq-A, 1:15, 2:30, 4:45, 6:00";
+
+        // Player state
+        let player = null;
+        let playerReady = false;
+        let currentVideoId = null;
+        let timeUpdateInterval = null;
+        let lastKnownTime = 0;
+        let seekDetectionThreshold = 1.5; // If time jumps more than 1.5 seconds, it's a seek
+        let lastClickedTime = null; // Track the last clicked timestamp
+        let currentTimeIndex = -1; // Track current position in saved times for cycling
+
+        // Media player state (for HTML5 video/audio)
+        let playerType = 'youtube'; // 'youtube', 'video', or 'audio'
+        let html5Player = null;
+        let audioPlayer = null;
+        let currentMediaUrl = null;
+
+        // Loop Timer variables
+        let loopTimerActive = false;
+        let loopTimerInterval = null;
+        let loopResetInterval = null;
+        let loopTimerEndTime = null;
+        let loopBaseTime = null;
+        let loopNextResetTime = null;
+        let loopIntervalSeconds = 13;
+        let currentLoopButton = null;
+        const originalPageTitle = document.title;
+
+        // Beep sound for timer completion
+        const beepSound = new Audio('https://assets.codepen.io/1075762/beep1.mp3');
+
+        // ============ CONFIG: Text Processor Link ============
+        const TEXT_PROCESSOR_URL = "https://cdpn.io/pen/debug/KwzBPaM";  // Replace with your CodePen URL
+        // =====================================================
+
+        // Set the Text Processor link to open in new tab
+        const textProcessorLink = document.getElementById('textProcessorLink');
+        if (textProcessorLink) {
+            textProcessorLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.open(TEXT_PROCESSOR_URL, '_blank');
+            });
+        }
+
+
+
+        // Store last cleaned transcript for restore functionality
+        let lastCleanedTranscript = null;
+
+        // Check URL parameters on page load
+        function checkUrlParameters() {
+            // Get everything after the ? in the URL
+            const queryString = window.location.search;
+
+            if (!queryString || queryString.length <= 1) return null;
+
+            // Remove the leading '?' and decode the URL
+            const param = decodeURIComponent(queryString.substring(1));
+
+            // The parameter should be the full URL + times string
+            // Example: ?https://www.youtube.com/watch?v=m0e43ItU8oo,3:10,3:40,1:10
+
+            // Clean up any extra whitespace
+            const cleanParam = param.trim();
+
+            console.log('🎬 URL parameter found (original):', param);
+            console.log('🎬 URL parameter found (cleaned):', cleanParam);
+            return cleanParam;
+        }
+
+        // Check for timer parameter in URL (e.g., &timer=25)
+        function checkTimerParameter() {
+            const queryString = window.location.search;
+            if (!queryString) return null;
+
+            // Look for &timer=X or timer=X in the URL
+            const timerMatch = queryString.match(/[&?]timer=(\d+)/);
+            if (timerMatch) {
+                return parseInt(timerMatch[1]);
+            }
+            return null;
+        }
+
+        // Auto-trigger timer based on URL parameter
+        function autoTriggerTimer() {
+            const timerMinutes = checkTimerParameter();
+            if (timerMinutes === 5) {
+                console.log('🔄 Auto-triggering 5min timer from URL parameter');
+                const btn = document.getElementById('loopTimer5minBtn');
+                if (btn) btn.click();
+            } else if (timerMinutes === 25) {
+                console.log('🔄 Auto-triggering 25min timer from URL parameter');
+                const btn = document.getElementById('loopTimer25minBtn');
+                if (btn) btn.click();
+            }
+        }
+
+        // YouTube API ready callback
+        function onYouTubeIframeAPIReady() {
+            console.log('🎬 YouTube IFrame API ready');
+
+            // Check if URL parameter exists
+            const urlParam = checkUrlParameters();
+
+            if (urlParam) {
+                // Load from URL parameter with a delay to ensure API is ready
+                console.log('🎬 Loading from URL parameter:', urlParam);
+
+                // Remove timer parameter from the URL param before processing
+                const cleanUrlParam = urlParam.replace(/&timer=\d+/g, '');
+
+                // Wait a bit for the API to be fully ready
+                setTimeout(async () => {
+                    try {
+                        // Check if URL parameter includes times (has commas)
+                        const hasTimes = cleanUrlParam.includes(',');
+
+                        // Save to IndexedDB only if URL includes times
+                        processVideoAndTimes(cleanUrlParam, hasTimes);
+
+                        // If URL doesn't have times, load saved times from IndexedDB
+                        if (!hasTimes) {
+                            const savedTimes = await loadSavedTimesFromIndexedDB();
+                            if (savedTimes && savedTimes.length > 0) {
+                                renderSavedTimes(savedTimes);
+                                console.log('💾 Loaded saved times from IndexedDB (URL had no times)');
+                            }
+                        }
+
+                        showStatus('Loaded from URL!', 'success');
+
+                        // Auto-trigger timer after video loads (with extra delay for player ready)
+                        setTimeout(() => {
+                            autoTriggerTimer();
+                        }, 2000);
+                    } catch (error) {
+                        console.error('🎬 Error loading from URL:', error);
+                        showStatus('Error loading from URL, loading default', 'error');
+                        loadDefaultVideo();
+                    }
+                }, 500);
+            } else {
+                // Try to load saved times from IndexedDB
+                loadSavedTimesFromIndexedDB().then(savedTimes => {
+                    if (savedTimes && savedTimes.length > 0) {
+                        // Load saved times from IndexedDB
+                        renderSavedTimes(savedTimes);
+                        console.log('💾 Loaded saved times from IndexedDB on page load');
+                    } else {
+                        // Load default if no saved times
+                        loadDefaultVideo();
+                    }
+                });
+            }
+        }
+
+        // YouTube player ready callback
+        function onPlayerReady(event) {
+            console.log('🎬 YouTube Player ready');
+            console.log('🎬 DEBUG: Player object:', event.target);
+            playerReady = true;
+            player = event.target;
+
+            startTimeUpdates();
+            document.getElementById('currentTimeDisplay').style.display = 'flex';
+
+            // Auto-append to cloud if access code is present
+            const accessCode = document.getElementById('accessCodeInput');
+            if (accessCode && accessCode.value.trim()) {
+                setTimeout(async () => {
+                    try {
+                        const videoData = player.getVideoData();
+                        const title = videoData.title || 'Untitled';
+                        const videoId = videoData.video_id;
+                        const url = `https://www.youtube.com/watch?v=${videoId}`;
+
+                        // Check if this URL already exists in cloud content
+                        if (!cloudLinksContent.includes(url)) {
+                            await appendToCloudAndSave(title, url);
+                            showStatus(`Auto-saved: ${title}`, 'success');
+                        }
+                    } catch (err) {
+                        console.error('Auto-append failed:', err);
+                    }
+                }, 1500); // Wait for video data to be available
+            }
+        }
+
+        // YouTube player state change callback
+        function onPlayerStateChange(event) {
+            console.log('🎬 YouTube Player state changed:', event.data);
+
+            if (event.data === YT.PlayerState.PLAYING) {
+                startTimeUpdates();
+            } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+                stopTimeUpdates();
+            }
+        }
+
+        // Load default video
+        function loadDefaultVideo() {
+            console.log('🎬 DEBUG: Loading defaultVideo:', defaultVideo);
+
+            // Process the default video string (same format as addCustomTimes)
+            processVideoAndTimes(defaultVideo);
+
+            showStatus('Default video loaded!', 'success');
+        }
+
+        // Update URL parameter to reflect current state
+        function updateUrlParameter() {
+            // Get current URL
+            let currentUrl = '';
+
+            if (playerType === 'youtube' && currentVideoId) {
+                // Reconstruct YouTube URL
+                currentUrl = `https://www.youtube.com/watch?v=${currentVideoId}`;
+            } else if ((playerType === 'video' || playerType === 'audio') && currentMediaUrl) {
+                // Use the direct media URL
+                currentUrl = currentMediaUrl;
+            } else {
+                return; // No media loaded
+            }
+
+            // Get all saved times
+            const savedTimeButtons = document.querySelectorAll('.saved-time-btn');
+
+            if (savedTimeButtons.length === 0) {
+                return; // No times to save
+            }
+
+            // Build the format: URL, time1, time2, time3, ...
+            const times = Array.from(savedTimeButtons).map(btn => btn.dataset.time);
+            const formattedString = `${currentUrl}, ${times.join(', ')}`;
+
+            // Update URL without reloading
+            const newUrl = `${window.location.pathname}?${encodeURIComponent(formattedString)}`;
+            window.history.replaceState({}, '', newUrl);
+        }
+
+        // Shared function to process "URL, time1, time2, ..." format
+        function processVideoAndTimes(inputString, saveToIndexedDB = false) {
+            console.log('🎬 DEBUG processVideoAndTimes called with:', inputString);
+
+            const container = document.getElementById('savedTimesButtons');
+
+            // Clear all existing buttons first
+            container.innerHTML = '';
+            currentTimeIndex = -1; // Reset cycle index when loading new times
+
+            // Split by comma and process each entry
+            const entries = inputString.split(',').map(t => t.trim()).filter(t => t);
+
+            console.log('🎬 DEBUG entries after split:', entries);
+
+            if (entries.length === 0) {
+                console.log('🎬 DEBUG no entries found');
+                return;
+            }
+
+            // Check if the first element is a media URL
+            const firstEntry = entries[0];
+            let timeEntries = entries;
+
+            console.log('🎬 DEBUG firstEntry:', firstEntry);
+
+            // Detect media type
+            const mediaType = detectMediaType(firstEntry);
+
+            console.log('🎬 DEBUG mediaType detected:', mediaType);
+
+            if (mediaType) {
+                // It's a valid media URL - load it
+                if (mediaType === 'youtube') {
+                    // YouTube URL - use YouTube player
+                    const videoId = extractVideoId(firstEntry);
+
+                    console.log('🎬 DEBUG videoId extracted:', videoId);
+
+                    if (videoId) {
+                        currentVideoId = videoId;
+                        switchToPlayer('youtube');
+
+                        // Clear and recreate player
+                        const youtubeContainer = document.getElementById('youtubeContainer');
+                        youtubeContainer.innerHTML = '<div id="youtube-player"></div>';
+
+                        const initPlayer = () => {
+                            if (typeof YT !== 'undefined' && YT.Player) {
+                                player = new YT.Player('youtube-player', {
+                                    height: '100%',
+                                    width: '100%',
+                                    videoId: videoId,
+                                    playerVars: {
+                                        'enablejsapi': 1,
+                                        'rel': 0,
+                                        'modestbranding': 1,
+                                        'iv_load_policy': 3
+                                    },
+                                    events: {
+                                        'onReady': onPlayerReady,
+                                        'onStateChange': onPlayerStateChange
+                                    }
+                                });
+
+                                console.log('🎬 YouTube video loaded:', firstEntry);
+                            } else {
+                                setTimeout(initPlayer, 500);
+                            }
+                        };
+
+                        initPlayer();
+                    }
+                } else {
+                    // Direct media URL (video or audio) - use HTML5 player
+                    switchToPlayer(mediaType);
+                    loadHTML5Media(firstEntry, mediaType);
+                    console.log('🎬 Media loaded:', firstEntry, 'type:', mediaType);
+                }
+
+                // Remove the URL from the entries, keep only the times
+                timeEntries = entries.slice(1);
+            }
+
+            // Process time entries
+            let addedCount = 0;
+            const colors = [
+                'linear-gradient(45deg, #4CAF50, #45a049)',
+                'linear-gradient(45deg, #2196F3, #1976D2)',
+                'linear-gradient(45deg, #9C27B0, #7B1FA2)',
+                'linear-gradient(45deg, #FF9800, #F57C00)',
+                'linear-gradient(45deg, #607D8B, #455A64)',
+                'linear-gradient(45deg, #E91E63, #C2185B)',
+                'linear-gradient(45deg, #00BCD4, #0097A7)',
+                'linear-gradient(45deg, #8BC34A, #689F38)',
+                'linear-gradient(45deg, #FF5722, #E64A19)'
+            ];
+
+            timeEntries.forEach((timeEntry, index) => {
+                const timeStr = timeEntry.trim();
+
+                // Validate the time string
+                const seconds = parseTimeToSeconds(timeStr);
+                if (seconds !== null) {
+                    // Create button element
+                    const button = document.createElement('button');
+                    button.className = 'saved-time-btn time-btn';
+                    button.dataset.time = timeStr;
+                    button.textContent = timeStr;
+                    button.style.background = colors[addedCount % colors.length];
+
+                    container.appendChild(button);
+                    addedCount++;
+                }
+            });
+
+            if (addedCount > 0) {
+                // Re-attach listeners to new buttons
+                attachTimeButtonListeners();
+
+                // Update URL to reflect new state
+                updateUrlParameter();
+
+                // Save to IndexedDB only if requested (when URL has times or from Paste button)
+                if (saveToIndexedDB) {
+                    saveSavedTimesToIndexedDB();
+                }
+            }
+        }
+
+        // Setup event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create metronome iframe
+            const metronomeContainer = document.getElementById('metronomeIframeContainer');
+            if (metronomeContainer) {
+                const metronomeIframe = document.createElement('iframe');
+                metronomeIframe.src = './metronome/dist/index.html';
+                metronomeIframe.style.cssText = 'width: 100%; height: 400px; border: none; border-radius: 10px;';
+                metronomeContainer.appendChild(metronomeIframe);
+            }
+
+            // Load default button
+            document.getElementById('loadDefaultBtn').addEventListener('click', function() {
+                loadDefaultVideo();
+            });
+
+            // YouTube clipboard button
+            document.getElementById('loadYouTubeClipboardBtn').addEventListener('click', function() {
+                loadYouTubeFromClipboard();
+            });
+
+            // Add custom times button
+            document.getElementById('addTimesBtn').addEventListener('click', function() {
+                addCustomTimes();
+            });
+
+            // Enter key support for custom times input
+            document.getElementById('customTimesInput').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCustomTimes();
+                }
+            });
+
+            // Clear times button
+            document.getElementById('clearTimesBtn').addEventListener('click', function() {
+                clearAllTimes();
+            });
+
+            // Copy current state button
+            document.getElementById('copyCurrentStateBtn').addEventListener('click', function() {
+                copyCurrentStateToClipboard();
+            });
+
+            // Copy shareable link button
+            document.getElementById('copyShareableLinkBtn').addEventListener('click', function() {
+                copyShareableLink();
+            });
+
+            // Clean & Copy Transcript button
+            document.getElementById('cleanTranscriptBtn').addEventListener('click', async function() {
+                try {
+                    // Read from clipboard
+                    const text = await navigator.clipboard.readText();
+                    console.log('📋 Clipboard content:', text.substring(0, 200) + '...');
+
+                    if (!text.trim()) {
+                        showStatus('Clipboard is empty - please copy transcript first', 'error');
+                        return;
+                    }
+
+                    // Clean the transcript
+                    const cleanedText = cleanTranscript(text);
+                    console.log('📋 Cleaned text:', cleanedText.substring(0, 200) + '...');
+
+                    if (!cleanedText) {
+                        showStatus('No valid transcript content found', 'error');
+                        return;
+                    }
+
+                    // Extract timestamps from the CLEANED text (which has one per minute)
+                    const cleanedLines = cleanedText.split('\n');
+                    const keptTimestamps = [];
+
+                    for (let line of cleanedLines) {
+                        line = line.trim();
+                        // Check if line is a timestamp (M:SS or H:MM:SS)
+                        const timeMatch = line.match(/^(\d+):(\d+)(?::(\d+))?$/);
+                        if (timeMatch) {
+                            keptTimestamps.push(line);
+                        }
+                    }
+
+                    console.log('📋 Kept timestamps:', keptTimestamps);
+
+                    if (keptTimestamps.length > 0) {
+                        renderSavedTimes(keptTimestamps);
+                        saveSavedTimesToIndexedDB();
+
+                        // Store cleaned text for restore functionality
+                        lastCleanedTranscript = cleanedText;
+
+                        // Copy cleaned text back to clipboard
+                        await navigator.clipboard.writeText(cleanedText);
+
+                        // Visual feedback
+                        const btn = this;
+                        const originalText = btn.textContent;
+                        btn.textContent = '✅ Cleaned & Copied!';
+                        btn.style.transform = 'scale(1.05)';
+
+                        setTimeout(() => {
+                            btn.textContent = originalText;
+                            btn.style.transform = '';
+                        }, 2000);
+
+                        showStatus(`Transcript cleaned, ${keptTimestamps.length} times added, and copied!`, 'success');
+                    } else {
+                        // No timestamps found - don't store, show error
+                        showStatus('No timestamps found in clipboard content - paste a transcript first', 'error');
+                        return;
+                    }
+
+                } catch (err) {
+                    console.error('Failed to process transcript:', err);
+                    showStatus('Failed to read/write clipboard. Please grant permission.', 'error');
+                }
+            });
+
+            // Restore Transcript button
+            document.getElementById('restoreTranscriptBtn').addEventListener('click', async function() {
+                if (!lastCleanedTranscript) {
+                    showStatus('No transcript to restore - use "Clean & Copy Transcript" first', 'error');
+                    return;
+                }
+
+                // Don't restore if it looks like a URL (not a transcript)
+                if (lastCleanedTranscript.trim().startsWith('http')) {
+                    showStatus('No valid transcript to restore', 'error');
+                    return;
+                }
+
+                try {
+                    await navigator.clipboard.writeText(lastCleanedTranscript);
+
+                    // Visual feedback
+                    const btn = this;
+                    const originalText = btn.textContent;
+                    btn.textContent = '✅ Restored!';
+                    btn.style.transform = 'scale(1.05)';
+
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.style.transform = '';
+                    }, 2000);
+
+                    showStatus('Transcript restored to clipboard!', 'success');
+                } catch (err) {
+                    console.error('Failed to restore transcript:', err);
+                    showStatus('Failed to write to clipboard', 'error');
+                }
+            });
+
+            // Loop timer buttons
+            const loopTimer5minBtn = document.getElementById('loopTimer5minBtn');
+            if (loopTimer5minBtn) {
+                loopTimer5minBtn.addEventListener('click', function() {
+                    const intervalSeconds = getLoopInterval();
+                    toggleLoopTimer(intervalSeconds, this, 5);
+                });
+            }
+
+            const loopTimer25minBtn = document.getElementById('loopTimer25minBtn');
+            if (loopTimer25minBtn) {
+                loopTimer25minBtn.addEventListener('click', function() {
+                    const intervalSeconds = getLoopInterval();
+                    toggleLoopTimer(intervalSeconds, this, 25);
+                });
+            }
+
+            // 30-second play button - plays 30s, pauses, rewinds 30s
+            document.getElementById('timer30sBtn').addEventListener('click', function() {
+                play30sThenRewind(this);
+            });
+
+            // 1-minute play button - plays 1min, pauses, rewinds 1min
+            document.getElementById('timer60sBtn').addEventListener('click', function() {
+                play60sThenRewind(this);
+            });
+
+            // 3-minute play button - plays 3min, pauses, rewinds 3min
+            document.getElementById('timer3minBtn').addEventListener('click', function() {
+                play3minThenRewind(this);
+            });
+
+            // Custom timer dropdown - plays selected duration, pauses, rewinds
+            document.getElementById('timerCustomSelect').addEventListener('change', function() {
+                if (this.value) {
+                    playCustomThenRewind(this, parseInt(this.value));
+                }
+            });
+
+            // Auto-detect valid time in loopStartTime input
+            document.getElementById('loopStartTime').addEventListener('input', function() {
+                const value = this.value.trim();
+                // Match M:SS or MM:SS format (complete when 2 digits follow the colon)
+                const match = value.match(/^(\d{1,2}):(\d{2})$/);
+                if (match) {
+                    const newTime = parseTimeToSeconds(value);
+                    if (newTime !== null) {
+                        // If a loop timer is running, update loopBaseTime
+                        if (loopTimerActive) {
+                            loopBaseTime = newTime;
+                        }
+                        // If a duration timer is running, update timerStartTime
+                        if (timerTimeout) {
+                            timerStartTime = newTime;
+                        }
+                    }
+                }
+            });
+
+            // Clear Saved Times button (in the Saved Times section)
+            document.getElementById('clearSavedTimesBtn').addEventListener('click', function() {
+                clearAllTimes();
+            });
+
+            // Saved time buttons - jump directly to those times
+            attachTimeButtonListeners();
+        });
+
+        // Attach click listeners to all saved time buttons
+        function attachTimeButtonListeners() {
+            document.querySelectorAll('.saved-time-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const time = this.dataset.time;
+
+                    // Remove active class from all buttons
+                    document.querySelectorAll('.saved-time-btn').forEach(b => b.classList.remove('active'));
+
+                    // Add active class to clicked button
+                    this.classList.add('active');
+
+                    // Visual feedback on the button
+                    this.style.transform = 'scale(1.15)';
+                    this.style.boxShadow = '0 5px 20px rgba(255,255,255,0.6)';
+
+                    // Parse and jump to the time
+                    const seconds = parseTimeToSeconds(time);
+                    if (seconds !== null) {
+                        // Save the clicked timestamp before jumping
+                        lastClickedTime = seconds;
+
+                        // Update the loop start time input
+                        const loopStartTimeInput = document.getElementById('loopStartTime');
+                        if (loopStartTimeInput) {
+                            loopStartTimeInput.value = time;
+                        }
+
+                        jumpToYouTubeTime(seconds);
+                    }
+
+                    // Reset button appearance (but keep the active class)
+                    setTimeout(() => {
+                        this.style.transform = '';
+                        this.style.boxShadow = '';
+                    }, 400);
+                });
+            });
+        }
+
+
+        // Add custom times as buttons
+        function addCustomTimes() {
+            const input = document.getElementById('customTimesInput');
+            const inputValue = input.value.trim();
+
+            if (!inputValue) {
+                showStatus('Please enter URL and times: URL, 1:15,2:00,3:10', 'error');
+                return;
+            }
+
+            // Check if it's a single time (not a URL, just one timestamp)
+            const entries = inputValue.split(',').map(t => t.trim()).filter(t => t);
+            const firstEntry = entries[0];
+            const mediaType = detectMediaType(firstEntry);
+
+            // If no media URL detected and it's just a single time, ADD to existing times
+            if (!mediaType && entries.length === 1) {
+                const timeStr = firstEntry;
+                const seconds = parseTimeToSeconds(timeStr);
+
+                if (seconds === null) {
+                    showStatus('Invalid time format. Use MM:SS or H:MM:SS', 'error');
+                    return;
+                }
+
+                // Get the container and count existing buttons
+                const container = document.getElementById('savedTimesButtons');
+                const existingButtons = container.querySelectorAll('.saved-time-btn');
+
+                // Color palette for new buttons
+                const colors = [
+                    'linear-gradient(45deg, #4CAF50, #45a049)',
+                    'linear-gradient(45deg, #2196F3, #1976D2)',
+                    'linear-gradient(45deg, #9C27B0, #7B1FA2)',
+                    'linear-gradient(45deg, #FF9800, #F57C00)',
+                    'linear-gradient(45deg, #607D8B, #455A64)',
+                    'linear-gradient(45deg, #E91E63, #C2185B)',
+                    'linear-gradient(45deg, #00BCD4, #0097A7)',
+                    'linear-gradient(45deg, #8BC34A, #689F38)',
+                    'linear-gradient(45deg, #FF5722, #E64A19)'
+                ];
+
+                // Create and add the new button
+                const button = document.createElement('button');
+                button.className = 'saved-time-btn time-btn';
+                button.dataset.time = timeStr;
+                button.textContent = timeStr;
+                button.style.background = colors[existingButtons.length % colors.length];
+
+                container.appendChild(button);
+
+                // Re-attach listeners to include the new button
+                attachTimeButtonListeners();
+
+                // NOTE: Don't save to IndexedDB when adding single times manually
+                // Only save when pasting full sets of times
+
+                showStatus(`Added time: ${timeStr}`, 'success');
+                input.value = ''; // Clear input
+                return;
+            }
+
+            // Otherwise, use the normal behavior (clear and load new times)
+            // Don't save to IndexedDB here - only when using Paste button
+            processVideoAndTimes(inputValue, false);
+
+            showStatus('Media and times loaded!', 'success');
+            input.value = ''; // Clear input
+        }
+
+        // Clear all time buttons
+        async function clearAllTimes() {
+            const container = document.getElementById('savedTimesButtons');
+            container.innerHTML = '';
+            currentTimeIndex = -1; // Reset cycle index
+
+            // Clear IndexedDB
+            try {
+                await indexedDBWrapper.delete(DB_NAME, SAVED_TIMES_KEY);
+                console.log('💾 Cleared saved times from IndexedDB');
+            } catch (error) {
+                console.error('💾 Error clearing saved times from IndexedDB:', error);
+            }
+
+            showStatus('All times cleared', 'info');
+        }
+
+        // Copy current URL + saved times to clipboard
+        async function copyCurrentStateToClipboard() {
+            // Get current URL
+            let currentUrl = '';
+
+            if (playerType === 'youtube' && currentVideoId) {
+                // Reconstruct YouTube URL
+                currentUrl = `https://www.youtube.com/watch?v=${currentVideoId}`;
+            } else if ((playerType === 'video' || playerType === 'audio') && currentMediaUrl) {
+                // Use the direct media URL
+                currentUrl = currentMediaUrl;
+            } else {
+                showStatus('No media loaded', 'error');
+                return;
+            }
+
+            // Get all saved times
+            const savedTimeButtons = document.querySelectorAll('.saved-time-btn');
+
+            if (savedTimeButtons.length === 0) {
+                showStatus('No saved times available', 'error');
+                return;
+            }
+
+            // Build the format: URL, time1, time2, time3, ...
+            const times = Array.from(savedTimeButtons).map(btn => btn.dataset.time);
+            const formattedString = `${currentUrl}, ${times.join(', ')}`;
+
+            // Copy to clipboard
+            try {
+                await navigator.clipboard.writeText(formattedString);
+                showStatus('Copied to clipboard!', 'success');
+
+                // Visual feedback on button
+                const btn = document.getElementById('copyCurrentStateBtn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                btn.style.transform = 'scale(1.05)';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.transform = '';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                showStatus('Failed to copy to clipboard', 'error');
+            }
+        }
+
+        // Copy shareable link (full URL with query parameters)
+        async function copyShareableLink() {
+            // Get current URL
+            let currentUrl = '';
+
+            if (playerType === 'youtube' && currentVideoId) {
+                // Reconstruct YouTube URL
+                currentUrl = `https://www.youtube.com/watch?v=${currentVideoId}`;
+            } else if ((playerType === 'video' || playerType === 'audio') && currentMediaUrl) {
+                // Use the direct media URL
+                currentUrl = currentMediaUrl;
+            } else {
+                showStatus('No media loaded', 'error');
+                return;
+            }
+
+            // Get all saved times
+            const savedTimeButtons = document.querySelectorAll('.saved-time-btn');
+
+            if (savedTimeButtons.length === 0) {
+                showStatus('No saved times available', 'error');
+                return;
+            }
+
+            // Build the format: URL, time1, time2, time3, ...
+            const times = Array.from(savedTimeButtons).map(btn => btn.dataset.time);
+            const formattedString = `${currentUrl}, ${times.join(', ')}`;
+
+            // Build the shareable link
+            const shareableLink = `${window.location.origin}${window.location.pathname}?${encodeURIComponent(formattedString)}`;
+
+            // Copy to clipboard
+            try {
+                await navigator.clipboard.writeText(shareableLink);
+                showStatus('Shareable link copied!', 'success');
+
+                // Visual feedback on button
+                const btn = document.getElementById('copyShareableLinkBtn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                btn.style.transform = 'scale(1.05)';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.transform = '';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                showStatus('Failed to copy shareable link', 'error');
+            }
+        }
+
+        // Parse time string to seconds (supports "1:23" or "83")
+        function parseTimeToSeconds(timeStr) {
+            timeStr = timeStr.trim();
+
+            // If it's just numbers, treat as seconds
+            if (/^\d+$/.test(timeStr)) {
+                return parseInt(timeStr);
+            }
+
+            // If it's in MM:SS format
+            const timeMatch = timeStr.match(/^(\d+):(\d+)$/);
+            if (timeMatch) {
+                const minutes = parseInt(timeMatch[1]);
+                const seconds = parseInt(timeMatch[2]);
+
+                if (seconds >= 60) {
+                    return null;
+                }
+
+                return (minutes * 60) + seconds;
+            }
+
+            // If it's in H:MM:SS format
+            const longTimeMatch = timeStr.match(/^(\d+):(\d+):(\d+)$/);
+            if (longTimeMatch) {
+                const hours = parseInt(longTimeMatch[1]);
+                const minutes = parseInt(longTimeMatch[2]);
+                const seconds = parseInt(longTimeMatch[3]);
+
+                if (minutes >= 60 || seconds >= 60) {
+                    return null;
+                }
+
+                return (hours * 3600) + (minutes * 60) + seconds;
+            }
+
+            return null;
+        }
+
+        // Jump to specific time in any player (YouTube or HTML5)
+        function jumpToYouTubeTime(seconds) {
+            if (playerType === 'youtube') {
+                if (!currentVideoId) {
+                    showStatus('No video loaded', 'error');
+                    return;
+                }
+
+                // Use YouTube Player API to seek to time
+                if (player && playerReady && typeof player.seekTo === 'function') {
+                    player.seekTo(seconds, true);
+                }
+            } else {
+                // HTML5 video or audio player
+                const activePlayer = getActivePlayer();
+                if (!activePlayer || !currentMediaUrl) {
+                    showStatus('No media loaded', 'error');
+                    return;
+                }
+
+                activePlayer.currentTime = seconds;
+            }
+
+            // If a timer is running, update the timer start position to the new time
+            if (timerTimeout && timerLoopsRemaining > 0) {
+                timerStartTime = seconds;
+                console.log('⏱️ Timer start position updated via jump to:', seconds);
+            }
+
+            // Format time for display
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const remainingSeconds = seconds % 60;
+
+            let timeStr;
+            if (hours > 0) {
+                timeStr = `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+            } else if (minutes > 0) {
+                timeStr = `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+            } else {
+                timeStr = `${remainingSeconds}s`;
+            }
+
+            showStatus(`Jumped to ${timeStr}`, 'success');
+        }
+
+        // Control functions
+        function reloadVideo() {
+            if (currentVideoId) {
+                player.loadVideoById(currentVideoId);
+                showStatus('Video reloaded', 'success');
+            }
+        }
+
+        function clearVideo() {
+            // Clear YouTube player
+            if (player && typeof player.destroy === 'function') {
+                player.destroy();
+            }
+            player = null;
+            currentVideoId = null;
+
+            // Clear HTML5 players
+            if (html5Player) {
+                html5Player.pause();
+                html5Player.src = '';
+            }
+            if (audioPlayer) {
+                audioPlayer.pause();
+                audioPlayer.src = '';
+            }
+            currentMediaUrl = null;
+
+            // Reset state
+            playerReady = false;
+            playerType = 'youtube';
+
+            // Update UI
+            document.getElementById('youtubeContainer').innerHTML = '<div style="color: #666; text-align: center; padding: 40px;">Video cleared</div>';
+            document.getElementById('mediaContainer').style.display = 'none';
+            document.getElementById('audioContainer').style.display = 'none';
+
+            stopTimeUpdates();
+            document.getElementById('currentTimeDisplay').style.display = 'none';
+            document.getElementById('currentTimeValue').textContent = '--:--';
+
+            showStatus('Media cleared', 'info');
+        }
+
+        // Show status message
+        let statusTimeout = null;
+        function showStatus(message, type = 'info', persistent = false) {
+            const statusDisplay = document.getElementById('statusDisplay');
+            statusDisplay.textContent = message;
+            statusDisplay.className = `status-display ${type}`;
+            statusDisplay.style.display = 'block';
+
+            if (statusTimeout) {
+                clearTimeout(statusTimeout);
+                statusTimeout = null;
+            }
+
+            if (!persistent) {
+                statusTimeout = setTimeout(() => {
+                    statusDisplay.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // Clipboard Loading Function (handles YouTube, Dropbox, and direct media URLs)
+        async function loadYouTubeFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                console.log('🎬 DEBUG: Clipboard text:', text);
+
+                if (!text.trim()) {
+                    showStatus('Clipboard is empty', 'error');
+                    return;
+                }
+
+                // Split by comma to check if there are times included
+                const entries = text.split(',').map(t => t.trim()).filter(t => t);
+                const firstEntry = entries[0];
+
+                // Detect media type
+                const mediaType = detectMediaType(firstEntry);
+
+                if (!mediaType) {
+                    showStatus('Not a valid media URL (YouTube, MP4, MP3, etc.)', 'error');
+                    return;
+                }
+
+                if (mediaType === 'youtube') {
+                    // Handle YouTube URL
+                    const videoId = extractVideoId(firstEntry);
+                    if (!videoId) {
+                        showStatus('Could not extract YouTube video ID', 'error');
+                        return;
+                    }
+
+                    currentVideoId = videoId;
+                    switchToPlayer('youtube');
+
+                    // Clear the container and create player div
+                    const container = document.getElementById('youtubeContainer');
+                    container.innerHTML = '<div id="youtube-player"></div>';
+
+                    // Wait for API to be ready then create player
+                    const initPlayer = () => {
+                        if (typeof YT !== 'undefined' && YT.Player) {
+                            player = new YT.Player('youtube-player', {
+                                height: '100%',
+                                width: '100%',
+                                videoId: videoId,
+                                playerVars: {
+                                    'enablejsapi': 1,
+                                    'rel': 0,
+                                    'modestbranding': 1,
+                                    'iv_load_policy': 3
+                                },
+                                events: {
+                                    'onReady': onPlayerReady,
+                                    'onStateChange': onPlayerStateChange
+                                }
+                            });
+                        } else {
+                            setTimeout(initPlayer, 500);
+                        }
+                    };
+
+                    initPlayer();
+                } else {
+                    // Handle HTML5 media (video or audio)
+                    switchToPlayer(mediaType);
+                    loadHTML5Media(firstEntry, mediaType);
+                }
+
+                // Check if there are times after the URL
+                if (entries.length > 1) {
+                    const timeEntries = entries.slice(1); // Get all entries after the URL
+                    const timesContainer = document.getElementById('savedTimesButtons');
+
+                    // Clear all existing buttons first
+                    timesContainer.innerHTML = '';
+                    currentTimeIndex = -1; // Reset cycle index when loading new times
+
+                    let addedCount = 0;
+                    const colors = [
+                        'linear-gradient(45deg, #4CAF50, #45a049)',
+                        'linear-gradient(45deg, #2196F3, #1976D2)',
+                        'linear-gradient(45deg, #9C27B0, #7B1FA2)',
+                        'linear-gradient(45deg, #FF9800, #F57C00)',
+                        'linear-gradient(45deg, #607D8B, #455A64)',
+                        'linear-gradient(45deg, #E91E63, #C2185B)',
+                        'linear-gradient(45deg, #00BCD4, #0097A7)',
+                        'linear-gradient(45deg, #8BC34A, #689F38)',
+                        'linear-gradient(45deg, #FF5722, #E64A19)'
+                    ];
+
+                    timeEntries.forEach((timeEntry, index) => {
+                        const timeStr = timeEntry.trim();
+
+                        // Validate the time string
+                        const seconds = parseTimeToSeconds(timeStr);
+                        if (seconds !== null) {
+                            // Create button element
+                            const button = document.createElement('button');
+                            button.className = 'saved-time-btn time-btn';
+                            button.dataset.time = timeStr;
+                            button.textContent = timeStr;
+                            button.style.background = colors[addedCount % colors.length];
+
+                            timesContainer.appendChild(button);
+                            addedCount++;
+                        }
+                    });
+
+                    if (addedCount > 0) {
+                        // Re-attach listeners to new buttons
+                        attachTimeButtonListeners();
+
+                        // Save to IndexedDB
+                        saveSavedTimesToIndexedDB();
+
+                        console.log(`🎬 DEBUG: Added ${addedCount} time buttons`);
+                    }
+                }
+
+                console.log('🎬 DEBUG: Loaded media from clipboard:', firstEntry, 'type:', mediaType);
+                showStatus(`${mediaType === 'audio' ? 'Audio' : 'Video'} loaded from clipboard!`, 'success');
+
+                // Visual feedback
+                const btn = document.getElementById('loadYouTubeClipboardBtn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Loaded!';
+                btn.style.transform = 'scale(1.05)';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.transform = '';
+                }, 2000);
+
+            } catch (err) {
+                console.error('🎬 DEBUG: Failed to read clipboard:', err);
+                showStatus('Failed to read clipboard. Please paste manually or grant permission.', 'error');
+            }
+        }
+
+        // Helper function to check if URL is YouTube
+        function isYouTubeURL(url) {
+            const youtubePatterns = [
+                /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/,
+                /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]+)/,
+                /(?:https?:\/\/)?youtu\.be\/([a-zA-Z0-9_-]+)/,
+                /(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([a-zA-Z0-9_-]+)/
+            ];
+
+            return youtubePatterns.some(pattern => pattern.test(url));
+        }
+
+        // Helper function to check if URL is a Dropbox direct link
+        function isDropboxURL(url) {
+            return url.includes('dropbox.com') && url.includes('raw=1');
+        }
+
+        // Helper function to detect media type from URL
+        function detectMediaType(url) {
+            // Check for YouTube first
+            if (isYouTubeURL(url)) {
+                return 'youtube';
+            }
+
+            // Check for audio extensions
+            const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'];
+            const hasAudioExt = audioExtensions.some(ext => url.toLowerCase().includes(ext));
+            if (hasAudioExt) {
+                return 'audio';
+            }
+
+            // Check for video extensions (including dropbox)
+            const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v'];
+            const hasVideoExt = videoExtensions.some(ext => url.toLowerCase().includes(ext));
+            if (hasVideoExt || isDropboxURL(url)) {
+                return 'video';
+            }
+
+            return null; // Unknown type
+        }
+
+        // Switch between player types
+        function switchToPlayer(type) {
+            const youtubeContainer = document.getElementById('youtubeContainer');
+            const mediaContainer = document.getElementById('mediaContainer');
+            const audioContainer = document.getElementById('audioContainer');
+
+            // Hide all players
+            youtubeContainer.style.display = 'none';
+            mediaContainer.style.display = 'none';
+            audioContainer.style.display = 'none';
+
+            // Show the appropriate player
+            if (type === 'youtube') {
+                youtubeContainer.style.display = 'block';
+                playerType = 'youtube';
+            } else if (type === 'video') {
+                mediaContainer.style.display = 'block';
+                playerType = 'video';
+                if (!html5Player) {
+                    html5Player = document.getElementById('html5-player');
+                }
+            } else if (type === 'audio') {
+                audioContainer.style.display = 'block';
+                playerType = 'audio';
+                if (!audioPlayer) {
+                    audioPlayer = document.getElementById('audio-player');
+                }
+            }
+
+            console.log('🎬 Switched to', type, 'player');
+        }
+
+        // Get the current active player
+        function getActivePlayer() {
+            if (playerType === 'youtube') {
+                return player;
+            } else if (playerType === 'video') {
+                return html5Player;
+            } else if (playerType === 'audio') {
+                return audioPlayer;
+            }
+            return null;
+        }
+
+        // Load HTML5 media (video or audio)
+        function loadHTML5Media(url, type) {
+            const mediaElement = type === 'audio' ? audioPlayer : html5Player;
+
+            if (!mediaElement) {
+                console.error('Media element not found');
+                return;
+            }
+
+            currentMediaUrl = url;
+            mediaElement.src = url;
+
+            // Setup time tracking for HTML5 media
+            mediaElement.addEventListener('loadedmetadata', () => {
+                playerReady = true;
+                document.getElementById('currentTimeDisplay').style.display = 'flex';
+                console.log('🎬 Media loaded:', url);
+            });
+
+            mediaElement.addEventListener('play', () => {
+                startTimeUpdates();
+            });
+
+            mediaElement.addEventListener('pause', () => {
+                stopTimeUpdates();
+            });
+
+            mediaElement.addEventListener('ended', () => {
+                stopTimeUpdates();
+            });
+
+            mediaElement.load();
+        }
+
+
+        // Time tracking functions
+        function startTimeUpdates() {
+            if (timeUpdateInterval) {
+                clearInterval(timeUpdateInterval);
+            }
+
+            timeUpdateInterval = setInterval(() => {
+                try {
+                    let currentTime = null;
+
+                    if (playerType === 'youtube' && player && playerReady && typeof player.getCurrentTime === 'function') {
+                        currentTime = player.getCurrentTime();
+                    } else if ((playerType === 'video' || playerType === 'audio') && playerReady) {
+                        const activePlayer = getActivePlayer();
+                        if (activePlayer && !isNaN(activePlayer.currentTime)) {
+                            currentTime = activePlayer.currentTime;
+                        }
+                    }
+
+                    if (currentTime !== null) {
+                        updateTimeDisplay(currentTime);
+                    }
+                } catch (error) {
+                    console.log('🎬 DEBUG: Error getting current time:', error);
+                }
+            }, 1000);
+        }
+
+        function stopTimeUpdates() {
+            if (timeUpdateInterval) {
+                clearInterval(timeUpdateInterval);
+                timeUpdateInterval = null;
+            }
+        }
+
+        function updateTimeDisplay(currentTimeSeconds) {
+            const timeValue = document.getElementById('currentTimeValue');
+            const loopStartTimeInput = document.getElementById('loopStartTime');
+
+            if (currentTimeSeconds !== undefined && currentTimeSeconds !== null) {
+                const hours = Math.floor(currentTimeSeconds / 3600);
+                const minutes = Math.floor((currentTimeSeconds % 3600) / 60);
+                const seconds = Math.floor(currentTimeSeconds % 60);
+
+                let timeStr;
+                if (hours > 0) {
+                    timeStr = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                } else {
+                    timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                }
+
+                timeValue.textContent = timeStr;
+
+                // Detect user seeking (time jump greater than threshold)
+                const timeDifference = Math.abs(currentTimeSeconds - lastKnownTime);
+                if (timeDifference > seekDetectionThreshold && lastKnownTime > 0) {
+                    // User manually seeked - update loop start time
+                    if (loopStartTimeInput) {
+                        loopStartTimeInput.value = timeStr;
+                    }
+
+                    // If a timer is running, update and RESTART the timer
+                    if (timerTimeout && timerLoopsRemaining > 0) {
+                        timerStartTime = currentTimeSeconds;
+                        console.log('⏱️ Timer restarted from:', timeStr);
+
+                        // Clear the current timer and restart fresh
+                        clearTimeout(timerTimeout);
+                        startTimerLoop();
+                    }
+                }
+
+                lastKnownTime = currentTimeSeconds;
+            } else {
+                timeValue.textContent = '--:--';
+            }
+        }
+
+        // IndexedDB functions for saved times
+        async function saveSavedTimesToIndexedDB() {
+            const savedTimeButtons = document.querySelectorAll('.saved-time-btn');
+            const times = Array.from(savedTimeButtons).map(btn => btn.dataset.time);
+
+            try {
+                await indexedDBWrapper.set(DB_NAME, SAVED_TIMES_KEY, times);
+                console.log('💾 Saved times to IndexedDB:', times);
+            } catch (error) {
+                console.error('💾 Error saving times to IndexedDB:', error);
+            }
+        }
+
+        async function loadSavedTimesFromIndexedDB() {
+            try {
+                const snapshot = await indexedDBWrapper.get(DB_NAME, SAVED_TIMES_KEY);
+
+                if (!snapshot.exists()) {
+                    console.log('💾 No saved times found in IndexedDB');
+                    return null;
+                }
+
+                const times = snapshot.val();
+                console.log('💾 Loaded times from IndexedDB:', times);
+                return times;
+            } catch (error) {
+                console.error('💾 Error loading saved times from IndexedDB:', error);
+                return null;
+            }
+        }
+
+        function renderSavedTimes(times) {
+            if (!times || times.length === 0) return;
+
+            const container = document.getElementById('savedTimesButtons');
+            container.innerHTML = ''; // Clear existing buttons
+
+            const colors = [
+                'linear-gradient(45deg, #4CAF50, #45a049)',
+                'linear-gradient(45deg, #2196F3, #1976D2)',
+                'linear-gradient(45deg, #9C27B0, #7B1FA2)',
+                'linear-gradient(45deg, #FF9800, #F57C00)',
+                'linear-gradient(45deg, #607D8B, #455A64)',
+                'linear-gradient(45deg, #E91E63, #C2185B)',
+                'linear-gradient(45deg, #00BCD4, #0097A7)',
+                'linear-gradient(45deg, #8BC34A, #689F38)',
+                'linear-gradient(45deg, #FF5722, #E64A19)'
+            ];
+
+            times.forEach((timeStr, index) => {
+                const button = document.createElement('button');
+                button.className = 'saved-time-btn time-btn';
+                button.dataset.time = timeStr;
+                button.textContent = timeStr;
+                button.style.background = colors[index % colors.length];
+                container.appendChild(button);
+            });
+
+            // Re-attach listeners to new buttons
+            attachTimeButtonListeners();
+
+            console.log('✅ Rendered', times.length, 'saved time buttons');
+        }
+
+        // Clean transcript: Keep the first timestamp in each minute (starting from minute 1)
+        // e.g., skip 0:xx, keep first in 1:xx, first in 2:xx, first in 3:xx, etc.
+        function cleanTranscript(text) {
+            if (!text || !text.trim()) {
+                return '';
+            }
+
+            const lines = text.split('\n');
+            const result = [];
+            let currentText = [];
+            let lastKeptMinute = 0; // Start at 0, so we skip minute 0 and start keeping from minute 1
+
+            for (let line of lines) {
+                line = line.trim();
+
+                // Skip empty lines
+                if (!line) {
+                    continue;
+                }
+
+                // Check if line is a timestamp (M:SS or H:MM:SS)
+                const timeMatch = line.match(/^(\d+):(\d+)(?::(\d+))?$/);
+
+                if (timeMatch) {
+                    const hours = timeMatch[3] ? parseInt(timeMatch[1]) : 0;
+                    const minutes = timeMatch[3] ? parseInt(timeMatch[2]) : parseInt(timeMatch[1]);
+                    const totalMinutes = (hours * 60) + minutes;
+
+                    // Keep this timestamp if it's the first one in a new minute (after minute 0)
+                    if (totalMinutes > lastKeptMinute) {
+                        // Save previous text block
+                        if (currentText.length > 0) {
+                            result.push(currentText.join(' '));
+                            currentText = [];
+                        }
+
+                        // Add the timestamp
+                        result.push(line);
+                        lastKeptMinute = totalMinutes;
+                    }
+                    // Otherwise, skip this timestamp (already have one for this minute or it's minute 0)
+                } else {
+                    // This is text content
+                    currentText.push(line);
+                }
+            }
+
+            // Add any remaining text
+            if (currentText.length > 0) {
+                result.push(currentText.join(' '));
+            }
+
+            return result.join('\n');
+        }
+
+        // Loop Timer Functions
+        function getLoopInterval() {
+            const loopIntervalInput = document.getElementById('loopIntervalInput');
+            if (!loopIntervalInput) return 13; // Default if element doesn't exist
+            const inputValue = loopIntervalInput.value.trim();
+            if (inputValue === '' || isNaN(inputValue) || parseInt(inputValue) < 1) {
+                return 13; // Default to 13 seconds
+            }
+            return parseInt(inputValue) + 1; // Add 1 second for reload delay
+        }
+
+        function toggleLoopTimer(intervalSeconds, buttonElement, durationMinutes = 5) {
+            if (loopTimerActive) {
+                // Timer is running - stop it first, then start new one
+                stopLoopTimer();
+            }
+            startLoopTimer(intervalSeconds, buttonElement, durationMinutes);
+        }
+
+        function startLoopTimer(intervalSeconds, buttonElement, durationMinutes = 5) {
+            // Get the loop start time from the input
+            const loopStartTimeInput = document.getElementById('loopStartTime');
+            const timeStr = loopStartTimeInput.value.trim();
+
+            if (!timeStr) {
+                showStatus('Please enter a loop start time', 'error');
+                return;
+            }
+
+            // Parse the time string
+            const baseSeconds = parseTimeToSeconds(timeStr);
+            if (baseSeconds === null) {
+                showStatus('Invalid time format. Use MM:SS or H:MM:SS', 'error');
+                return;
+            }
+
+            if (!currentVideoId && !currentMediaUrl) {
+                showStatus('Please load a video first', 'error');
+                return;
+            }
+
+            loopBaseTime = baseSeconds;
+            loopIntervalSeconds = intervalSeconds;
+            currentLoopButton = buttonElement;
+
+            // Start the timer (5 or 25 minutes)
+            loopTimerActive = true;
+            loopTimerEndTime = Date.now() + (durationMinutes * 60 * 1000);
+            loopNextResetTime = Date.now() + (intervalSeconds * 1000);
+
+            // Update UI - show which timer is running
+            buttonElement.textContent = `🔄 ${durationMinutes} min`;
+            buttonElement.style.background = 'linear-gradient(45deg, #FF9800, #F57C00)';
+
+            const statusDiv = document.getElementById('loopTimerStatus');
+            if (statusDiv) statusDiv.style.display = 'block';
+
+            // Set up display update interval
+            loopTimerInterval = setInterval(updateLoopTimerDisplay, 1000);
+
+            // Schedule first loop reset with fade (fire early to allow fade time)
+            const fadeAdjustedDelay = Math.max(1000, (intervalSeconds * 1000) - FADE_OUT_DURATION_MS);
+            loopResetInterval = setTimeout(resetToLoopTimeWithFade, fadeAdjustedDelay);
+
+            // Jump to the base time immediately
+            jumpToYouTubeTime(loopBaseTime);
+
+            const playTime = intervalSeconds - 1;
+            console.log(`🔄 Loop timer started - will return to ${loopBaseTime}s (${timeStr}) every ${intervalSeconds} seconds (${playTime}s play + 1s reload) for ${durationMinutes} minutes`);
+            showStatus(`Loop to ${timeStr} every ${playTime}s for ${durationMinutes} min`, 'success');
+        }
+
+        function stopLoopTimer() {
+            loopTimerActive = false;
+
+            // Clear intervals/timeouts
+            if (loopTimerInterval) {
+                clearInterval(loopTimerInterval);
+                loopTimerInterval = null;
+            }
+            if (loopResetInterval) {
+                clearTimeout(loopResetInterval);  // Changed to clearTimeout
+                loopResetInterval = null;
+            }
+
+            // Cancel any ongoing fades and restore volume
+            cancelFades();
+
+            // Update UI - Reset all buttons
+            const loop5minBtn = document.getElementById('loopTimer5minBtn');
+            const loop25minBtn = document.getElementById('loopTimer25minBtn');
+
+            if (loop5minBtn) {
+                loop5minBtn.textContent = '▶️ 5 min';
+                loop5minBtn.style.background = 'linear-gradient(45deg, #4CAF50, #45a049)';
+            }
+
+            if (loop25minBtn) {
+                loop25minBtn.textContent = '▶️ 25 min';
+                loop25minBtn.style.background = 'linear-gradient(45deg, #9C27B0, #7B1FA2)';
+            }
+
+            const statusDiv = document.getElementById('loopTimerStatus');
+            if (statusDiv) statusDiv.style.display = 'none';
+
+            // Reset variables
+            loopTimerEndTime = null;
+            loopBaseTime = null;
+            loopNextResetTime = null;
+            loopIntervalSeconds = 13;
+            currentLoopButton = null;
+
+            // Reset page title
+            document.title = originalPageTitle;
+
+            console.log('🔄 Loop timer stopped');
+            showStatus('Loop timer stopped', 'info');
+        }
+
+        // Shared timer state
+        let timerTimeout = null;
+        let timerLoopsRemaining = 0;
+        let timerStartTime = 0;
+        let timerButtonRef = null;
+        let timerDurationMs = 0;
+        let timerTotalLoops = 0;
+        let timerLabel = '';
+        let timerDefaultBg = '';
+
+        // Fade state variables
+        const FADE_OUT_DURATION_MS = 1500;  // 1.5 second fade out
+        const FADE_IN_DURATION_MS = 500;    // 0.5 second fade in
+        let fadeOutInterval = null;
+        let fadeInInterval = null;
+        let fadeOutInProgress = false;
+        let fadeInInProgress = false;
+        let originalVolume = 100;  // YouTube uses 0-100
+
+        // Get current volume from active player
+        function getCurrentVolume() {
+            if (player && typeof player.getVolume === 'function') {
+                return player.getVolume();  // YouTube: 0-100
+            } else if (html5Player) {
+                return html5Player.volume * 100;  // HTML5: 0-1 -> 0-100
+            } else if (audioPlayer) {
+                return audioPlayer.volume * 100;
+            }
+            return 100;
+        }
+
+        // Set volume on active player
+        function setPlayerVolume(vol) {
+            if (player && typeof player.setVolume === 'function') {
+                player.setVolume(vol);  // YouTube: 0-100
+            } else if (html5Player) {
+                html5Player.volume = vol / 100;  // HTML5: 0-1
+            } else if (audioPlayer) {
+                audioPlayer.volume = vol / 100;
+            }
+        }
+
+        // Fade out function - returns a Promise that resolves when fade is complete
+        function fadeOut(durationMs = FADE_OUT_DURATION_MS) {
+            return new Promise((resolve) => {
+                if (fadeOutInProgress) {
+                    resolve();
+                    return;
+                }
+
+                // Cancel any ongoing fade in
+                if (fadeInInterval) {
+                    clearInterval(fadeInInterval);
+                    fadeInInterval = null;
+                    fadeInInProgress = false;
+                }
+
+                fadeOutInProgress = true;
+                const startVolume = getCurrentVolume();
+                originalVolume = startVolume;  // Remember for fade in
+                const steps = 20;
+                const stepDuration = durationMs / steps;
+                const volumeStep = startVolume / steps;
+                let currentStep = 0;
+
+                console.log(`🔉 Fade out started: ${startVolume} -> 0 over ${durationMs}ms`);
+
+                fadeOutInterval = setInterval(() => {
+                    currentStep++;
+                    const newVolume = Math.max(0, startVolume - (volumeStep * currentStep));
+                    setPlayerVolume(newVolume);
+
+                    if (currentStep >= steps || newVolume <= 0) {
+                        clearInterval(fadeOutInterval);
+                        fadeOutInterval = null;
+                        fadeOutInProgress = false;
+                        setPlayerVolume(0);
+                        console.log(`🔇 Fade out complete`);
+                        resolve();
+                    }
+                }, stepDuration);
+            });
+        }
+
+        // Fade in function
+        function fadeIn(durationMs = FADE_IN_DURATION_MS) {
+            if (fadeInInProgress) return;
+
+            // Cancel any ongoing fade out
+            if (fadeOutInterval) {
+                clearInterval(fadeOutInterval);
+                fadeOutInterval = null;
+                fadeOutInProgress = false;
+            }
+
+            fadeInInProgress = true;
+            setPlayerVolume(0);  // Start silent
+            const targetVolume = originalVolume || 100;
+            const steps = 20;
+            const stepDuration = durationMs / steps;
+            const volumeStep = targetVolume / steps;
+            let currentStep = 0;
+
+            console.log(`🔊 Fade in started: 0 -> ${targetVolume} over ${durationMs}ms`);
+
+            fadeInInterval = setInterval(() => {
+                currentStep++;
+                const newVolume = Math.min(targetVolume, volumeStep * currentStep);
+                setPlayerVolume(newVolume);
+
+                if (currentStep >= steps || newVolume >= targetVolume) {
+                    clearInterval(fadeInInterval);
+                    fadeInInterval = null;
+                    fadeInInProgress = false;
+                    setPlayerVolume(targetVolume);
+                    console.log(`🔊 Fade in complete`);
+                }
+            }, stepDuration);
+        }
+
+        // Cancel any ongoing fades and restore volume
+        function cancelFades() {
+            if (fadeOutInterval) {
+                clearInterval(fadeOutInterval);
+                fadeOutInterval = null;
+            }
+            if (fadeInInterval) {
+                clearInterval(fadeInInterval);
+                fadeInInterval = null;
+            }
+            fadeOutInProgress = false;
+            fadeInInProgress = false;
+            setPlayerVolume(originalVolume || 100);
+        }
+
+        function getRepeatCount() {
+            const radio = document.querySelector('input[name="timerRepeat"]:checked');
+            return radio ? parseInt(radio.value) : 1;
+        }
+
+        function resetTimerButton() {
+            if (timerButtonRef) {
+                // Check if it's the custom select dropdown
+                if (timerButtonRef.tagName === 'SELECT') {
+                    timerButtonRef.value = '';
+                    timerButtonRef.style.background = 'linear-gradient(45deg, #E1BEE7, #CE93D8)';
+                } else {
+                    timerButtonRef.textContent = timerLabel;
+                    timerButtonRef.style.background = timerDefaultBg;
+                }
+            }
+        }
+
+        function startTimerLoop() {
+            const currentLoop = timerTotalLoops - timerLoopsRemaining + 1;
+
+            // Update button/select to show progress
+            if (timerButtonRef.tagName === 'SELECT') {
+                // For select, just change background to indicate running
+                timerButtonRef.style.background = 'linear-gradient(45deg, #FF5722, #E64A19)';
+            } else if (timerTotalLoops > 1) {
+                timerButtonRef.textContent = `⏹️ ${currentLoop}/${timerTotalLoops}`;
+                timerButtonRef.style.background = 'linear-gradient(45deg, #FF5722, #E64A19)';
+            } else {
+                timerButtonRef.textContent = '⏹️ Stop';
+                timerButtonRef.style.background = 'linear-gradient(45deg, #FF5722, #E64A19)';
+            }
+
+            if (timerTotalLoops > 1) {
+                showStatus(`Playing ${timerLabel.replace('⏱️ ', '')} loop ${currentLoop} of ${timerTotalLoops}...`, 'info', true);
+            } else {
+                showStatus(`Playing for ${timerLabel.replace('⏱️ ', '')}...`, 'info', true);
+            }
+
+            // Focus the loopStartTime input so user can type a new time while watching
+            const loopInput = document.getElementById('loopStartTime');
+            loopInput.focus();
+            loopInput.select();
+
+            // Calculate when to start fade out (before the loop ends)
+            const fadeStartDelay = Math.max(0, timerDurationMs - FADE_OUT_DURATION_MS);
+
+            // Set timeout to start fade out before the loop ends
+            timerTimeout = setTimeout(function() {
+                // Start fade out, then handle loop completion
+                fadeOut().then(() => {
+                    timerLoopsRemaining--;
+
+                    // Rewind to start
+                    const rewindTime = Math.max(0, timerStartTime);
+                    jumpToYouTubeTime(rewindTime);
+
+                    if (timerLoopsRemaining > 0) {
+                        // More loops - restore volume and restart
+                        fadeIn();
+                        showStatus(`Loop ${timerTotalLoops - timerLoopsRemaining} complete. Starting next...`, 'info', true);
+                        startTimerLoop();
+                    } else {
+                        // All done - pause (volume already at 0 from fade out)
+                        if (player && typeof player.pauseVideo === 'function') {
+                            player.pauseVideo();
+                        } else if (html5Player) {
+                            html5Player.pause();
+                        } else if (audioPlayer) {
+                            audioPlayer.pause();
+                        }
+
+                        // Restore volume for next play
+                        setPlayerVolume(originalVolume || 100);
+
+                        resetTimerButton();
+                        timerTimeout = null;
+
+                        if (timerTotalLoops > 1) {
+                            showStatus(`All ${timerTotalLoops} loops complete! Rewound to ${formatSecondsToTime(rewindTime)}`, 'success');
+                        } else {
+                            showStatus('Paused and rewound to ' + formatSecondsToTime(rewindTime), 'success');
+                        }
+                    }
+                });
+            }, fadeStartDelay);
+        }
+
+        // 30-second play then rewind function
+        function play30sThenRewind(buttonElement) {
+            // If this timer is already running, cancel it
+            if (timerTimeout && timerButtonRef === buttonElement) {
+                clearTimeout(timerTimeout);
+                timerTimeout = null;
+                timerLoopsRemaining = 0;
+                buttonElement.textContent = '⏱️ 30s';
+                buttonElement.style.background = 'linear-gradient(45deg, #00BCD4, #0097A7)';
+                showStatus('30s timer cancelled', 'info');
+                return;
+            }
+
+            // If other timer is running, cancel it first
+            if (timerTimeout) {
+                clearTimeout(timerTimeout);
+                resetTimerButton();
+            }
+
+            // Setup timer
+            timerLabel = '⏱️ 30s';
+            timerDefaultBg = 'linear-gradient(45deg, #00BCD4, #0097A7)';
+            timerDurationMs = 30000;
+            timerTotalLoops = getRepeatCount();
+            timerLoopsRemaining = timerTotalLoops;
+            timerButtonRef = buttonElement;
+
+            // Get start time from loopStartTime input
+            const loopStartTimeInput = document.getElementById('loopStartTime');
+            const timeStr = loopStartTimeInput.value.trim();
+            timerStartTime = parseTimeToSeconds(timeStr);
+            if (timerStartTime === null) {
+                timerStartTime = 0;
+            }
+
+            // Jump to the start time immediately
+            jumpToYouTubeTime(timerStartTime);
+
+            startTimerLoop();
+        }
+
+        // 1-minute play then rewind function
+        function play60sThenRewind(buttonElement) {
+            // If this timer is already running, cancel it
+            if (timerTimeout && timerButtonRef === buttonElement) {
+                clearTimeout(timerTimeout);
+                timerTimeout = null;
+                timerLoopsRemaining = 0;
+                buttonElement.textContent = '⏱️ 1m';
+                buttonElement.style.background = 'linear-gradient(45deg, #8BC34A, #689F38)';
+                showStatus('1min timer cancelled', 'info');
+                return;
+            }
+
+            // If other timer is running, cancel it first
+            if (timerTimeout) {
+                clearTimeout(timerTimeout);
+                resetTimerButton();
+            }
+
+            // Setup timer
+            timerLabel = '⏱️ 1m';
+            timerDefaultBg = 'linear-gradient(45deg, #8BC34A, #689F38)';
+            timerDurationMs = 60000;
+            timerTotalLoops = getRepeatCount();
+            timerLoopsRemaining = timerTotalLoops;
+            timerButtonRef = buttonElement;
+
+            // Get start time from loopStartTime input
+            const loopStartTimeInput = document.getElementById('loopStartTime');
+            const timeStr = loopStartTimeInput.value.trim();
+            timerStartTime = parseTimeToSeconds(timeStr);
+            if (timerStartTime === null) {
+                timerStartTime = 0;
+            }
+
+            // Jump to the start time immediately
+            jumpToYouTubeTime(timerStartTime);
+
+            startTimerLoop();
+        }
+
+        // 3-minute play then rewind function
+        function play3minThenRewind(buttonElement) {
+            // If this timer is already running, cancel it
+            if (timerTimeout && timerButtonRef === buttonElement) {
+                clearTimeout(timerTimeout);
+                timerTimeout = null;
+                timerLoopsRemaining = 0;
+                buttonElement.textContent = '⏱️ 3m';
+                buttonElement.style.background = 'linear-gradient(45deg, #FF9800, #F57C00)';
+                showStatus('3min timer cancelled', 'info');
+                return;
+            }
+
+            // If other timer is running, cancel it first
+            if (timerTimeout) {
+                clearTimeout(timerTimeout);
+                resetTimerButton();
+            }
+
+            // Setup timer
+            timerLabel = '⏱️ 3m';
+            timerDefaultBg = 'linear-gradient(45deg, #FF9800, #F57C00)';
+            timerDurationMs = 180000;
+            timerTotalLoops = getRepeatCount();
+            timerLoopsRemaining = timerTotalLoops;
+            timerButtonRef = buttonElement;
+
+            // Get start time from loopStartTime input
+            const loopStartTimeInput = document.getElementById('loopStartTime');
+            const timeStr = loopStartTimeInput.value.trim();
+            timerStartTime = parseTimeToSeconds(timeStr);
+            if (timerStartTime === null) {
+                timerStartTime = 0;
+            }
+
+            // Jump to the start time immediately
+            jumpToYouTubeTime(timerStartTime);
+
+            startTimerLoop();
+        }
+
+        // Custom duration play then rewind function
+        function playCustomThenRewind(selectElement, seconds) {
+            const customLabel = `⏱️ ${seconds}s`;
+            const customBg = 'linear-gradient(45deg, #9C27B0, #7B1FA2)';
+
+            // If timer is already running, cancel it
+            if (timerTimeout && timerButtonRef === selectElement) {
+                clearTimeout(timerTimeout);
+                timerTimeout = null;
+                timerLoopsRemaining = 0;
+                selectElement.value = '';
+                selectElement.style.background = 'linear-gradient(45deg, #E1BEE7, #CE93D8)';
+                showStatus(`${seconds}s timer cancelled`, 'info');
+                return;
+            }
+
+            // If other timer is running, cancel it first
+            if (timerTimeout) {
+                clearTimeout(timerTimeout);
+                resetTimerButton();
+            }
+
+            // Setup timer
+            timerLabel = customLabel;
+            timerDefaultBg = customBg;
+            timerDurationMs = seconds * 1000;
+            timerTotalLoops = getRepeatCount();
+            timerLoopsRemaining = timerTotalLoops;
+            timerButtonRef = selectElement;
+
+            // Get start time from loopStartTime input
+            const loopStartTimeInput = document.getElementById('loopStartTime');
+            const timeStr = loopStartTimeInput.value.trim();
+            timerStartTime = parseTimeToSeconds(timeStr);
+            if (timerStartTime === null) {
+                timerStartTime = 0;
+            }
+
+            // Jump to the start time immediately
+            jumpToYouTubeTime(timerStartTime);
+
+            startTimerLoop();
+        }
+
+        // New version with fade out/in for smooth loop transitions
+        function resetToLoopTimeWithFade() {
+            if (!loopTimerActive || loopBaseTime === null) {
+                return;
+            }
+
+            // Check if the main timer is still running
+            if (Date.now() >= loopTimerEndTime) {
+                // Timer is ending - fade out, then stop
+                fadeOut().then(() => {
+                    showStatus('Loop timer completed!', 'success');
+                    // Play beep sound when timer completes
+                    beepSound.play().catch(err => console.log('Beep sound failed:', err));
+                    stopLoopTimer();
+                });
+                return;
+            }
+
+            // Fade out, then jump and fade in
+            fadeOut().then(() => {
+                // Jump back to the loop time
+                jumpToYouTubeTime(loopBaseTime);
+
+                // Fade back in
+                fadeIn();
+
+                // Set next reset time for display purposes
+                loopNextResetTime = Date.now() + (loopIntervalSeconds * 1000);
+
+                // Schedule next reset with fade
+                const fadeAdjustedDelay = Math.max(1000, (loopIntervalSeconds * 1000) - FADE_OUT_DURATION_MS);
+                loopResetInterval = setTimeout(resetToLoopTimeWithFade, fadeAdjustedDelay);
+
+                console.log(`🔄 Reset to loop time ${loopBaseTime}s with fade`);
+            });
+        }
+
+        // Original version without fade (kept for compatibility)
+        function resetToLoopTime() {
+            if (!loopTimerActive || loopBaseTime === null) {
+                return;
+            }
+
+            // Check if the main timer is still running
+            if (Date.now() >= loopTimerEndTime) {
+                showStatus('Loop timer completed!', 'success');
+                // Play beep sound when timer completes
+                beepSound.play().catch(err => console.log('Beep sound failed:', err));
+                stopLoopTimer();
+                return;
+            }
+
+            // Jump back to the loop time
+            jumpToYouTubeTime(loopBaseTime);
+
+            // Set next reset time
+            loopNextResetTime = Date.now() + (loopIntervalSeconds * 1000);
+
+            console.log(`🔄 Reset to loop time ${loopBaseTime}s`);
+        }
+
+        function updateLoopTimerDisplay() {
+            if (!loopTimerActive) return;
+
+            const statusDiv = document.getElementById('loopTimerStatus');
+            const remainingTime = loopTimerEndTime - Date.now();
+            const nextResetTime = loopNextResetTime - Date.now();
+
+            if (remainingTime <= 0) {
+                document.title = `✅ Timer Complete! | ${originalPageTitle}`;
+                setTimeout(() => {
+                    document.title = originalPageTitle;
+                }, 3000);
+
+                // Play beep sound when timer completes
+                beepSound.play().catch(err => console.log('Beep sound failed:', err));
+                stopLoopTimer();
+                showStatus('Loop timer completed!', 'success');
+                return;
+            }
+
+            const minutes = Math.floor(remainingTime / 60000);
+            const seconds = Math.floor((remainingTime % 60000) / 1000);
+            const nextResetSeconds = Math.max(0, Math.floor(nextResetTime / 1000));
+
+            const timeRemaining = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            // Update status display
+            if (statusDiv) statusDiv.textContent = `Loop Timer: ${timeRemaining} remaining | Next reset in: ${nextResetSeconds}s`;
+
+            // Update page title
+            document.title = `🔄 ${timeRemaining} left | Next: ${nextResetSeconds}s | ${originalPageTitle}`;
+        }
+
+        // ========== Memorize - Line Reader with TTS Functions ==========
+
+        // Memorize State
+        let memorizeLines = [];
+        let memorizeLastStart = null;
+        let memorizeLastEnd = null;
+        let memorizeIsSpeaking = false;
+        let memorizeUtterance = null;
+
+        // Initialize TTS for Memorize
+        if ('speechSynthesis' in window) {
+            speechSynthesis.addEventListener('voiceschanged', () => {
+                speechSynthesis.getVoices();
+            });
+        }
+
+        // Memorize TTS Toggle
+        const memorizeTtsToggle = document.getElementById('memorize-ttsToggle');
+        const memorizeTtsLabel = document.getElementById('memorize-ttsLabel');
+
+        if (memorizeTtsToggle) {
+            memorizeTtsToggle.addEventListener('change', function() {
+                if (this.checked) {
+                    memorizeTtsLabel.textContent = 'TTS ON';
+                } else {
+                    memorizeTtsLabel.textContent = 'TTS OFF';
+                    memorizeStopSpeaking();
+                }
+            });
+        }
+
+        // Memorize Paste from clipboard
+        async function memorizePasteFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (!text.trim()) {
+                    memorizeShowStatus('Clipboard is empty');
+                    return;
+                }
+
+                memorizeLines = text.split('\n');
+                document.getElementById('memorize-totalLines').textContent = memorizeLines.length;
+
+                memorizeRenderContent(null, null, true);
+                document.getElementById('memorize-toggleDisplayBtn').textContent = 'Hide Content';
+                memorizeShowStatus(`Loaded ${memorizeLines.length} lines from clipboard`);
+            } catch (err) {
+                memorizeShowStatus('Failed to read clipboard. Please allow clipboard access.');
+                console.error('Memorize clipboard error:', err);
+            }
+        }
+
+        // Memorize Render content with line numbers
+        function memorizeRenderContent(highlightStart = null, highlightEnd = null, forceShow = false) {
+            const display = document.getElementById('memorize-contentDisplay');
+            const wasHidden = display.classList.contains('memorize-hidden');
+
+            if (memorizeLines.length === 0) {
+                display.classList.add('memorize-hidden');
+                return;
+            }
+
+            let html = '';
+            memorizeLines.forEach((line, index) => {
+                const lineNum = index + 1;
+                const isHighlighted = highlightStart !== null &&
+                    lineNum >= highlightStart && lineNum <= highlightEnd;
+
+                html += `<div class="memorize-line ${isHighlighted ? 'highlighted' : ''}">
+                    <span class="memorize-line-num">${lineNum}</span>
+                    <span class="memorize-line-text">${memorizeEscapeHtml(line)}</span>
+                </div>`;
+            });
+
+            display.innerHTML = html;
+
+            if (forceShow || !wasHidden) {
+                display.classList.remove('memorize-hidden');
+            }
+        }
+
+        // Memorize Show all lines
+        function memorizeShowAllLines() {
+            const display = document.getElementById('memorize-contentDisplay');
+            display.classList.toggle('full');
+            display.classList.remove('memorize-hidden');
+            document.getElementById('memorize-toggleDisplayBtn').textContent = 'Hide Content';
+            memorizeRenderContent(null, null, true);
+        }
+
+        // Memorize Toggle content display visibility
+        function memorizeToggleContentDisplay() {
+            const display = document.getElementById('memorize-contentDisplay');
+            const btn = document.getElementById('memorize-toggleDisplayBtn');
+
+            if (display.classList.contains('memorize-hidden')) {
+                display.classList.remove('memorize-hidden');
+                btn.textContent = 'Hide Content';
+            } else {
+                display.classList.add('memorize-hidden');
+                btn.textContent = 'Show Content';
+            }
+        }
+
+        // Memorize Clear content
+        function memorizeClearContent() {
+            memorizeLines = [];
+            memorizeLastStart = null;
+            memorizeLastEnd = null;
+            document.getElementById('memorize-totalLines').textContent = '0';
+            document.getElementById('memorize-contentDisplay').classList.add('memorize-hidden');
+            document.getElementById('memorize-selectedText').classList.add('memorize-hidden');
+            document.getElementById('memorize-rangeInput').value = '';
+            memorizeStopSpeaking();
+            memorizeShowStatus('Cleared');
+        }
+
+        // Memorize Read range
+        function memorizeReadRange() {
+            const input = document.getElementById('memorize-rangeInput').value.trim();
+
+            if (!input) {
+                memorizeShowStatus('Enter a range (e.g., 1-4 or 5)');
+                return;
+            }
+
+            // Handle special commands
+            if (input.toLowerCase() === 'r') {
+                memorizeRepeatLast();
+                return;
+            }
+            if (input.toLowerCase() === 'catn') {
+                memorizeShowAllLines();
+                return;
+            }
+            if (input.toLowerCase() === 'clr' || input.toLowerCase() === 'clear') {
+                memorizeClearContent();
+                return;
+            }
+
+            // Parse range
+            let start, end;
+            if (input.includes('-')) {
+                const parts = input.split('-');
+                start = parseInt(parts[0]);
+                end = parseInt(parts[1]);
+            } else {
+                start = parseInt(input);
+                end = start;
+            }
+
+            // Validate
+            if (isNaN(start) || isNaN(end)) {
+                memorizeShowStatus('Invalid format. Use: 3-4 or 5');
+                return;
+            }
+
+            if (start < 1 || end > memorizeLines.length || start > end) {
+                memorizeShowStatus(`Invalid range. Lines available: 1-${memorizeLines.length}`);
+                return;
+            }
+
+            // Save for repeat
+            memorizeLastStart = start;
+            memorizeLastEnd = end;
+
+            // Display and speak
+            memorizeDisplaySelectedLines(start, end);
+        }
+
+        // Memorize Repeat last range
+        function memorizeRepeatLast() {
+            if (memorizeLastStart === null) {
+                memorizeShowStatus('No previous range to repeat');
+                return;
+            }
+            memorizeDisplaySelectedLines(memorizeLastStart, memorizeLastEnd);
+        }
+
+        // Memorize Display selected lines
+        function memorizeDisplaySelectedLines(start, end) {
+            const selectedText = document.getElementById('memorize-selectedText');
+            const selectedLines = memorizeLines.slice(start - 1, end);
+
+            let html = '';
+            selectedLines.forEach((line, index) => {
+                const lineNum = start + index;
+                html += `<div class="memorize-line">
+                    <span class="memorize-line-num">${lineNum}</span>
+                    <span class="memorize-line-text">${memorizeEscapeHtml(line)}</span>
+                </div>`;
+            });
+
+            selectedText.innerHTML = html;
+            selectedText.classList.remove('memorize-hidden');
+
+            // Highlight in main display
+            memorizeRenderContent(start, end);
+
+            // Speak if TTS is on
+            if (memorizeTtsToggle && memorizeTtsToggle.checked) {
+                memorizeSpeakText(selectedLines.join('\n'));
+            }
+
+            memorizeShowStatus(`Reading lines ${start}-${end}`);
+        }
+
+        // Memorize Text-to-Speech
+        function memorizeSpeakText(text) {
+            if (!('speechSynthesis' in window)) {
+                memorizeShowStatus('Text-to-Speech not supported in this browser');
+                return;
+            }
+
+            // Stop any current speech
+            memorizeStopSpeaking();
+
+            memorizeUtterance = new SpeechSynthesisUtterance(text);
+            memorizeUtterance.rate = parseFloat(document.getElementById('memorize-speedSelect').value);
+            memorizeUtterance.pitch = 1;
+            memorizeUtterance.volume = 1;
+            memorizeUtterance.lang = 'en-US';
+
+            // Try to get a good voice
+            const voices = speechSynthesis.getVoices();
+            if (voices.length > 0) {
+                const englishVoice = voices.find(voice =>
+                    (voice.lang.includes('en-') && voice.name.includes('Enhanced')) ||
+                    (voice.lang.includes('en-') && voice.name.includes('Premium')) ||
+                    voice.lang.includes('en-')
+                );
+                if (englishVoice) {
+                    memorizeUtterance.voice = englishVoice;
+                }
+            }
+
+            memorizeUtterance.onstart = () => {
+                memorizeIsSpeaking = true;
+            };
+
+            memorizeUtterance.onend = () => {
+                memorizeIsSpeaking = false;
+                memorizeShowStatus('Finished reading');
+            };
+
+            memorizeUtterance.onerror = (event) => {
+                memorizeIsSpeaking = false;
+                if (event.error !== 'interrupted') {
+                    memorizeShowStatus('Speech error: ' + event.error);
+                }
+            };
+
+            // Small delay to ensure clean start
+            setTimeout(() => {
+                speechSynthesis.speak(memorizeUtterance);
+            }, 100);
+        }
+
+        // Memorize Stop speaking
+        function memorizeStopSpeaking() {
+            if ('speechSynthesis' in window) {
+                speechSynthesis.cancel();
+            }
+            memorizeIsSpeaking = false;
+        }
+
+        // Memorize Show status message
+        function memorizeShowStatus(message) {
+            const status = document.getElementById('memorize-status');
+            status.textContent = message;
+            status.classList.remove('memorize-hidden');
+
+            setTimeout(() => {
+                status.classList.add('memorize-hidden');
+            }, 3000);
+        }
+
+        // Memorize Escape HTML
+        function memorizeEscapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Memorize Keyboard shortcuts
+        const memorizeRangeInput = document.getElementById('memorize-rangeInput');
+        if (memorizeRangeInput) {
+            memorizeRangeInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    memorizeReadRange();
+                }
+            });
+        }
+
+        // ========== Link Extractor & Bilingual Display Functions ==========
+
+        let extractedLink = null;
+        let isSwapped = false;
+        let parsedLines = [];
+
+        async function pasteToExtractor() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('linkExtractorTextarea').value = text;
+                showStatus('Pasted from clipboard', 'success');
+            } catch (err) {
+                console.error('Failed to read clipboard:', err);
+                showStatus('Failed to paste from clipboard', 'error');
+            }
+        }
+
+        function extractLinkFromTextarea() {
+            const content = document.getElementById('linkExtractorTextarea').value.trim();
+            const displayDiv = document.getElementById('extractedLinkDisplay');
+            const anchor = document.getElementById('extractedLinkAnchor');
+
+            if (!content) {
+                extractedLink = null;
+                displayDiv.style.display = 'none';
+                showStatus('No content in textarea', 'error');
+                return null;
+            }
+
+            // Find first URL using regex
+            const urlRegex = /(https?:\/\/[^\s]+)/;
+            const match = content.match(urlRegex);
+
+            if (!match) {
+                extractedLink = null;
+                displayDiv.style.display = 'none';
+                showStatus('No link found in textarea', 'error');
+                return null;
+            }
+
+            // Extract and clean the URL (remove trailing punctuation)
+            extractedLink = match[0].replace(/[.,;!?]+$/, '');
+
+            // Display the extracted link
+            anchor.href = extractedLink;
+            anchor.textContent = extractedLink;
+            displayDiv.style.display = 'block';
+
+            console.log('extractedLink:', extractedLink);
+            showStatus('Link extracted: ' + extractedLink, 'success');
+            return extractedLink;
+        }
+
+        function loadExtractedLink() {
+            // Extract link if not already extracted
+            if (!extractedLink) {
+                extractLinkFromTextarea();
+            }
+
+            if (!extractedLink) {
+                showStatus('No link to load. Extract a link first.', 'error');
+                return;
+            }
+
+            // Extract video ID from the URL
+            const videoId = extractVideoId(extractedLink);
+
+            if (!videoId) {
+                showStatus('Invalid YouTube URL', 'error');
+                return;
+            }
+
+            // Load the video
+            currentVideoId = videoId;
+            switchToPlayer('youtube');
+
+            // Clear the container and create player div
+            const container = document.getElementById('youtubeContainer');
+            container.innerHTML = '<div id="youtube-player"></div>';
+
+            // Wait for API to be ready then create player
+            const initPlayer = () => {
+                if (typeof YT !== 'undefined' && YT.Player) {
+                    player = new YT.Player('youtube-player', {
+                        height: '100%',
+                        width: '100%',
+                        videoId: videoId,
+                        playerVars: {
+                            'enablejsapi': 1,
+                            'rel': 0,
+                            'modestbranding': 1,
+                            'iv_load_policy': 3
+                        },
+                        events: {
+                            'onReady': onPlayerReady,
+                            'onStateChange': onPlayerStateChange
+                        }
+                    });
+                } else {
+                    setTimeout(initPlayer, 500);
+                }
+            };
+
+            initPlayer();
+            showStatus('Loaded extracted video', 'success');
+        }
+
+        function processAndDisplayBilingual() {
+            const content = document.getElementById('linkExtractorTextarea').value.trim();
+            const displaySection = document.getElementById('bilingualDisplaySection');
+            const bilingualContent = document.getElementById('bilingualContent');
+
+            if (!content) {
+                displaySection.style.display = 'none';
+                showStatus('No content to display', 'error');
+                return;
+            }
+
+            const lines = content.split('\n');
+            parsedLines = [];
+            let html = '';
+            let rowNum = 0;
+
+            for (const line of lines) {
+                if (!line.trim()) {
+                    // Empty line - add spacing
+                    html += '<div style="height: 15px;"></div>';
+                    parsedLines.push({ left: '', right: '', isEmpty: true });
+                    continue;
+                }
+
+                // Split by pipe
+                const parts = line.split('|');
+
+                if (parts.length >= 2) {
+                    rowNum++;
+                    // Remove glossed words in parentheses (e.g., "vida(life)" or "conto (tale)")
+                    const left = parts[0].trim().replace(/\s*\([^)]+\)/g, '');
+                    const right = parts.slice(1).join('|').trim();
+
+                    parsedLines.push({ left, right, isEmpty: false });
+
+                    const displayLeft = isSwapped ? right : left;
+                    const displayRight = isSwapped ? left : right;
+
+                    html += `
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 10px 0; border-bottom: 1px solid #eee;">
+                            <div style="padding-right: 15px; border-right: 2px solid #e0e0e0;">
+                                <span style="display: inline-block; background: #2196F3; color: white; width: 22px; height: 22px; border-radius: 50%; text-align: center; line-height: 22px; font-size: 11px; margin-right: 8px; font-weight: bold;">${rowNum}</span>
+                                ${escapeHtml(displayLeft)}
+                            </div>
+                            <div style="padding-left: 15px; color: #555;">${escapeHtml(displayRight)}</div>
+                        </div>
+                    `;
+                } else {
+                    // No pipe found - show on left side only
+                    rowNum++;
+                    const content = line.trim();
+                    parsedLines.push({ left: content, right: '', isEmpty: false });
+
+                    html += `
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 10px 0; border-bottom: 1px solid #eee;">
+                            <div style="padding-right: 15px; border-right: 2px solid #e0e0e0;">
+                                <span style="display: inline-block; background: #2196F3; color: white; width: 22px; height: 22px; border-radius: 50%; text-align: center; line-height: 22px; font-size: 11px; margin-right: 8px; font-weight: bold;">${rowNum}</span>
+                                ${escapeHtml(content)}
+                            </div>
+                            <div style="padding-left: 15px; color: #999; font-style: italic;">(no translation)</div>
+                        </div>
+                    `;
+                }
+            }
+
+            bilingualContent.innerHTML = html || '<div style="color: #999; text-align: center; padding: 20px;">No piped text found</div>';
+            displaySection.style.display = 'block';
+            showStatus('Displayed ' + rowNum + ' lines', 'success');
+        }
+
+        function swapLanguages() {
+            isSwapped = !isSwapped;
+
+            // Swap headers
+            const leftHeader = document.getElementById('leftHeader');
+            const rightHeader = document.getElementById('rightHeader');
+
+            if (isSwapped) {
+                leftHeader.textContent = 'English';
+                rightHeader.textContent = 'Portuguese';
+            } else {
+                leftHeader.textContent = 'Portuguese';
+                rightHeader.textContent = 'English';
+            }
+
+            // Re-process to update display
+            if (parsedLines.length > 0) {
+                processAndDisplayBilingual();
+            }
+
+            showStatus('Languages swapped', 'success');
+        }
+
+        function clearExtractor() {
+            document.getElementById('linkExtractorTextarea').value = '';
+            document.getElementById('extractedLinkDisplay').style.display = 'none';
+            document.getElementById('bilingualDisplaySection').style.display = 'none';
+            extractedLink = null;
+            parsedLines = [];
+            showStatus('Extractor cleared', 'info');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Global access to extractedLink
+        window.getExtractedLink = () => extractedLink;
+
+        // ========== METRONOME FUNCTIONALITY ==========
+        window.AudioContext = window.AudioContext || window.webkitAudioContext;
+        let metronomeContext = null;
+        let metronomeTimer = null;
+        let metronomeNoteCount = 0;
+        let metronomeCounting = false;
+        let metronomeAccentPitch = 380;
+        let metronomeOffBeatPitch = 200;
+        let metronomeCurTime = 0.0;
+        let metronomeDelta = 0;
+
+        // Initialize audio context on first user interaction
+        function initMetronomeContext() {
+            if (!metronomeContext) {
+                metronomeContext = new AudioContext();
+            }
+        }
+
+        function metronomeSchedule() {
+            while (metronomeCurTime < metronomeContext.currentTime + 0.1) {
+                metronomePlayNote(metronomeCurTime);
+                metronomeUpdateTime();
+            }
+            metronomeTimer = window.setTimeout(metronomeSchedule, 100);
+        }
+
+        function metronomeUpdateTime() {
+            const bpm = parseInt(document.getElementById('metronomeBpm').value, 10) || 60;
+            metronomeCurTime += 60.0 / bpm;
+            metronomeNoteCount++;
+        }
+
+        function metronomePlayNote(t) {
+            const note = metronomeContext.createOscillator();
+            const beat = parseInt(document.getElementById('metronomeBeat').value, 10) || 4;
+
+            if (metronomeNoteCount >= beat) {
+                metronomeNoteCount = 0;
+            }
+
+            const dots = document.querySelectorAll('#metronomeCounter .dot');
+            const currentDot = dots[metronomeNoteCount];
+
+            if (currentDot && currentDot.classList.contains('active')) {
+                note.frequency.value = metronomeAccentPitch;
+            } else {
+                note.frequency.value = metronomeOffBeatPitch;
+            }
+
+            note.connect(metronomeContext.destination);
+            note.start(t);
+            note.stop(t + 0.05);
+
+            // Visual feedback
+            dots.forEach(dot => {
+                dot.style.transform = '';
+                dot.style.background = dot.classList.contains('active') ? '#5ec2ff' : '#FFF';
+            });
+
+            if (currentDot) {
+                currentDot.style.transform = 'translateY(-8px)';
+                currentDot.style.background = '#F75454';
+            }
+        }
+
+        function metronomeCountDown() {
+            const timerInput = document.getElementById('metronomeTimer');
+            const currentVal = parseInt(timerInput.value, 10);
+
+            if (currentVal > 0 && metronomeCounting) {
+                timerInput.value = currentVal - 1;
+                window.setTimeout(metronomeCountDown, 1000);
+            } else {
+                document.getElementById('metronomePlay').click();
+                timerInput.value = 60;
+            }
+        }
+
+        // Update dots when beat changes
+        function updateMetronomeDots() {
+            const counter = document.getElementById('metronomeCounter');
+            const beat = parseInt(document.getElementById('metronomeBeat').value, 10) || 4;
+            counter.innerHTML = '';
+
+            for (let i = 0; i < beat; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'dot' + (i === 0 ? ' active' : '');
+                dot.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                });
+                counter.appendChild(dot);
+            }
+        }
+
+        // Metronome Event listeners
+        document.getElementById('metronomeBeat').addEventListener('change', updateMetronomeDots);
+
+        document.querySelector('.bpm-minus').addEventListener('click', function() {
+            const input = document.getElementById('metronomeBpm');
+            input.value = Math.max(1, parseInt(input.value, 10) - 1);
+        });
+
+        document.querySelector('.bpm-plus').addEventListener('click', function() {
+            const input = document.getElementById('metronomeBpm');
+            input.value = parseInt(input.value, 10) + 1;
+        });
+
+        document.getElementById('metronomeTap').addEventListener('click', function() {
+            const d = new Date();
+            const temp = d.getTime();
+            const bpm = Math.ceil(60000 / (temp - metronomeDelta));
+            if (bpm > 0 && bpm < 300) {
+                document.getElementById('metronomeBpm').value = bpm;
+            }
+            metronomeDelta = temp;
+        });
+
+        document.getElementById('metronomePlay').addEventListener('click', function() {
+            initMetronomeContext();
+
+            if (this.dataset.playing === 'true') {
+                // Stop
+                metronomeCounting = false;
+                window.clearTimeout(metronomeTimer);
+                document.querySelectorAll('#metronomeCounter .dot').forEach(dot => {
+                    dot.style.transform = '';
+                    dot.style.background = dot.classList.contains('active') ? '#5ec2ff' : '#FFF';
+                });
+                this.dataset.playing = 'false';
+                this.textContent = 'Play';
+                this.style.background = '#D6E26D';
+                this.style.color = '#3d430d';
+            } else {
+                // Play
+                if (document.getElementById('metronome-timer-check').checked) {
+                    metronomeCounting = true;
+                    metronomeCountDown();
+                }
+
+                metronomeCurTime = metronomeContext.currentTime;
+                metronomeNoteCount = parseInt(document.getElementById('metronomeBeat').value, 10) || 4;
+                metronomeSchedule();
+
+                this.dataset.playing = 'true';
+                this.textContent = 'Stop';
+                this.style.background = '#F75454';
+                this.style.color = '#FFF';
+            }
+        });
+
+        // Click dots to toggle accent
+        document.querySelectorAll('#metronomeCounter .dot').forEach(dot => {
+            dot.addEventListener('click', function() {
+                this.classList.toggle('active');
+            });
+        });
+    </script>
+</body>
+</html>
+
+
