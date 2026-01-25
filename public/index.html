@@ -740,7 +740,9 @@
             <!-- Current Time Display (below video players) -->
             <div class="current-time-display" id="currentTimeDisplay" style="display: none;">
                 <label style="color: #FFC107; font-weight: 600; font-size: 12px;">🔄 Loop to:</label>
-                <input type="text" id="loopStartTime" class="time-input" placeholder="0:01" value="0:01" style="width: 65px; text-align: center; font-size: 12px; padding: 4px 6px; margin-right: 15px;">
+                <button id="loopTimeMinus30" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-right: 4px;">−30s</button>
+                <input type="text" id="loopStartTime" class="time-input" placeholder="0:01" value="0:01" style="width: 65px; text-align: center; font-size: 12px; padding: 4px 6px;">
+                <button id="loopTimePlus30" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-left: 4px; margin-right: 15px;">+30s</button>
                 <span class="time-label">Current Time:</span>
                 <span class="time-value" id="currentTimeValue">--:--</span>
                 <button id="timer30sBtn" class="jump-btn" style="background: linear-gradient(45deg, #00BCD4, #0097A7); margin-left: 15px; padding: 6px 12px; font-size: 12px;">⏱️ 30s</button>
@@ -2111,6 +2113,14 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                 }
             });
 
+            // Loop time adjustment buttons (-30s and +30s)
+            document.getElementById('loopTimeMinus30').addEventListener('click', function() {
+                adjustLoopTime(-30);
+            });
+            document.getElementById('loopTimePlus30').addEventListener('click', function() {
+                adjustLoopTime(30);
+            });
+
             // Clear Saved Times button (in the Saved Times section)
             document.getElementById('clearSavedTimesBtn').addEventListener('click', function() {
                 clearAllTimes();
@@ -2344,6 +2354,44 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
             } catch (err) {
                 console.error('Failed to copy:', err);
                 showStatus('Failed to copy shareable link', 'error');
+            }
+        }
+
+        // Adjust loop time by a given number of seconds
+        function adjustLoopTime(deltaSeconds) {
+            const loopStartTimeInput = document.getElementById('loopStartTime');
+            const currentValue = loopStartTimeInput.value.trim();
+
+            // If empty, treat as 0:00
+            let currentSeconds = 0;
+            if (currentValue) {
+                currentSeconds = parseTimeToSeconds(currentValue);
+                if (currentSeconds === null) currentSeconds = 0;
+            }
+
+            // Add delta, but don't go below 0
+            let newSeconds = Math.max(0, currentSeconds + deltaSeconds);
+
+            // Format back to time string
+            const hours = Math.floor(newSeconds / 3600);
+            const minutes = Math.floor((newSeconds % 3600) / 60);
+            const seconds = Math.floor(newSeconds % 60);
+
+            let timeStr;
+            if (hours > 0) {
+                timeStr = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            } else {
+                timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            loopStartTimeInput.value = timeStr;
+
+            // Update timer states if active
+            if (loopTimerActive) {
+                loopBaseTime = newSeconds;
+            }
+            if (timerTimeout) {
+                timerStartTime = newSeconds;
             }
         }
 
