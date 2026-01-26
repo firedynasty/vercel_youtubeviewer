@@ -833,6 +833,25 @@
                 <button id="getYTTitleBtn" class="paste-btn" onclick="getAndAppendYouTubeTitle()" style="display: none; background: linear-gradient(45deg, #E91E63, #C2185B);">🎬 Get YT Title</button>
             </div>
             <div id="cloud-section" style="background: #2a2a2a; color: #fff; padding: 15px; border-radius: 8px; font-size: 1em; line-height: 1.6; white-space: pre-wrap; min-height: 100px;"></div>
+
+            <!-- Show Formatted Links Button -->
+            <div style="margin-top: 15px; text-align: center;">
+                <button id="toggleFormattedLinksBtn" class="paste-btn" onclick="toggleFormattedLinks()" style="background: linear-gradient(45deg, #9C27B0, #7B1FA2);">📋 Show Formatted Links</button>
+            </div>
+
+            <!-- Formatted Links Display (hidden by default) -->
+            <div id="formatted-links-container" style="display: none; margin-top: 15px; position: relative;">
+                <div style="background: #1e1e1e; color: #d4d4d4; padding: 15px; padding-top: 40px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.9em; line-height: 1.5; white-space: pre-wrap; border: 1px solid #444; position: relative;">
+                    <button id="copyFormattedLinksBtn" onclick="copyFormattedLinks()" style="position: absolute; top: 8px; right: 8px; padding: 6px 10px; border: none; border-radius: 4px; background: #2196F3; color: white; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 5px;" title="Copy to clipboard">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        <span>Copy</span>
+                    </button>
+                    <div id="formatted-links-content"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1390,6 +1409,75 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
 
             // Append to cloud and save
             await appendToCloudAndSave(title, url);
+        }
+
+        // ============================================
+        // FORMATTED LINKS DISPLAY FUNCTIONS
+        // ============================================
+
+        // Generate formatted text from cloud links content
+        function generateFormattedLinks() {
+            if (!cloudLinksContent.trim()) {
+                return '(No links available)';
+            }
+
+            const entries = parseCloudLinks();
+            const formatted = entries.map(entry => {
+                if (entry.name) {
+                    return `${entry.name}\n${entry.url}`;
+                }
+                return entry.url;
+            }).join('\n');
+
+            return formatted;
+        }
+
+        // Toggle the formatted links display
+        function toggleFormattedLinks() {
+            const container = document.getElementById('formatted-links-container');
+            const content = document.getElementById('formatted-links-content');
+            const btn = document.getElementById('toggleFormattedLinksBtn');
+
+            if (container.style.display === 'none') {
+                // Show the formatted links
+                const formatted = generateFormattedLinks();
+                content.textContent = formatted;
+                container.style.display = 'block';
+                btn.textContent = '📋 Hide Formatted Links';
+                btn.style.background = 'linear-gradient(45deg, #E91E63, #C2185B)';
+            } else {
+                // Hide the formatted links
+                container.style.display = 'none';
+                btn.textContent = '📋 Show Formatted Links';
+                btn.style.background = 'linear-gradient(45deg, #9C27B0, #7B1FA2)';
+            }
+        }
+
+        // Copy formatted links to clipboard
+        async function copyFormattedLinks() {
+            const content = document.getElementById('formatted-links-content');
+            const copyBtn = document.getElementById('copyFormattedLinksBtn');
+            const originalHTML = copyBtn.innerHTML;
+
+            try {
+                await navigator.clipboard.writeText(content.textContent);
+                copyBtn.innerHTML = '<span>✓ Copied!</span>';
+                copyBtn.style.background = '#4CAF50';
+
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalHTML;
+                    copyBtn.style.background = '#2196F3';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                copyBtn.innerHTML = '<span>❌ Error</span>';
+                copyBtn.style.background = '#f44336';
+
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalHTML;
+                    copyBtn.style.background = '#2196F3';
+                }, 2000);
+            }
         }
 
         // Auto-load cloud links on page load
