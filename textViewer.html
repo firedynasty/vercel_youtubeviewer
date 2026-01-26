@@ -769,6 +769,17 @@
         <!-- Status Display -->
         <div class="status-display" id="statusDisplay"></div>
 
+        <!-- Birds Audio Player -->
+        <div id="birdsAudioSection" style="background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%); color: white; padding: 12px 15px; border-radius: 8px; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <span style="font-weight: bold;">🐦 Birds Chirping</span>
+                <button id="birdsPlayBtn" onclick="toggleBirdsAudio()" style="background: rgba(255,255,255,0.2); border: 1px solid white; color: white; padding: 5px 12px; border-radius: 4px; cursor: pointer;">▶ Play</button>
+            </div>
+            <audio id="birdsAudioElement" preload="metadata" controls style="width: 100%; height: 35px;"
+                src="https://www.dropbox.com/scl/fi/2jzvla2xykyz2auqvcrcv/birds_chirping_23mins.mp3?rlkey=re6qjmobia9cr2ttf8nkmwkv1&st=96hl9yvs&raw=1">
+            </audio>
+        </div>
+
         <!-- Compact Metronome -->
         <div class="metronome-section">
             <div class="counter" id="metronomeCounter">
@@ -951,65 +962,55 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                         this.style.background = 'transparent';
                     });
 
-                    // Click to copy and auto-load
-                    span.addEventListener('click', async function() {
+                    // Click to load video directly (bypasses clipboard)
+                    span.addEventListener('click', function() {
                         const url = this.dataset.url;
                         const autoTimerToggle = document.getElementById('autoTimerToggle');
 
-                        try {
-                            await navigator.clipboard.writeText(url);
+                        // Visual feedback
+                        const originalText = this.textContent;
+                        const originalColor = this.style.color;
+                        this.textContent = '✅ Loading...';
+                        this.style.color = '#4CAF50';
 
-                            // Visual feedback
-                            const originalText = this.textContent;
-                            const originalColor = this.style.color;
-                            this.textContent = '✅ Loading...';
-                            this.style.color = '#4CAF50';
+                        setTimeout(() => {
+                            this.textContent = originalText;
+                            this.style.color = originalColor;
+                        }, 1500);
 
-                            setTimeout(() => {
-                                this.textContent = originalText;
-                                this.style.color = originalColor;
-                            }, 1500);
+                        // Load video directly
+                        loadMediaFromUrl(url);
 
-                            // Check if Auto Timer mode is ON
-                            if (autoTimerToggle && autoTimerToggle.checked) {
-                                // Select the 50 times radio button
-                                const radio50 = document.querySelector('input[name="timerRepeat"][value="50"]');
-                                if (radio50) {
-                                    radio50.checked = true;
-                                }
-
-                                // Extract timestamp from URL (e.g., &t=958s or ?t=505s)
-                                let startSeconds = 0;
-                                const timeMatch = url.match(/[?&]t=(\d+)s?/);
-                                if (timeMatch) {
-                                    startSeconds = parseInt(timeMatch[1], 10);
-                                }
-
-                                // Auto-trigger the "Paste Media + Times" button
-                                document.getElementById('loadYouTubeClipboardBtn').click();
-
-                                // Wait for video to load, then seek to timestamp and start timer
-                                setTimeout(() => {
-                                    // Jump to the extracted timestamp
-                                    if (startSeconds > 0) {
-                                        jumpToYouTubeTime(startSeconds);
-                                    }
-
-                                    // Trigger the 30s timer button after a short delay
-                                    setTimeout(() => {
-                                        const timer30sBtn = document.getElementById('timer30sBtn');
-                                        if (timer30sBtn) {
-                                            timer30sBtn.click();
-                                        }
-                                    }, 500);
-                                }, 1500);
-                            } else {
-                                // Normal mode - just load the video
-                                document.getElementById('loadYouTubeClipboardBtn').click();
+                        // Check if Auto Timer mode is ON
+                        if (autoTimerToggle && autoTimerToggle.checked) {
+                            // Select the 50 times radio button
+                            const radio50 = document.querySelector('input[name="timerRepeat"][value="50"]');
+                            if (radio50) {
+                                radio50.checked = true;
                             }
-                        } catch (err) {
-                            console.error('Failed to copy URL:', err);
-                            showStatus('Failed to copy URL', 'error');
+
+                            // Extract timestamp from URL (e.g., &t=958s or ?t=505s)
+                            let startSeconds = 0;
+                            const timeMatch = url.match(/[?&]t=(\d+)s?/);
+                            if (timeMatch) {
+                                startSeconds = parseInt(timeMatch[1], 10);
+                            }
+
+                            // Wait for video to load, then seek to timestamp and start timer
+                            setTimeout(() => {
+                                // Jump to the extracted timestamp
+                                if (startSeconds > 0) {
+                                    jumpToYouTubeTime(startSeconds);
+                                }
+
+                                // Trigger the 30s timer button after a short delay
+                                setTimeout(() => {
+                                    const timer30sBtn = document.getElementById('timer30sBtn');
+                                    if (timer30sBtn) {
+                                        timer30sBtn.click();
+                                    }
+                                }, 500);
+                            }, 1500);
                         }
                     });
 
@@ -1177,19 +1178,18 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                 urlSpan.textContent = entry.url.length > 50 ? entry.url.substring(0, 50) + '...' : entry.url;
                 urlSpan.style.cssText = 'flex: 1; color: #64B5F6; text-decoration: underline; cursor: pointer; min-width: 150px;';
                 urlSpan.title = entry.url;
-                urlSpan.addEventListener('click', async function() {
-                    try {
-                        await navigator.clipboard.writeText(entry.url);
-                        urlSpan.textContent = '✅ Loading...';
-                        urlSpan.style.color = '#4CAF50';
-                        document.getElementById('loadYouTubeClipboardBtn').click();
-                        setTimeout(() => {
-                            urlSpan.textContent = entry.url.length > 50 ? entry.url.substring(0, 50) + '...' : entry.url;
-                            urlSpan.style.color = '#64B5F6';
-                        }, 1500);
-                    } catch (err) {
-                        console.error('Failed to copy URL:', err);
-                    }
+                urlSpan.addEventListener('click', function() {
+                    // Visual feedback
+                    urlSpan.textContent = '✅ Loading...';
+                    urlSpan.style.color = '#4CAF50';
+
+                    // Load video directly (bypasses clipboard)
+                    loadMediaFromUrl(entry.url);
+
+                    setTimeout(() => {
+                        urlSpan.textContent = entry.url.length > 50 ? entry.url.substring(0, 50) + '...' : entry.url;
+                        urlSpan.style.color = '#64B5F6';
+                    }, 1500);
                 });
                 urlSpan.addEventListener('mouseenter', function() {
                     this.style.color = '#FF6B35';
@@ -1394,6 +1394,56 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
             setTimeout(() => {
                 loadLinksFromCloud();
             }, 1000);
+        });
+
+        // ===== Birds Audio Player (LG TV compatible) =====
+        function toggleBirdsAudio() {
+            const audio = document.getElementById('birdsAudioElement');
+            const btn = document.getElementById('birdsPlayBtn');
+
+            if (audio.paused) {
+                // LG TV fix: force load before playing
+                audio.load();
+                audio.volume = 1.0;
+                audio.muted = false;
+
+                audio.play().then(() => {
+                    btn.textContent = '⏸ Pause';
+                }).catch(err => {
+                    console.error('Audio play failed:', err);
+                    // Try reload on error
+                    audio.load();
+                    setTimeout(() => {
+                        audio.play();
+                        btn.textContent = '⏸ Pause';
+                    }, 500);
+                });
+            } else {
+                audio.pause();
+                btn.textContent = '▶ Play';
+            }
+        }
+
+        // Initialize birds audio on page load (LG TV fix)
+        document.addEventListener('DOMContentLoaded', function() {
+            const birdsAudio = document.getElementById('birdsAudioElement');
+            if (birdsAudio) {
+                // Force initial load for LG TV compatibility
+                birdsAudio.load();
+                birdsAudio.volume = 1.0;
+                birdsAudio.muted = false;
+
+                // Sync button state with audio events
+                birdsAudio.addEventListener('play', () => {
+                    document.getElementById('birdsPlayBtn').textContent = '⏸ Pause';
+                });
+                birdsAudio.addEventListener('pause', () => {
+                    document.getElementById('birdsPlayBtn').textContent = '▶ Play';
+                });
+                birdsAudio.addEventListener('ended', () => {
+                    document.getElementById('birdsPlayBtn').textContent = '▶ Play';
+                });
+            }
         });
     </script>
     <script>
@@ -2496,6 +2546,65 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
         }
 
         // Clipboard Loading Function (handles YouTube, Dropbox, and direct media URLs)
+        // Direct video loading function (bypasses clipboard)
+        function loadMediaFromUrl(url) {
+            if (!url || !url.trim()) {
+                showStatus('No URL provided', 'error');
+                return;
+            }
+
+            const mediaType = detectMediaType(url);
+
+            if (!mediaType) {
+                showStatus('Not a valid media URL (YouTube, MP4, MP3, etc.)', 'error');
+                return;
+            }
+
+            if (mediaType === 'youtube') {
+                const videoId = extractVideoId(url);
+                if (!videoId) {
+                    showStatus('Could not extract YouTube video ID', 'error');
+                    return;
+                }
+
+                currentVideoId = videoId;
+                switchToPlayer('youtube');
+
+                const container = document.getElementById('youtubeContainer');
+                container.innerHTML = '<div id="youtube-player"></div>';
+
+                const initPlayer = () => {
+                    if (typeof YT !== 'undefined' && YT.Player) {
+                        player = new YT.Player('youtube-player', {
+                            height: '100%',
+                            width: '100%',
+                            videoId: videoId,
+                            playerVars: {
+                                'enablejsapi': 1,
+                                'rel': 0,
+                                'modestbranding': 1,
+                                'iv_load_policy': 3
+                            },
+                            events: {
+                                'onReady': onPlayerReady,
+                                'onStateChange': onPlayerStateChange
+                            }
+                        });
+                    } else {
+                        setTimeout(initPlayer, 500);
+                    }
+                };
+
+                initPlayer();
+            } else {
+                switchToPlayer(mediaType);
+                loadHTML5Media(url, mediaType);
+            }
+
+            console.log('🎬 DEBUG: Loaded media directly:', url, 'type:', mediaType);
+            showStatus(`${mediaType === 'audio' ? 'Audio' : 'Video'} loaded!`, 'success');
+        }
+
         async function loadYouTubeFromClipboard() {
             try {
                 const text = await navigator.clipboard.readText();
