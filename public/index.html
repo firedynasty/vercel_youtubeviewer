@@ -780,6 +780,36 @@
             background: #c0392b;
             transform: scale(1.1);
         }
+        .pagination-auto-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 15px;
+            padding: 6px 12px;
+            background: rgba(50, 50, 50, 0.9);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 107, 53, 0.3);
+        }
+        .pagination-auto-label {
+            font-size: 12px;
+            color: #aaa;
+            font-weight: 500;
+        }
+        .pagination-timer {
+            font-size: 13px;
+            color: #4CAF50;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: center;
+        }
+        .pagination-timer.active {
+            color: #FF6B35;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
         body.pagination-active {
             padding-top: 70px;
         }
@@ -793,6 +823,15 @@
         <div id="linkLabelDisplay" class="link-label-display">Link Name</div>
         <span id="linkCounter" class="link-counter">1/1</span>
         <button class="link-go-btn" onclick="loadCurrentPaginationLink()">Go</button>
+        <!-- Auto-play toggle -->
+        <div class="pagination-auto-group">
+            <span class="pagination-auto-label">Auto</span>
+            <label class="switch">
+                <input type="checkbox" id="paginationAutoPlay">
+                <span class="slider-toggle"></span>
+            </label>
+            <span id="paginationTimer" class="pagination-timer"></span>
+        </div>
         <button class="link-close-btn" onclick="closePagination()">✕</button>
     </div>
 
@@ -1123,6 +1162,11 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
             navbar.classList.add('active');
             document.body.classList.add('pagination-active');
             updatePaginationDisplay();
+            // Start auto-play timer if enabled
+            const toggle = document.getElementById('paginationAutoPlay');
+            if (toggle && toggle.checked) {
+                startAutoPlayTimer();
+            }
         }
 
         // Close pagination
@@ -1132,6 +1176,7 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
             document.body.classList.remove('pagination-active');
             allPaginationLinks = [];
             currentPaginationIndex = 0;
+            stopAutoPlayTimer();
         }
 
         // Update the pagination display
@@ -1155,6 +1200,7 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
             if (currentPaginationIndex > 0) {
                 currentPaginationIndex--;
                 updatePaginationDisplay();
+                resetAutoPlayTimer();
             }
         }
 
@@ -1163,15 +1209,190 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
             if (currentPaginationIndex < allPaginationLinks.length - 1) {
                 currentPaginationIndex++;
                 updatePaginationDisplay();
+                resetAutoPlayTimer();
             }
         }
 
         // Load the current pagination link (auto-embed)
-        function loadCurrentPaginationLink() {
+        // autoplay: if true, video will start playing automatically
+        function loadCurrentPaginationLink(autoplay = false) {
             if (allPaginationLinks.length === 0) return;
             const current = allPaginationLinks[currentPaginationIndex];
-            loadMediaFromUrl(current.url);
+            loadMediaFromUrl(current.url, autoplay);
         }
+
+        // ============ AUTO-PLAY TIMER ============
+        const AUTO_ADVANCE_SECONDS = 180; // 3 minutes
+        const FADE_OUT_SECONDS = 3; // Start fading 3 seconds before switch
+        let autoPlayTimerId = null;
+        let autoPlayTimeRemaining = AUTO_ADVANCE_SECONDS;
+        let isFadingOut = false;
+        let fadeIntervalId = null;
+
+        // Load saved preference
+        function loadAutoPlayPreference() {
+            const saved = localStorage.getItem('paginationAutoPlay');
+            const toggle = document.getElementById('paginationAutoPlay');
+            if (toggle && saved === 'true') {
+                toggle.checked = true;
+                startAutoPlayTimer();
+            }
+        }
+
+        // Format time as M:SS
+        function formatAutoPlayTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Fade out volume over duration (in ms)
+        function fadeOutVolume(duration = 2500, callback) {
+            if (isFadingOut) return;
+            isFadingOut = true;
+
+            let currentVolume = 100;
+            const steps = 25;
+            const stepTime = duration / steps;
+            const volumeStep = 100 / steps;
+
+            // Try to get current volume from YouTube player
+            if (player && typeof player.getVolume === 'function') {
+                try {
+                    currentVolume = player.getVolume();
+                } catch (e) {}
+            }
+
+            const initialVolume = currentVolume;
+
+            fadeIntervalId = setInterval(() => {
+                currentVolume -= (initialVolume / steps);
+                if (currentVolume <= 0) {
+                    currentVolume = 0;
+                    clearInterval(fadeIntervalId);
+                    fadeIntervalId = null;
+                    isFadingOut = false;
+                    if (callback) callback();
+                }
+
+                // Set volume on YouTube player
+                if (player && typeof player.setVolume === 'function') {
+                    try {
+                        player.setVolume(Math.max(0, currentVolume));
+                    } catch (e) {}
+                }
+
+                // Set volume on HTML5 video/audio
+                const html5Video = document.querySelector('#html5Container video');
+                const html5Audio = document.querySelector('#html5Container audio');
+                if (html5Video) html5Video.volume = Math.max(0, currentVolume / 100);
+                if (html5Audio) html5Audio.volume = Math.max(0, currentVolume / 100);
+            }, stepTime);
+        }
+
+        // Reset volume to full
+        function resetVolume() {
+            if (fadeIntervalId) {
+                clearInterval(fadeIntervalId);
+                fadeIntervalId = null;
+            }
+            isFadingOut = false;
+
+            if (player && typeof player.setVolume === 'function') {
+                try {
+                    player.setVolume(100);
+                } catch (e) {}
+            }
+        }
+
+        // Update timer display
+        function updateTimerDisplay() {
+            const timerEl = document.getElementById('paginationTimer');
+            const toggle = document.getElementById('paginationAutoPlay');
+            if (!timerEl) return;
+
+            if (toggle && toggle.checked && currentPaginationIndex < allPaginationLinks.length - 1) {
+                timerEl.textContent = formatAutoPlayTime(autoPlayTimeRemaining);
+                timerEl.classList.add('active');
+            } else {
+                timerEl.textContent = '';
+                timerEl.classList.remove('active');
+            }
+        }
+
+        // Start the auto-play timer
+        function startAutoPlayTimer() {
+            stopAutoPlayTimer();
+            autoPlayTimeRemaining = AUTO_ADVANCE_SECONDS;
+            updateTimerDisplay();
+            resetVolume();
+
+            const toggle = document.getElementById('paginationAutoPlay');
+            if (!toggle || !toggle.checked) return;
+            if (currentPaginationIndex >= allPaginationLinks.length - 1) return;
+
+            autoPlayTimerId = setInterval(() => {
+                autoPlayTimeRemaining--;
+                updateTimerDisplay();
+
+                // Start fading out volume 3 seconds before switch
+                if (autoPlayTimeRemaining === FADE_OUT_SECONDS && !isFadingOut) {
+                    fadeOutVolume(2500);
+                }
+
+                if (autoPlayTimeRemaining <= 0) {
+                    // Time's up - advance to next and load it with autoplay
+                    paginationNext();
+                    loadCurrentPaginationLink(true); // true = autoplay
+                    autoPlayTimeRemaining = AUTO_ADVANCE_SECONDS;
+                    resetVolume();
+
+                    // Stop if we reached the last link
+                    if (currentPaginationIndex >= allPaginationLinks.length - 1) {
+                        stopAutoPlayTimer();
+                    }
+                }
+            }, 1000);
+        }
+
+        // Stop the auto-play timer
+        function stopAutoPlayTimer() {
+            if (autoPlayTimerId) {
+                clearInterval(autoPlayTimerId);
+                autoPlayTimerId = null;
+            }
+            if (fadeIntervalId) {
+                clearInterval(fadeIntervalId);
+                fadeIntervalId = null;
+            }
+            isFadingOut = false;
+            updateTimerDisplay();
+        }
+
+        // Reset timer when navigating
+        function resetAutoPlayTimer() {
+            const toggle = document.getElementById('paginationAutoPlay');
+            if (toggle && toggle.checked) {
+                startAutoPlayTimer();
+            }
+        }
+
+        // Auto-play toggle event listener
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggle = document.getElementById('paginationAutoPlay');
+            if (toggle) {
+                toggle.addEventListener('change', function() {
+                    localStorage.setItem('paginationAutoPlay', this.checked.toString());
+                    if (this.checked) {
+                        startAutoPlayTimer();
+                    } else {
+                        stopAutoPlayTimer();
+                    }
+                });
+            }
+            loadAutoPlayPreference();
+        });
+        // ============ END AUTO-PLAY TIMER ============
 
         // Keyboard navigation for pagination
         document.addEventListener('keydown', function(e) {
@@ -2925,7 +3146,8 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
         }
 
         // Direct video loading function (bypasses clipboard)
-        function loadMediaFromUrl(url) {
+        // autoplay parameter: if true, video will start playing automatically
+        function loadMediaFromUrl(url, autoplay = false) {
             if (!url || !url.trim()) {
                 showStatus('No URL provided', 'error');
                 return;
@@ -2961,7 +3183,8 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                                 'enablejsapi': 1,
                                 'rel': 0,
                                 'modestbranding': 1,
-                                'iv_load_policy': 3
+                                'iv_load_policy': 3,
+                                'autoplay': autoplay ? 1 : 0
                             },
                             events: {
                                 'onReady': onPlayerReady,
@@ -2976,7 +3199,7 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                 initPlayer();
             } else {
                 switchToPlayer(mediaType);
-                loadHTML5Media(url, mediaType);
+                loadHTML5Media(url, mediaType, autoplay);
             }
 
             console.log('🎬 DEBUG: Loaded media directly:', url, 'type:', mediaType);
@@ -3207,7 +3430,7 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
         }
 
         // Load HTML5 media (video or audio)
-        function loadHTML5Media(url, type) {
+        function loadHTML5Media(url, type, autoplay = false) {
             const mediaElement = type === 'audio' ? audioPlayer : html5Player;
 
             if (!mediaElement) {
@@ -3223,7 +3446,11 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                 playerReady = true;
                 document.getElementById('currentTimeDisplay').style.display = 'flex';
                 console.log('🎬 Media loaded:', url);
-            });
+                // Autoplay if requested
+                if (autoplay) {
+                    mediaElement.play().catch(e => console.log('Autoplay prevented:', e));
+                }
+            }, { once: true });
 
             mediaElement.addEventListener('play', () => {
                 startTimeUpdates();

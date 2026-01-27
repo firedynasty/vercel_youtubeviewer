@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTTS } from './hooks/useTTS';
+import LinkPagination, { parseLinksFromText } from './components/LinkPagination';
 
 const DocumentEditor = () => {
   // Files state
@@ -21,6 +22,11 @@ const DocumentEditor = () => {
   const [showSidebar, setShowSidebar] = useState(false);
   const [appendCodeInput, setAppendCodeInput] = useState('');
 
+  // Link pagination state
+  const [parsedLinks, setParsedLinks] = useState([]);
+  const [linkPaginationActive, setLinkPaginationActive] = useState(false);
+  const [currentLinkIndex, setCurrentLinkIndex] = useState(0);
+
   const textareaRef = useRef(null);
 
   // TTS hook
@@ -35,6 +41,20 @@ const DocumentEditor = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFile, files[selectedFile]]);
+
+  // Parse links when file content changes
+  useEffect(() => {
+    if (selectedFile && files[selectedFile]) {
+      const links = parseLinksFromText(files[selectedFile]);
+      console.log('Parsed links:', links);
+      setParsedLinks(links);
+    } else {
+      setParsedLinks([]);
+    }
+    // Reset pagination when file changes
+    setLinkPaginationActive(false);
+    setCurrentLinkIndex(0);
+  }, [selectedFile, files]);
 
   // Check if running on localhost
   const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -416,6 +436,17 @@ const DocumentEditor = () => {
 
   return (
     <div style={styles.container}>
+      {/* Link Pagination Navbar */}
+      {linkPaginationActive && parsedLinks.length > 0 && (
+        <LinkPagination
+          links={parsedLinks}
+          currentIndex={currentLinkIndex}
+          onIndexChange={setCurrentLinkIndex}
+          onClose={() => setLinkPaginationActive(false)}
+          darkMode={darkMode}
+        />
+      )}
+
       {/* Sidebar */}
       {showSidebar && (
         <div style={{
@@ -745,6 +776,16 @@ const DocumentEditor = () => {
               }}
               placeholder="Start typing..."
             />
+          ) : linkPaginationActive && parsedLinks.length > 0 ? (
+            // Embed view with pagination
+            <div style={styles.embedContainer}>
+              <iframe
+                src={parsedLinks[currentLinkIndex].url}
+                title={parsedLinks[currentLinkIndex].label}
+                style={styles.embedIframe}
+                sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+              />
+            </div>
           ) : (
             <div style={{
               ...styles.viewerContent,
@@ -753,7 +794,34 @@ const DocumentEditor = () => {
               color: darkMode ? '#e0e0e0' : '#333',
             }}>
               <pre style={styles.preContent}>
-                {files[selectedFile] || '(empty file)'}
+                {(files[selectedFile] || '(empty file)').split('\n').map((line, lineIndex) => {
+                  const trimmed = line.trim();
+                  // Check if line is a link
+                  const commaMatch = trimmed.match(/^(https?:\/\/[^\s,]+)\s*,\s*(.+)$/i);
+                  const urlMatch = trimmed.match(/^(https?:\/\/[^\s]+)$/i);
+
+                  if (commaMatch || urlMatch) {
+                    const linkIndex = parsedLinks.findIndex(l =>
+                      l.url === (commaMatch ? commaMatch[1] : urlMatch[1])
+                    );
+                    return (
+                      <span
+                        key={lineIndex}
+                        style={styles.textLink}
+                        onClick={() => {
+                          console.log('Link clicked! Index:', linkIndex, 'URL:', commaMatch ? commaMatch[1] : urlMatch[1]);
+                          if (linkIndex >= 0) {
+                            setCurrentLinkIndex(linkIndex);
+                            setLinkPaginationActive(true);
+                          }
+                        }}
+                      >
+                        {line}{'\n'}
+                      </span>
+                    );
+                  }
+                  return <span key={lineIndex}>{line}{'\n'}</span>;
+                })}
               </pre>
             </div>
           )}
@@ -1106,6 +1174,32 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Link pagination styles
+  textLink: {
+    color: '#3b82f6',
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    background: 'rgba(59, 130, 246, 0.1)',
+    padding: '2px 4px',
+    borderRadius: '3px',
+    display: 'inline-block',
+  },
+  embedContainer: {
+    width: '100%',
+    height: '100%',
+    paddingTop: '50px', // Space for navbar
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  embedIframe: {
+    width: '100%',
+    height: '100%',
+    border: 'none',
+    borderRadius: '8px',
+    background: 'white',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
   },
 };
 
