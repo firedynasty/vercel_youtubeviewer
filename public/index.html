@@ -678,9 +678,125 @@
             left: 6px;
             transform: skewX(-30deg);
         }
+
+        /* Link Pagination Navbar */
+        .link-pagination-navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            z-index: 9999;
+            padding: 0 20px;
+            border-bottom: 3px solid #FF6B35;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.5);
+        }
+        .link-pagination-navbar.active {
+            display: flex;
+        }
+        .link-nav-btn {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(45deg, #FF6B35, #F7931E);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .link-nav-btn:hover:not(:disabled) {
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.5);
+        }
+        .link-nav-btn:disabled {
+            background: #555;
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .link-label-display {
+            min-width: 200px;
+            max-width: 500px;
+            padding: 10px 20px;
+            background: linear-gradient(45deg, #FF6B35, #F7931E);
+            color: white;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .link-counter {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            font-weight: bold;
+            min-width: 50px;
+            text-align: center;
+        }
+        .link-go-btn {
+            padding: 8px 20px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            margin-left: 10px;
+        }
+        .link-go-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.5);
+        }
+        .link-close-btn {
+            width: 32px;
+            height: 32px;
+            background: #e74c3c;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 10px;
+        }
+        .link-close-btn:hover {
+            background: #c0392b;
+            transform: scale(1.1);
+        }
+        body.pagination-active {
+            padding-top: 70px;
+        }
     </style>
 </head>
 <body>
+    <!-- Link Pagination Navbar -->
+    <div id="linkPaginationNavbar" class="link-pagination-navbar">
+        <button id="linkPrevBtn" class="link-nav-btn" onclick="paginationPrev()">◀</button>
+        <div id="linkLabelDisplay" class="link-label-display">Link Name</div>
+        <span id="linkCounter" class="link-counter">1/1</span>
+        <button id="linkNextBtn" class="link-nav-btn" onclick="paginationNext()">▶</button>
+        <button class="link-go-btn" onclick="loadCurrentPaginationLink()">Go</button>
+        <button class="link-close-btn" onclick="closePagination()">✕</button>
+    </div>
+
     <div class="container">
         <h1>Youtube Viewer (and Looper)</h1>
 
@@ -956,6 +1072,130 @@ https://www.youtube.com/watch?v=MQosgoHNHRE
 Classic Gospel
 https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIjn4q&index=1`;
 
+        // ============================================
+        // LINK PAGINATION SYSTEM
+        // ============================================
+        let allPaginationLinks = [];  // Array of {name, url}
+        let currentPaginationIndex = 0;
+        let paginationSource = null;  // 'text' or 'cloud'
+
+        // Parse links from text-section template
+        function parseTextSectionLinks() {
+            const lines = template_for_copy_and_paste.split('\n').map(l => l.trim()).filter(l => l);
+            const entries = [];
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                if (line.startsWith('http://') || line.startsWith('https://')) {
+                    entries.push({ name: '', url: line });
+                } else if (i + 1 < lines.length) {
+                    const nextLine = lines[i + 1];
+                    if (nextLine.startsWith('http://') || nextLine.startsWith('https://')) {
+                        entries.push({ name: line, url: nextLine });
+                        i++;
+                    }
+                }
+            }
+            return entries;
+        }
+
+        // Activate pagination from text-section
+        function activatePaginationFromText(clickedUrl) {
+            allPaginationLinks = parseTextSectionLinks();
+            paginationSource = 'text';
+            const index = allPaginationLinks.findIndex(l => l.url === clickedUrl);
+            currentPaginationIndex = index >= 0 ? index : 0;
+            showPagination();
+            loadCurrentPaginationLink();
+        }
+
+        // Activate pagination from cloud-section
+        function activatePaginationFromCloud(clickedUrl) {
+            allPaginationLinks = parseCloudLinks();
+            paginationSource = 'cloud';
+            const index = allPaginationLinks.findIndex(l => l.url === clickedUrl);
+            currentPaginationIndex = index >= 0 ? index : 0;
+            showPagination();
+            loadCurrentPaginationLink();
+        }
+
+        // Show the pagination navbar
+        function showPagination() {
+            const navbar = document.getElementById('linkPaginationNavbar');
+            navbar.classList.add('active');
+            document.body.classList.add('pagination-active');
+            updatePaginationDisplay();
+        }
+
+        // Close pagination
+        function closePagination() {
+            const navbar = document.getElementById('linkPaginationNavbar');
+            navbar.classList.remove('active');
+            document.body.classList.remove('pagination-active');
+            allPaginationLinks = [];
+            currentPaginationIndex = 0;
+        }
+
+        // Update the pagination display
+        function updatePaginationDisplay() {
+            if (allPaginationLinks.length === 0) return;
+            const current = allPaginationLinks[currentPaginationIndex];
+            const labelDisplay = document.getElementById('linkLabelDisplay');
+            const counter = document.getElementById('linkCounter');
+            const prevBtn = document.getElementById('linkPrevBtn');
+            const nextBtn = document.getElementById('linkNextBtn');
+
+            labelDisplay.textContent = current.name || current.url;
+            labelDisplay.title = current.url;
+            counter.textContent = `${currentPaginationIndex + 1}/${allPaginationLinks.length}`;
+            prevBtn.disabled = currentPaginationIndex === 0;
+            nextBtn.disabled = currentPaginationIndex === allPaginationLinks.length - 1;
+        }
+
+        // Navigate to previous link (display only, no embed)
+        function paginationPrev() {
+            if (currentPaginationIndex > 0) {
+                currentPaginationIndex--;
+                updatePaginationDisplay();
+            }
+        }
+
+        // Navigate to next link (display only, no embed)
+        function paginationNext() {
+            if (currentPaginationIndex < allPaginationLinks.length - 1) {
+                currentPaginationIndex++;
+                updatePaginationDisplay();
+            }
+        }
+
+        // Load the current pagination link (auto-embed)
+        function loadCurrentPaginationLink() {
+            if (allPaginationLinks.length === 0) return;
+            const current = allPaginationLinks[currentPaginationIndex];
+            loadMediaFromUrl(current.url);
+        }
+
+        // Keyboard navigation for pagination
+        document.addEventListener('keydown', function(e) {
+            const navbar = document.getElementById('linkPaginationNavbar');
+            if (!navbar.classList.contains('active')) return;
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                paginationPrev();
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                paginationNext();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                loadCurrentPaginationLink();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                closePagination();
+            }
+        });
+        // ============================================
+
         // Populate text-section with clickable URLs
         function populateQuickLinks() {
             const container = document.getElementById('text-section');
@@ -984,7 +1224,7 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                         this.style.background = 'transparent';
                     });
 
-                    // Click to load video directly (bypasses clipboard)
+                    // Click to activate pagination and load video
                     span.addEventListener('click', function() {
                         const url = this.dataset.url;
                         const autoTimerToggle = document.getElementById('autoTimerToggle');
@@ -1000,8 +1240,8 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                             this.style.color = originalColor;
                         }, 1500);
 
-                        // Load video directly
-                        loadMediaFromUrl(url);
+                        // Activate pagination and load video
+                        activatePaginationFromText(url);
 
                         // Check if Auto Timer mode is ON
                         if (autoTimerToggle && autoTimerToggle.checked) {
@@ -1205,8 +1445,8 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                     urlSpan.textContent = '✅ Loading...';
                     urlSpan.style.color = '#4CAF50';
 
-                    // Load video directly (bypasses clipboard)
-                    loadMediaFromUrl(entry.url);
+                    // Activate pagination and load video
+                    activatePaginationFromCloud(entry.url);
 
                     setTimeout(() => {
                         urlSpan.textContent = entry.url.length > 50 ? entry.url.substring(0, 50) + '...' : entry.url;
