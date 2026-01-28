@@ -847,7 +847,17 @@
             <button id="cleanTranscriptBtn" class="jump-btn" style="background: linear-gradient(45deg, #2196F3, #1976D2); font-size: 13px; padding: 10px 19px;">✨ Clean & Copy Transcript</button>
             <button id="restoreTranscriptBtn" class="jump-btn" style="background: linear-gradient(45deg, #00BCD4, #0097A7); font-size: 13px; padding: 10px 19px;">📄 Restore Prev. Pasted Trans.</button>
             <a id="textProcessorLink" href="processedText.html" class="jump-btn" style="background: linear-gradient(45deg, #E91E63, #C2185B); font-size: 13px; padding: 10px 19px; text-decoration: none; color: white;">📝 Text Processor</a>
-            <button id="cloudNotesBtn" class="jump-btn" style="background: linear-gradient(45deg, #607D8B, #455A64); font-size: 13px; padding: 10px 19px;">☁️ Cloud Notes</button>
+            <button id="cloudNotesToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #607D8B, #455A64); font-size: 13px; padding: 10px 19px;">☁️ Cloud Notes</button>
+        </div>
+
+        <!-- Inline Cloud Notes Section -->
+        <div id="cloudNotesSection" style="display:none; margin-bottom: 20px; padding: 15px; background: #1a1a2e; border-radius: 8px; border: 1px solid #333;">
+            <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center; flex-wrap: wrap;">
+                <button id="cloudNotesLoadBtn" class="jump-btn" style="background: linear-gradient(45deg, #2196F3, #1976D2); font-size: 12px; padding: 8px 16px;">📥 Load</button>
+                <button id="cloudNotesSaveBtn" class="jump-btn" style="background: linear-gradient(45deg, #4CAF50, #45a049); font-size: 12px; padding: 8px 16px;">💾 Save</button>
+                <span id="cloudNotesStatus" style="font-size: 13px; color: #888;"></span>
+            </div>
+            <textarea id="cloudNotesTextarea" placeholder="Your cloud notes..." style="width: 100%; min-height: 150px; padding: 12px; font-size: 14px; border: 2px solid #333; border-radius: 6px; background: #2a2a2a; color: #fff; resize: vertical; outline: none; font-family: inherit; line-height: 1.5; box-sizing: border-box;"></textarea>
         </div>
 
         <!-- Time Controls -->
@@ -4844,77 +4854,46 @@
         });
 
         // ============================================
-        // CLOUD NOTES FEATURE
+        // CLOUD NOTES FEATURE (Inline)
         // ============================================
         const CLOUD_NOTES_CODE = '123';
         const CLOUD_NOTES_FILENAME = 'cloud_notes.txt';
-        let cloudNotesUnlocked = false;
-        let cloudNotesContent = '';
 
-        document.getElementById('cloudNotesBtn').addEventListener('click', function() {
-            document.getElementById('cloudNotesModal').style.display = 'flex';
-            document.getElementById('cloudNotesCodeInput').focus();
+        // Toggle section visibility
+        document.getElementById('cloudNotesToggleBtn').addEventListener('click', function() {
+            const section = document.getElementById('cloudNotesSection');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
         });
 
-        document.getElementById('cloudNotesCloseBtn').addEventListener('click', closeCloudNotes);
-        document.getElementById('cloudNotesOverlay').addEventListener('click', closeCloudNotes);
-
-        function closeCloudNotes() {
-            document.getElementById('cloudNotesModal').style.display = 'none';
-            cloudNotesUnlocked = false;
-            document.getElementById('cloudNotesCodeInput').value = '';
-            document.getElementById('cloudNotesTextarea').value = '';
-            document.getElementById('cloudNotesStatus').textContent = '';
-            document.getElementById('cloudNotesUnlockSection').style.display = 'block';
-            document.getElementById('cloudNotesEditSection').style.display = 'none';
-        }
-
-        document.getElementById('cloudNotesUnlockBtn').addEventListener('click', unlockCloudNotes);
-        document.getElementById('cloudNotesCodeInput').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') unlockCloudNotes();
-        });
-
-        async function unlockCloudNotes() {
-            const code = document.getElementById('cloudNotesCodeInput').value;
+        // Load from cloud
+        document.getElementById('cloudNotesLoadBtn').addEventListener('click', async function() {
             const statusEl = document.getElementById('cloudNotesStatus');
-
-            if (code !== CLOUD_NOTES_CODE) {
-                statusEl.textContent = 'Invalid code';
-                statusEl.style.color = '#f44336';
-                return;
-            }
+            const textarea = document.getElementById('cloudNotesTextarea');
 
             statusEl.textContent = 'Loading...';
             statusEl.style.color = '#FFC107';
 
             try {
-                const response = await fetch('/api/files', {
-                    method: 'GET'
-                });
-
+                const response = await fetch('/api/files');
                 if (response.ok) {
                     const data = await response.json();
-                    cloudNotesContent = data.files?.[CLOUD_NOTES_FILENAME] || '';
-                    document.getElementById('cloudNotesTextarea').value = cloudNotesContent;
-                    cloudNotesUnlocked = true;
-                    document.getElementById('cloudNotesUnlockSection').style.display = 'none';
-                    document.getElementById('cloudNotesEditSection').style.display = 'block';
-                    statusEl.textContent = '';
+                    textarea.value = data.files?.[CLOUD_NOTES_FILENAME] || '';
+                    statusEl.textContent = 'Loaded ✓';
+                    statusEl.style.color = '#4CAF50';
                 } else {
-                    statusEl.textContent = 'Failed to load';
+                    statusEl.textContent = 'Load failed';
                     statusEl.style.color = '#f44336';
                 }
             } catch (err) {
                 statusEl.textContent = 'Error: ' + err.message;
                 statusEl.style.color = '#f44336';
             }
-        }
+        });
 
+        // Save to cloud
         document.getElementById('cloudNotesSaveBtn').addEventListener('click', async function() {
-            if (!cloudNotesUnlocked) return;
-
-            const content = document.getElementById('cloudNotesTextarea').value;
             const statusEl = document.getElementById('cloudNotesStatus');
+            const textarea = document.getElementById('cloudNotesTextarea');
             const saveBtn = this;
 
             saveBtn.disabled = true;
@@ -4924,12 +4903,10 @@
             try {
                 const response = await fetch('/api/files', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         filename: CLOUD_NOTES_FILENAME,
-                        content: content,
+                        content: textarea.value,
                         accessCode: CLOUD_NOTES_CODE
                     })
                 });
@@ -4937,7 +4914,6 @@
                 if (response.ok) {
                     statusEl.textContent = 'Saved ✓';
                     statusEl.style.color = '#4CAF50';
-                    cloudNotesContent = content;
                 } else {
                     statusEl.textContent = 'Save failed';
                     statusEl.style.color = '#f44336';
@@ -4950,28 +4926,6 @@
             }
         });
     </script>
-
-    <!-- Cloud Notes Modal -->
-    <div id="cloudNotesModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:10000;align-items:center;justify-content:center;">
-        <div id="cloudNotesOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);"></div>
-        <div style="position:relative;background:#1a1a2e;border-radius:12px;padding:25px;width:90%;max-width:600px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,0.5);">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
-                <h3 style="margin:0;color:#fff;font-size:1.3rem;">☁️ Cloud Notes</h3>
-                <span id="cloudNotesStatus" style="font-size:14px;"></span>
-                <button id="cloudNotesCloseBtn" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:0 5px;">×</button>
-            </div>
-
-            <div id="cloudNotesUnlockSection" style="display:flex;gap:10px;align-items:center;">
-                <input id="cloudNotesCodeInput" type="password" placeholder="Enter code" style="flex:1;padding:10px 15px;font-size:14px;border:2px solid #ff9800;border-radius:6px;background:#2a2a2a;color:#fff;outline:none;">
-                <button id="cloudNotesUnlockBtn" style="padding:10px 20px;background:linear-gradient(45deg,#ff9800,#f57c00);border:none;border-radius:6px;color:#fff;font-size:14px;cursor:pointer;">🔓 Unlock</button>
-            </div>
-
-            <div id="cloudNotesEditSection" style="display:none;flex:1;flex-direction:column;gap:15px;">
-                <textarea id="cloudNotesTextarea" placeholder="Write your notes here..." style="flex:1;min-height:300px;padding:15px;font-size:14px;border:2px solid #333;border-radius:8px;background:#2a2a2a;color:#fff;resize:vertical;outline:none;font-family:inherit;line-height:1.5;"></textarea>
-                <button id="cloudNotesSaveBtn" style="padding:12px 25px;background:linear-gradient(45deg,#4CAF50,#45a049);border:none;border-radius:6px;color:#fff;font-size:14px;cursor:pointer;align-self:flex-end;">💾 Save</button>
-            </div>
-        </div>
-    </div>
 </body>
 </html>
 
