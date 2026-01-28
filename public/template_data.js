@@ -17,12 +17,6 @@ calmMusic
 https://www.youtube.com/watch?v=f-i_nJLG2Is
 codingMusic
 https://www.youtube.com/watch?v=M5QY2_8704o
-shedeur
-https://www.youtube.com/watch?v=cKBpf3Sz-8U
-camOnSheduer
-https://www.youtube.com/watch?v=XeDuDqFI2c0
-patrickOnShedeur
-https://www.youtube.com/watch?v=ZV3jB6bVS54
 chillWorkMusic
 https://www.youtube.com/watch?v=dheqxLgg-qg&t=958s
 indianMusic
@@ -79,8 +73,10 @@ mozart requieum
 https://www.youtube.com/watch?v=Dp2SJN4UiE4
 SSoly Pianist
 https://www.youtube.com/watch?v=Enakoe8xTg8
-NF
-https://www.youtube.com/watch?v=Kyng8yYwvwg?0:01
+NF Fear
+https://www.youtube.com/watch?v=Kyng8yYwvwg
+NF Hope
+https://www.youtube.com/watch?v=tsmPCi7NKrg
 Mozart effect
 https://www.youtube.com/watch?v=qT9neos0YDk&t=890s
 Hebrew Genesis 1
