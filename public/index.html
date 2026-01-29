@@ -823,6 +823,7 @@
         <div id="linkLabelDisplay" class="link-label-display">Link Name</div>
         <span id="linkCounter" class="link-counter">1/1</span>
         <button class="link-go-btn" onclick="goAutoplayPending = true; loadCurrentPaginationLink()">Go</button>
+        <button id="navbarLoopBtn" class="link-go-btn" style="background:linear-gradient(45deg,#9C27B0,#7B1FA2);margin-left:5px;padding:8px 14px;" onclick="toggleNavbarLoop(this)">🔁 3</button>
         <!-- Auto-play toggle -->
         <div class="pagination-auto-group">
             <span class="pagination-auto-label">Auto</span>
@@ -1138,6 +1139,47 @@
             if (allPaginationLinks.length === 0) return;
             const current = allPaginationLinks[currentPaginationIndex];
             loadMediaFromUrl(current.url, autoplay);
+        }
+
+        function toggleNavbarLoop(buttonElement) {
+            // If this timer is already running, cancel it
+            if (timerTimeout && timerButtonRef === buttonElement) {
+                clearTimeout(timerTimeout);
+                timerTimeout = null;
+                timerLoopsRemaining = 0;
+                buttonElement.textContent = '🔁 3';
+                buttonElement.style.background = 'linear-gradient(45deg, #9C27B0, #7B1FA2)';
+                showStatus('Navbar loop cancelled', 'info');
+                return;
+            }
+
+            // If another timer is running, cancel it first
+            if (timerTimeout) {
+                clearTimeout(timerTimeout);
+                resetTimerButton();
+            }
+
+            // Set repeat radio to 8
+            const radio8 = document.querySelector('input[name="timerRepeat"][value="8"]');
+            if (radio8) radio8.checked = true;
+
+            // Setup 3-minute timer with 8 repeats
+            timerLabel = '🔁 3';
+            timerDefaultBg = 'linear-gradient(45deg, #9C27B0, #7B1FA2)';
+            timerDurationMs = 180000;
+            timerTotalLoops = 8;
+            timerLoopsRemaining = 8;
+            timerButtonRef = buttonElement;
+
+            // Get start time from loopStartTime input
+            const loopStartTimeInput = document.getElementById('loopStartTime');
+            const timeStr = loopStartTimeInput.value.trim();
+            timerStartTime = parseTimeToSeconds(timeStr);
+            if (timerStartTime === null) timerStartTime = 0;
+
+            // Jump to start and begin looping
+            jumpToYouTubeTime(timerStartTime);
+            startTimerLoop();
         }
 
         // ============ AUTO-PLAY TIMER ============
