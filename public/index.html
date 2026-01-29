@@ -1916,7 +1916,7 @@
             if (audio.paused) {
                 // LG TV fix: force load before playing
                 audio.load();
-                audio.volume = 1.0;
+                audio.volume = 0.3;
                 audio.muted = false;
 
                 audio.play().then(() => {
@@ -1942,7 +1942,7 @@
             if (birdsAudio) {
                 // Force initial load for LG TV compatibility
                 birdsAudio.load();
-                birdsAudio.volume = 1.0;
+                birdsAudio.volume = 0.3;
                 birdsAudio.muted = false;
 
                 // Sync button state with audio events
