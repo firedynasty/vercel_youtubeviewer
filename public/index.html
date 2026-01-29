@@ -822,7 +822,7 @@
         <button id="linkPrevBtn" class="link-nav-btn" onclick="paginationPrev()">◀</button>
         <div id="linkLabelDisplay" class="link-label-display">Link Name</div>
         <span id="linkCounter" class="link-counter">1/1</span>
-        <button class="link-go-btn" onclick="loadCurrentPaginationLink()">Go</button>
+        <button class="link-go-btn" onclick="goAutoplayPending = true; loadCurrentPaginationLink()">Go</button>
         <!-- Auto-play toggle -->
         <div class="pagination-auto-group">
             <span class="pagination-auto-label">Auto</span>
@@ -1034,6 +1034,7 @@
         let allPaginationLinks = [];  // Array of {name, url}
         let currentPaginationIndex = 0;
         let paginationSource = null;  // 'text' or 'cloud'
+        let goAutoplayPending = false; // Flag: Go button was clicked, play after embed + 500ms
 
         // Parse links from text-section template
         function parseTextSectionLinks() {
@@ -2210,6 +2211,16 @@
             console.log('🎬 DEBUG: Player object:', event.target);
             playerReady = true;
             player = event.target;
+
+            // Go button: delay 500ms then auto-play
+            if (goAutoplayPending) {
+                goAutoplayPending = false;
+                setTimeout(() => {
+                    if (player && typeof player.playVideo === 'function') {
+                        player.playVideo();
+                    }
+                }, 500);
+            }
 
             startTimeUpdates();
             document.getElementById('currentTimeDisplay').style.display = 'flex';
