@@ -2960,13 +2960,23 @@
 
             loopStartTimeInput.value = timeStr;
 
-            // Update timer states if active
+            // Cancel any running timer
+            if (timerTimeout) {
+                clearTimeout(timerTimeout);
+                cancelFades();
+                resetTimerButton();
+                timerTimeout = null;
+                timerLoopsRemaining = 0;
+                showStatus('Timer cancelled', 'info');
+            }
+
+            // Update loop timer state if active
             if (loopTimerActive) {
                 loopBaseTime = newSeconds;
             }
-            if (timerTimeout) {
-                timerStartTime = newSeconds;
-            }
+
+            // Jump to the new time
+            jumpToYouTubeTime(newSeconds);
         }
 
         // Parse time string to seconds (supports "1:23" or "83")
