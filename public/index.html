@@ -953,6 +953,9 @@
                     <span style="opacity: 0.9;">Timers:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">q</code>=15s <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">w</code>=30s
                 </div>
                 <div>
+                    <span style="opacity: 0.9;">Match:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">\</code>
+                </div>
+                <div>
                     <span style="opacity: 0.9;">±30s:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">o</code> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">p</code>
                 </div>
                 <div>
@@ -2689,6 +2692,31 @@
                 }
             });
 
+            // Enter key in loopStartTime input - jump to that time
+            document.getElementById('loopStartTime').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    const timeStr = this.value.trim();
+                    const seconds = parseTimeToSeconds(timeStr);
+                    if (seconds !== null) {
+                        // Cancel any running timer
+                        if (timerTimeout) {
+                            clearTimeout(timerTimeout);
+                            cancelFades();
+                            resetTimerButton();
+                            timerTimeout = null;
+                            timerLoopsRemaining = 0;
+                        }
+                        // Update loop timer state if active
+                        if (loopTimerActive) {
+                            loopBaseTime = seconds;
+                        }
+                        // Jump to the time
+                        jumpToYouTubeTime(seconds);
+                        showStatus('Jumped to ' + timeStr, 'success');
+                    }
+                }
+            });
+
             // Loop time adjustment buttons (-30s and +30s)
             document.getElementById('loopTimeMinus30').addEventListener('click', function() {
                 adjustLoopTime(-30);
@@ -2752,10 +2780,17 @@
                     } else if (e.key === 'p') {
                         adjustLoopTime(30);
                     } else if (e.key === '[') {
-                        adjustLoopTime(5);
-                    } else if (e.key === ']') {
                         adjustLoopTime(-5);
+                    } else if (e.key === ']') {
+                        adjustLoopTime(5);
                     }
+                    return;
+                }
+
+                // Match key: \ (backslash)
+                if (e.key === '\\') {
+                    e.preventDefault();
+                    document.getElementById('loopTimeMatch')?.click();
                     return;
                 }
             });
