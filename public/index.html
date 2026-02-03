@@ -945,6 +945,25 @@
         <!-- Status Display -->
         <div class="status-display" id="statusDisplay"></div>
 
+        <!-- Keyboard Shortcuts Info -->
+        <div style="background: linear-gradient(135deg, #673ab7 0%, #512da8 100%); color: white; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; font-size: 11px; line-height: 1.6;">
+            <div style="font-weight: bold; margin-bottom: 6px; font-size: 12px;">⌨️ Keyboard Shortcuts</div>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <div>
+                    <span style="opacity: 0.9;">Timers:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">1</code>=15s <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">2</code>=30s <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">3</code>=1m <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">4</code>=3m
+                </div>
+                <div>
+                    <span style="opacity: 0.9;">Match:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">Enter</code>
+                </div>
+                <div>
+                    <span style="opacity: 0.9;">±5s:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">←</code> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">→</code>
+                </div>
+                <div>
+                    <span style="opacity: 0.9;">±30s:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">[</code> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">]</code>
+                </div>
+            </div>
+        </div>
+
         <!-- Birds Audio Player -->
         <div id="birdsAudioSection" style="background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%); color: white; padding: 12px 15px; border-radius: 8px; margin-bottom: 10px;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
@@ -2732,6 +2751,48 @@
 
             // Saved time buttons - jump directly to those times
             attachTimeButtonListeners();
+
+            // Keyboard shortcuts for timer controls and navigation
+            document.addEventListener('keydown', function(e) {
+                // Ignore if user is typing in an input/textarea/select
+                if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+
+                // Prevent default for all our shortcuts
+                const shortcutKeys = ['1', '2', '3', '4', 'Enter', 'ArrowLeft', 'ArrowRight', '[', ']'];
+                if (shortcutKeys.includes(e.key)) {
+                    e.preventDefault();
+                }
+
+                // Timer buttons: 1=15s, 2=30s, 3=1m, 4=3m
+                if (e.key === '1') {
+                    document.getElementById('timer15sBtn')?.click();
+                } else if (e.key === '2') {
+                    document.getElementById('timer30sBtn')?.click();
+                } else if (e.key === '3') {
+                    document.getElementById('timer60sBtn')?.click();
+                } else if (e.key === '4') {
+                    document.getElementById('timer3minBtn')?.click();
+                }
+
+                // Match button: Enter
+                else if (e.key === 'Enter') {
+                    document.getElementById('loopTimeMatch')?.click();
+                }
+
+                // Navigation: Arrow keys for ±5s
+                else if (e.key === 'ArrowLeft') {
+                    adjustLoopTime(-5);
+                } else if (e.key === 'ArrowRight') {
+                    adjustLoopTime(5);
+                }
+
+                // Navigation: Brackets for ±30s
+                else if (e.key === '[') {
+                    adjustLoopTime(-30);
+                } else if (e.key === ']') {
+                    adjustLoopTime(30);
+                }
+            });
         });
 
         // Attach click listeners to all saved time buttons
