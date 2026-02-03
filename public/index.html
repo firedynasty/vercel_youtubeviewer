@@ -950,16 +950,13 @@
             <div style="font-weight: bold; margin-bottom: 6px; font-size: 12px;">⌨️ Keyboard Shortcuts</div>
             <div style="display: flex; gap: 20px; flex-wrap: wrap;">
                 <div>
-                    <span style="opacity: 0.9;">Timers:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">1</code>=15s <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">2</code>=30s <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">3</code>=1m <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">4</code>=3m
+                    <span style="opacity: 0.9;">Timers:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">q</code>=15s <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">w</code>=30s
                 </div>
                 <div>
-                    <span style="opacity: 0.9;">Match:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">Enter</code>
+                    <span style="opacity: 0.9;">±30s:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">o</code> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">p</code>
                 </div>
                 <div>
-                    <span style="opacity: 0.9;">±5s:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">←</code> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">→</code>
-                </div>
-                <div>
-                    <span style="opacity: 0.9;">±30s:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">[</code> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">]</code>
+                    <span style="opacity: 0.9;">±5s:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">[</code> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">]</code>
                 </div>
             </div>
         </div>
@@ -2734,44 +2731,32 @@
             attachTimeButtonListeners();
 
             // Keyboard shortcuts for timer controls and navigation
+            // ALL shortcuts work EVERYWHERE (even in inputs)
             document.addEventListener('keydown', function(e) {
-                // Ignore if user is typing in an input/textarea/select
-                if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
-
-                // Prevent default for all our shortcuts
-                const shortcutKeys = ['1', '2', '3', '4', 'Enter', 'ArrowLeft', 'ArrowRight', '[', ']'];
-                if (shortcutKeys.includes(e.key)) {
+                // Timer keys: q=15s, w=30s
+                if (e.key === 'q' || e.key === 'w') {
                     e.preventDefault();
+                    if (e.key === 'q') {
+                        document.getElementById('timer15sBtn')?.click();
+                    } else if (e.key === 'w') {
+                        document.getElementById('timer30sBtn')?.click();
+                    }
+                    return;
                 }
 
-                // Timer buttons: 1=15s, 2=30s, 3=1m, 4=3m
-                if (e.key === '1') {
-                    document.getElementById('timer15sBtn')?.click();
-                } else if (e.key === '2') {
-                    document.getElementById('timer30sBtn')?.click();
-                } else if (e.key === '3') {
-                    document.getElementById('timer60sBtn')?.click();
-                } else if (e.key === '4') {
-                    document.getElementById('timer3minBtn')?.click();
-                }
-
-                // Match button: Enter
-                else if (e.key === 'Enter') {
-                    document.getElementById('loopTimeMatch')?.click();
-                }
-
-                // Navigation: Arrow keys for ±5s
-                else if (e.key === 'ArrowLeft') {
-                    adjustLoopTime(-5);
-                } else if (e.key === 'ArrowRight') {
-                    adjustLoopTime(5);
-                }
-
-                // Navigation: Brackets for ±30s
-                else if (e.key === '[') {
-                    adjustLoopTime(-30);
-                } else if (e.key === ']') {
-                    adjustLoopTime(30);
+                // Navigation keys: o,p,[,]
+                if (e.key === 'o' || e.key === 'p' || e.key === '[' || e.key === ']') {
+                    e.preventDefault();
+                    if (e.key === 'o') {
+                        adjustLoopTime(-30);
+                    } else if (e.key === 'p') {
+                        adjustLoopTime(30);
+                    } else if (e.key === '[') {
+                        adjustLoopTime(5);
+                    } else if (e.key === ']') {
+                        adjustLoopTime(-5);
+                    }
+                    return;
                 }
             });
         });
