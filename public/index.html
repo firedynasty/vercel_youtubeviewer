@@ -919,7 +919,7 @@
                 <button id="timer30sBtn" class="jump-btn" style="background: linear-gradient(45deg, #00BCD4, #0097A7); margin-left: 10px; padding: 6px 12px; font-size: 12px;">⏱️ 30s</button>
                 <button id="timer60sBtn" class="jump-btn" style="background: linear-gradient(45deg, #8BC34A, #689F38); margin-left: 10px; padding: 6px 12px; font-size: 12px;">⏱️ 1m</button>
                 <button id="timer3minBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); margin-left: 10px; padding: 6px 12px; font-size: 12px;">⏱️ 3m</button>
-                <select id="timerCustomSelect" style="margin-left: 10px; padding: 5px 8px; font-size: 12px; border-radius: 6px; border: 2px solid #9C27B0; background: linear-gradient(45deg, #E1BEE7, #CE93D8); cursor: pointer; font-weight: 600;">
+                <select id="timerCustomSelect" style="display: none; margin-left: 10px; padding: 5px 8px; font-size: 12px; border-radius: 6px; border: 2px solid #9C27B0; background: linear-gradient(45deg, #E1BEE7, #CE93D8); cursor: pointer; font-weight: 600;">
                     <option value="">⏱️ Custom</option>
                     <option value="35">35s</option>
                     <option value="40">40s</option>
@@ -927,18 +927,20 @@
                     <option value="50">50s</option>
                 </select>
                 <span style="margin-left: 15px; color: #9C27B0; font-size: 12px; font-weight: 600;">🔄 Repeat:</span>
-                <label style="margin-left: 8px; cursor: pointer; font-size: 12px;">
-                    <input type="radio" name="timerRepeat" value="1" style="cursor: pointer;"> 1 time
-                </label>
-                <label style="margin-left: 10px; cursor: pointer; font-size: 12px;">
-                    <input type="radio" name="timerRepeat" value="8" style="cursor: pointer;"> 8 times
-                </label>
-                <label style="margin-left: 10px; cursor: pointer; font-size: 12px;">
-                    <input type="radio" name="timerRepeat" value="30" checked style="cursor: pointer;"> 30 times
-                </label>
-                <label style="margin-left: 10px; cursor: pointer; font-size: 12px;">
-                    <input type="radio" name="timerRepeat" value="50" style="cursor: pointer;"> 50 times
-                </label>
+                <span style="display: none;">
+                    <label style="margin-left: 8px; cursor: pointer; font-size: 12px;">
+                        <input type="radio" name="timerRepeat" value="40" style="cursor: pointer;"> 40 times
+                    </label>
+                    <label style="margin-left: 10px; cursor: pointer; font-size: 12px;">
+                        <input type="radio" name="timerRepeat" value="8" style="cursor: pointer;"> 8 times
+                    </label>
+                    <label style="margin-left: 10px; cursor: pointer; font-size: 12px;">
+                        <input type="radio" name="timerRepeat" value="30" checked style="cursor: pointer;"> 30 times
+                    </label>
+                    <label style="margin-left: 10px; cursor: pointer; font-size: 12px;">
+                        <input type="radio" name="timerRepeat" value="80" style="cursor: pointer;"> 80 times
+                    </label>
+                </span>
             </div>
         </div>
 
@@ -1430,10 +1432,10 @@
 
                         // Check if Auto Timer mode is ON
                         if (autoTimerToggle && autoTimerToggle.checked) {
-                            // Select the 50 times radio button
-                            const radio50 = document.querySelector('input[name="timerRepeat"][value="50"]');
-                            if (radio50) {
-                                radio50.checked = true;
+                            // Select the 80 times radio button
+                            const radio80 = document.querySelector('input[name="timerRepeat"][value="80"]');
+                            if (radio80) {
+                                radio80.checked = true;
                             }
 
                             // Extract timestamp from URL (e.g., &t=958s or ?t=505s)
@@ -2693,6 +2695,7 @@
             });
 
             // Enter key in loopStartTime input - jump to that time
+            // Escape key - clear the input
             document.getElementById('loopStartTime').addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
                     const timeStr = this.value.trim();
@@ -2714,6 +2717,9 @@
                         jumpToYouTubeTime(seconds);
                         showStatus('Jumped to ' + timeStr, 'success');
                     }
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    this.value = '';
                 }
             });
 
@@ -2761,14 +2767,19 @@
             // Keyboard shortcuts for timer controls and navigation
             // ALL shortcuts work EVERYWHERE (even in inputs)
             document.addEventListener('keydown', function(e) {
-                // Timer keys: q=15s, w=30s
+                // Timer keys: q=15s, w=30s (don't toggle off if already running)
                 if (e.key === 'q' || e.key === 'w') {
                     e.preventDefault();
-                    if (e.key === 'q') {
-                        document.getElementById('timer15sBtn')?.click();
-                    } else if (e.key === 'w') {
-                        document.getElementById('timer30sBtn')?.click();
+                    const btn15s = document.getElementById('timer15sBtn');
+                    const btn30s = document.getElementById('timer30sBtn');
+
+                    // Only click the button if it's not already the active timer
+                    if (e.key === 'q' && !(timerTimeout && timerButtonRef === btn15s)) {
+                        btn15s?.click();
+                    } else if (e.key === 'w' && !(timerTimeout && timerButtonRef === btn30s)) {
+                        btn30s?.click();
                     }
+                    document.getElementById('loopStartTime')?.focus();
                     return;
                 }
 
@@ -2784,6 +2795,7 @@
                     } else if (e.key === ']') {
                         adjustLoopTime(5);
                     }
+                    document.getElementById('loopStartTime')?.focus();
                     return;
                 }
 
@@ -2791,6 +2803,7 @@
                 if (e.key === '\\') {
                     e.preventDefault();
                     document.getElementById('loopTimeMatch')?.click();
+                    document.getElementById('loopStartTime')?.focus();
                     return;
                 }
             });
@@ -4104,7 +4117,7 @@
             timerLabel = '⏱️ 15s';
             timerDefaultBg = 'linear-gradient(45deg, #7E57C2, #5E35B1)';
             timerDurationMs = 15000;
-            timerTotalLoops = getRepeatCount();
+            timerTotalLoops = 80;  // 15s × 80 = 20 minutes
             timerLoopsRemaining = timerTotalLoops;
             timerButtonRef = buttonElement;
 
@@ -4145,7 +4158,7 @@
             timerLabel = '⏱️ 30s';
             timerDefaultBg = 'linear-gradient(45deg, #00BCD4, #0097A7)';
             timerDurationMs = 30000;
-            timerTotalLoops = getRepeatCount();
+            timerTotalLoops = 40;  // 30s × 40 = 20 minutes
             timerLoopsRemaining = timerTotalLoops;
             timerButtonRef = buttonElement;
 
@@ -4186,7 +4199,7 @@
             timerLabel = '⏱️ 1m';
             timerDefaultBg = 'linear-gradient(45deg, #8BC34A, #689F38)';
             timerDurationMs = 60000;
-            timerTotalLoops = getRepeatCount();
+            timerTotalLoops = 25;  // 1m × 25 = 25 minutes
             timerLoopsRemaining = timerTotalLoops;
             timerButtonRef = buttonElement;
 
@@ -4227,7 +4240,7 @@
             timerLabel = '⏱️ 3m';
             timerDefaultBg = 'linear-gradient(45deg, #FF9800, #F57C00)';
             timerDurationMs = 180000;
-            timerTotalLoops = getRepeatCount();
+            timerTotalLoops = 8;  // 3m × 8 = 24 minutes
             timerLoopsRemaining = timerTotalLoops;
             timerButtonRef = buttonElement;
 
