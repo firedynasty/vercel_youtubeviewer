@@ -1378,26 +1378,7 @@
         });
         // ============ END AUTO-PLAY TIMER ============
 
-        // Keyboard navigation for pagination
-        document.addEventListener('keydown', function(e) {
-            const navbar = document.getElementById('linkPaginationNavbar');
-            if (!navbar.classList.contains('active')) return;
-            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
-
-            if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                paginationPrev();
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                paginationNext();
-            } else if (e.key === 'Enter') {
-                e.preventDefault();
-                loadCurrentPaginationLink();
-            } else if (e.key === 'Escape') {
-                e.preventDefault();
-                closePagination();
-            }
-        });
+        // Keyboard navigation for pagination - REMOVED to avoid conflicts with timer controls
         // ============================================
 
         // Populate text-section with clickable URLs
