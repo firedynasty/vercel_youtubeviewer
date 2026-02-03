@@ -927,6 +927,7 @@
                     <option value="50">50s</option>
                 </select>
                 <span style="margin-left: 15px; color: #9C27B0; font-size: 12px; font-weight: 600;">🔄 Repeat:</span>
+                <span style="margin-left: 5px; color: #757575; font-size: 11px; font-style: italic;">timers auto-repeat for ~25 mins</span>
                 <span style="display: none;">
                     <label style="margin-left: 8px; cursor: pointer; font-size: 12px;">
                         <input type="radio" name="timerRepeat" value="40" style="cursor: pointer;"> 40 times
@@ -2767,17 +2768,23 @@
             // Keyboard shortcuts for timer controls and navigation
             // ALL shortcuts work EVERYWHERE (even in inputs)
             document.addEventListener('keydown', function(e) {
-                // Timer keys: q=15s, w=30s (don't toggle off if already running)
-                if (e.key === 'q' || e.key === 'w') {
+                // Timer keys: q=15s, w=30s, e=1m, r=3m (don't toggle off if already running)
+                if (e.key === 'q' || e.key === 'w' || e.key === 'e' || e.key === 'r') {
                     e.preventDefault();
                     const btn15s = document.getElementById('timer15sBtn');
                     const btn30s = document.getElementById('timer30sBtn');
+                    const btn1m = document.getElementById('timer60sBtn');
+                    const btn3m = document.getElementById('timer3minBtn');
 
                     // Only click the button if it's not already the active timer
                     if (e.key === 'q' && !(timerTimeout && timerButtonRef === btn15s)) {
                         btn15s?.click();
                     } else if (e.key === 'w' && !(timerTimeout && timerButtonRef === btn30s)) {
                         btn30s?.click();
+                    } else if (e.key === 'e' && !(timerTimeout && timerButtonRef === btn1m)) {
+                        btn1m?.click();
+                    } else if (e.key === 'r' && !(timerTimeout && timerButtonRef === btn3m)) {
+                        btn3m?.click();
                     }
                     document.getElementById('loopStartTime')?.focus();
                     return;
