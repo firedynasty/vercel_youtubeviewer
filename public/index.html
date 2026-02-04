@@ -907,17 +907,14 @@
             <!-- Current Time Display (below video players) -->
             <div class="current-time-display" id="currentTimeDisplay" style="display: none;">
                 <label style="color: #FFC107; font-weight: 600; font-size: 12px;">🔄 Go/loop to:</label>
-                <button id="loopTimeMinus30" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-right: 4px;">−30s</button>
+                <button id="loopTimeMinus15" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-right: 4px;">−15s</button>
                 <input type="text" id="loopStartTime" class="time-input" placeholder="0:01" value="0:01" style="width: 65px; text-align: center; font-size: 12px; padding: 4px 6px;">
-                <button id="loopTimePlus30" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-left: 4px;">+30s</button>
-                <button id="loopTimePlus5" class="jump-btn" style="background: linear-gradient(45deg, #78909C, #546E7A); padding: 4px 8px; font-size: 11px; margin-left: 4px;">+5s</button>
-                <button id="loopTimeMinus5" class="jump-btn" style="background: linear-gradient(45deg, #78909C, #546E7A); padding: 4px 8px; font-size: 11px; margin-left: 4px;">-5s</button>
-                <button id="loopTimeMatch" class="jump-btn" style="background: linear-gradient(45deg, #FFC107, #FFA000); padding: 4px 8px; font-size: 11px; margin-left: 4px; margin-right: 15px;">match</button>
-                <span class="time-label">Current Time:</span>
+                <button id="loopTimePlus15" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-left: 4px;">+15s</button>
+                <span class="time-label" style="margin-left: 15px;">Current Time:</span>
                 <span class="time-value" id="currentTimeValue">--:--</span>
+                <span class="time-label" style="margin-left: 15px;">Playback time:</span>
+                <span class="time-value" id="playbackTimeValue" style="color: #FFC107; font-weight: 700;">0:01</span>
                 <button id="timer15sBtn" class="jump-btn" style="background: linear-gradient(45deg, #7E57C2, #5E35B1); margin-left: 15px; padding: 6px 12px; font-size: 12px;">⏱️ 15s</button>
-                <button id="timer30sBtn" class="jump-btn" style="background: linear-gradient(45deg, #00BCD4, #0097A7); margin-left: 10px; padding: 6px 12px; font-size: 12px;">⏱️ 30s</button>
-                <button id="timer60sBtn" class="jump-btn" style="background: linear-gradient(45deg, #8BC34A, #689F38); margin-left: 10px; padding: 6px 12px; font-size: 12px;">⏱️ 1m</button>
                 <button id="timer3minBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); margin-left: 10px; padding: 6px 12px; font-size: 12px;">⏱️ 3m</button>
                 <select id="timerCustomSelect" style="display: none; margin-left: 10px; padding: 5px 8px; font-size: 12px; border-radius: 6px; border: 2px solid #9C27B0; background: linear-gradient(45deg, #E1BEE7, #CE93D8); cursor: pointer; font-weight: 600;">
                     <option value="">⏱️ Custom</option>
@@ -953,16 +950,13 @@
             <div style="font-weight: bold; margin-bottom: 6px; font-size: 12px;">⌨️ Keyboard Shortcuts</div>
             <div style="display: flex; gap: 20px; flex-wrap: wrap;">
                 <div>
-                    <span style="opacity: 0.9;">Timers:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">q</code>=15s <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">w</code>=30s
+                    <span style="opacity: 0.9;">Timers:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">q</code>=15s
+                </div>
+                <div>
+                    <span style="opacity: 0.9;">±15s:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">[</code> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">]</code>
                 </div>
                 <div>
                     <span style="opacity: 0.9;">Match:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">\</code>
-                </div>
-                <div>
-                    <span style="opacity: 0.9;">±30s:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">o</code> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">p</code>
-                </div>
-                <div>
-                    <span style="opacity: 0.9;">±5s:</span> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">[</code> <code style="background: rgba(255,255,255,0.2); padding: 2px 5px; border-radius: 3px;">]</code>
                 </div>
             </div>
         </div>
@@ -1453,11 +1447,11 @@
                                     jumpToYouTubeTime(startSeconds);
                                 }
 
-                                // Trigger the 30s timer button after a short delay
+                                // Trigger the 15s timer button after a short delay
                                 setTimeout(() => {
-                                    const timer30sBtn = document.getElementById('timer30sBtn');
-                                    if (timer30sBtn) {
-                                        timer30sBtn.click();
+                                    const timer15sBtn = document.getElementById('timer15sBtn');
+                                    if (timer15sBtn) {
+                                        timer15sBtn.click();
                                     }
                                 }, 500);
                             }, 1500);
@@ -2653,16 +2647,6 @@
                 play15sThenRewind(this);
             });
 
-            // 30-second play button - plays 30s, pauses, rewinds 30s
-            document.getElementById('timer30sBtn').addEventListener('click', function() {
-                play30sThenRewind(this);
-            });
-
-            // 1-minute play button - plays 1min, pauses, rewinds 1min
-            document.getElementById('timer60sBtn').addEventListener('click', function() {
-                play60sThenRewind(this);
-            });
-
             // 3-minute play button - plays 3min, pauses, rewinds 3min
             document.getElementById('timer3minBtn').addEventListener('click', function() {
                 play3minThenRewind(this);
@@ -2678,11 +2662,22 @@
             // Auto-detect valid time in loopStartTime input
             document.getElementById('loopStartTime').addEventListener('input', function() {
                 const value = this.value.trim();
-                // Match M:SS or MM:SS format (complete when 2 digits follow the colon)
-                const match = value.match(/^(\d{1,2}):(\d{2})$/);
-                if (match) {
+
+                // Check for valid time formats
+                const isTimeFormat = value.match(/^(\d{1,2}):(\d{2})$/);  // M:SS or MM:SS
+                const isNumberFormat = value.match(/^\d+$/);  // Just numbers (e.g., "90")
+
+                if (isTimeFormat || isNumberFormat) {
                     const newTime = parseTimeToSeconds(value);
                     if (newTime !== null) {
+                        // Format as M:SS for display
+                        const minutes = Math.floor(newTime / 60);
+                        const seconds = newTime % 60;
+                        const displayTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+                        // Update the playback time display
+                        document.getElementById('playbackTimeValue').textContent = displayTime;
+
                         // If a loop timer is running, update loopBaseTime
                         if (loopTimerActive) {
                             loopBaseTime = newTime;
@@ -2695,11 +2690,62 @@
                 }
             });
 
-            // Enter key in loopStartTime input - jump to that time
+            // Enter key in loopStartTime input - jump to that time or adjust time with +/-
             // Escape key - clear the input
             document.getElementById('loopStartTime').addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
+                    e.preventDefault();
                     const timeStr = this.value.trim();
+
+                    // Check for time+delta notation (e.g., "2:01+10" or "1:30-5")
+                    const timeWithDeltaMatch = timeStr.match(/^(\d{1,2}:\d{2})([+-])(\d+)$/);
+                    if (timeWithDeltaMatch) {
+                        const baseTimeStr = timeWithDeltaMatch[1];
+                        const operator = timeWithDeltaMatch[2];
+                        const deltaSeconds = parseInt(timeWithDeltaMatch[3]);
+
+                        const baseSeconds = parseTimeToSeconds(baseTimeStr);
+                        if (baseSeconds !== null) {
+                            const adjustment = operator === '+' ? deltaSeconds : -deltaSeconds;
+                            const newSeconds = Math.max(0, baseSeconds + adjustment);
+
+                            // Format back to time string
+                            const minutes = Math.floor(newSeconds / 60);
+                            const seconds = newSeconds % 60;
+                            const resultTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+                            // Update input and playback time display
+                            this.value = resultTime;
+                            document.getElementById('playbackTimeValue').textContent = resultTime;
+
+                            // Update timers if running
+                            if (loopTimerActive) loopBaseTime = newSeconds;
+                            if (timerTimeout) timerStartTime = newSeconds;
+
+                            // Jump to the time
+                            jumpToYouTubeTime(newSeconds);
+                            showStatus(`Calculated: ${baseTimeStr} ${operator}${deltaSeconds}s = ${resultTime}`, 'success');
+                            this.select();
+                            return;
+                        }
+                    }
+
+                    // Check for +/- notation (e.g., "+5" or "-10")
+                    const deltaMatch = timeStr.match(/^([+-])(\d+)$/);
+                    if (deltaMatch) {
+                        const operator = deltaMatch[1];
+                        const deltaSeconds = parseInt(deltaMatch[2]);
+                        const adjustment = operator === '+' ? deltaSeconds : -deltaSeconds;
+
+                        // Apply the adjustment
+                        adjustLoopTime(adjustment);
+
+                        // Focus stays on input for quick adjustments
+                        this.select();
+                        return;
+                    }
+
+                    // Otherwise, treat as a time to jump to
                     const seconds = parseTimeToSeconds(timeStr);
                     if (seconds !== null) {
                         // If a timer is running, update start time and restart from new position
@@ -2718,24 +2764,23 @@
                     }
                 } else if (e.key === 'Escape') {
                     e.preventDefault();
-                    this.value = '';
+                    this.focus();
+                    this.select();
                 }
             });
 
-            // Loop time adjustment buttons (-30s and +30s)
-            document.getElementById('loopTimeMinus30').addEventListener('click', function() {
-                adjustLoopTime(-30);
+            // Loop time adjustment buttons (-15s and +15s)
+            document.getElementById('loopTimeMinus15').addEventListener('click', function() {
+                adjustLoopTime(-15);
             });
-            document.getElementById('loopTimePlus30').addEventListener('click', function() {
-                adjustLoopTime(30);
+            document.getElementById('loopTimePlus15').addEventListener('click', function() {
+                adjustLoopTime(15);
             });
-            document.getElementById('loopTimePlus5').addEventListener('click', function() {
-                adjustLoopTime(5);
-            });
-            document.getElementById('loopTimeMinus5').addEventListener('click', function() {
-                adjustLoopTime(-5);
-            });
-            document.getElementById('loopTimeMatch').addEventListener('click', function() {
+
+            // Match button - set loop time to current playback time (kept for backward compatibility)
+            const loopTimeMatchBtn = document.getElementById('loopTimeMatch');
+            if (loopTimeMatchBtn) {
+                loopTimeMatchBtn.addEventListener('click', function() {
                 const currentTimeStr = document.getElementById('currentTimeValue').textContent.trim();
                 const seconds = parseTimeToSeconds(currentTimeStr);
                 if (seconds !== null) {
@@ -2752,6 +2797,7 @@
                     showStatus('Loop time matched to ' + currentTimeStr, 'info');
                 }
             });
+            }
 
             // Clear Saved Times button (in the Saved Times section)
             document.getElementById('clearSavedTimesBtn').addEventListener('click', function() {
@@ -2764,48 +2810,43 @@
             // Keyboard shortcuts for timer controls and navigation
             // ALL shortcuts work EVERYWHERE (even in inputs)
             document.addEventListener('keydown', function(e) {
-                // Timer keys: q=15s, w=30s, e=1m, r=3m (don't toggle off if already running)
-                if (e.key === 'q' || e.key === 'w' || e.key === 'e' || e.key === 'r') {
+                // Timer shortcut: q=15s
+                if (e.key === 'q') {
                     e.preventDefault();
                     const btn15s = document.getElementById('timer15sBtn');
-                    const btn30s = document.getElementById('timer30sBtn');
-                    const btn1m = document.getElementById('timer60sBtn');
-                    const btn3m = document.getElementById('timer3minBtn');
-
                     // Only click the button if it's not already the active timer
-                    if (e.key === 'q' && !(timerTimeout && timerButtonRef === btn15s)) {
+                    if (!(timerTimeout && timerButtonRef === btn15s)) {
                         btn15s?.click();
-                    } else if (e.key === 'w' && !(timerTimeout && timerButtonRef === btn30s)) {
-                        btn30s?.click();
-                    } else if (e.key === 'e' && !(timerTimeout && timerButtonRef === btn1m)) {
-                        btn1m?.click();
-                    } else if (e.key === 'r' && !(timerTimeout && timerButtonRef === btn3m)) {
-                        btn3m?.click();
                     }
                     document.getElementById('loopStartTime')?.focus();
                     return;
                 }
 
-                // Navigation keys: o,p,[,]
-                if (e.key === 'o' || e.key === 'p' || e.key === '[' || e.key === ']') {
+                // Pagination keys: [=down (-15s), ]=up (+15s)
+                if (e.key === '[' || e.key === ']') {
                     e.preventDefault();
-                    if (e.key === 'o') {
-                        adjustLoopTime(-30);
-                    } else if (e.key === 'p') {
-                        adjustLoopTime(30);
-                    } else if (e.key === '[') {
-                        adjustLoopTime(-5);
+                    if (e.key === '[') {
+                        adjustLoopTime(-15);  // Down pagination
                     } else if (e.key === ']') {
-                        adjustLoopTime(5);
+                        adjustLoopTime(15);   // Up pagination
                     }
                     document.getElementById('loopStartTime')?.focus();
                     return;
                 }
 
-                // Match key: \ (backslash)
+                // Match key: \ (backslash) - set loop time to current playback time
                 if (e.key === '\\') {
                     e.preventDefault();
-                    document.getElementById('loopTimeMatch')?.click();
+                    // Match functionality (inline since button was removed)
+                    const currentTimeStr = document.getElementById('currentTimeValue').textContent.trim();
+                    const seconds = parseTimeToSeconds(currentTimeStr);
+                    if (seconds !== null) {
+                        const loopStartInput = document.getElementById('loopStartTime');
+                        loopStartInput.value = currentTimeStr;
+                        // Trigger input event to update timer
+                        loopStartInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        showStatus(`Loop time matched to ${currentTimeStr}`, 'success');
+                    }
                     document.getElementById('loopStartTime')?.focus();
                     return;
                 }
@@ -3042,14 +3083,12 @@
         // Adjust loop time by a given number of seconds
         function adjustLoopTime(deltaSeconds) {
             const loopStartTimeInput = document.getElementById('loopStartTime');
-            const currentValue = loopStartTimeInput.value.trim();
+            const playbackTimeDisplay = document.getElementById('playbackTimeValue');
 
-            // If empty, treat as 0:00
-            let currentSeconds = 0;
-            if (currentValue) {
-                currentSeconds = parseTimeToSeconds(currentValue);
-                if (currentSeconds === null) currentSeconds = 0;
-            }
+            // Always use the playback time display as the base
+            const playbackTimeStr = playbackTimeDisplay.textContent.trim();
+            let currentSeconds = parseTimeToSeconds(playbackTimeStr);
+            if (currentSeconds === null) currentSeconds = 0;
 
             // Add delta, but don't go below 0
             let newSeconds = Math.max(0, currentSeconds + deltaSeconds);
@@ -3068,6 +3107,9 @@
 
             loopStartTimeInput.value = timeStr;
 
+            // Update the playback time display
+            playbackTimeDisplay.textContent = timeStr;
+
             // If a timer is running, update start time and restart from new position
             if (timerTimeout && timerLoopsRemaining > 0) {
                 timerStartTime = newSeconds;
@@ -3079,6 +3121,10 @@
             if (loopTimerActive) {
                 loopBaseTime = newSeconds;
             }
+
+            // Show status with base time info
+            const direction = deltaSeconds > 0 ? `+${deltaSeconds}` : deltaSeconds;
+            showStatus(`Playback time: ${playbackTimeStr} ${direction}s = ${timeStr}`, 'success');
 
             // Jump to the new time
             jumpToYouTubeTime(newSeconds);

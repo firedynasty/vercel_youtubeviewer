@@ -1,0 +1,128 @@
+# Summary of Changes - February 4, 2026 🚀
+
+## Major Features Added
+
+### 1. Simplified Timer Buttons
+- Removed 30s and 1m timer buttons
+- Kept 15s and 3m timer buttons only
+- Auto-trigger now uses 15s timer instead of 30s
+
+### 2. Pagination System for Loop Time
+- Added ±15s pagination buttons next to loop start time input
+- Buttons adjust the loop time by 15-second increments
+- Changed from previous ±30s and ±5s system to unified ±15s
+
+### 3. Simplified Keyboard Shortcuts
+**Current shortcuts (work everywhere):**
+- `q` → 15s timer
+- `[` → Down pagination (−15s)
+- `]` → Up pagination (+15s)
+- `\` → Match (set loop time to current playback time)
+
+**Removed shortcuts:**
+- `w`, `e`, `r` (for 30s, 1m, 3m timers)
+- `o`, `p` (for ±30s adjustments)
+
+### 4. Playback Time Display
+- Added persistent "Playback time:" display next to "Current Time:"
+- Shows in gold color (color: #FFC107)
+- Stores the base time used for +/- adjustments
+- Persists even when input field is cleared/highlighted
+- Updates when user enters valid time in input
+
+### 5. Input Field Enhancements
+
+#### a) +/- Notation (relative to playback time)
+- Type `+5` or `-10` in input and press Enter
+- Adjusts from the saved "Playback time" value
+- Example: Playback time is 1:30, type `+5` → becomes 1:35
+- Shows status: "Playback time: 1:30 +5s = 1:35"
+
+#### b) Time Calculation Feature
+- Type expressions like `2:01+10` or `2:01-10` in input
+- Press Enter to calculate result
+- Example: `2:01+10` → calculates to `2:11`
+- Example: `2:01-10` → calculates to `1:51`
+- Shows status: "Calculated: 2:01 +10s = 2:11"
+
+#### c) Number to Time Conversion
+- Type plain numbers (e.g., `90`) and it converts to M:SS format (1:30)
+- Now properly updates the "Playback time" display
+- Works seamlessly with existing M:SS format input
+
+#### d) Escape Key Behavior
+- Changed from clearing input to focusing and selecting text
+- Makes it easy to quickly select current time and type new value
+
+### 6. Updated UI Display
+**Keyboard Shortcuts Info Panel:**
+```
+⌨️ Keyboard Shortcuts
+Timers: q=15s
+±15s: [ ]
+Match: \
+```
+
+**Loop Time Controls:**
+```
+🔄 Loop to: [−15s] [input] [+15s]  Current Time: 1:30  Playback time: 1:25  [⏱️ 15s] [⏱️ 3m]
+```
+
+## Bug Fixes
+- Fixed missing closing brace in loopTimeMatch event listener (was causing "loadMediaFromUrl is not defined" error)
+- Fixed syntax error that prevented JavaScript from executing properly
+
+## Technical Changes
+
+### Modified Functions
+1. `adjustLoopTime(deltaSeconds)` - Now uses playbackTimeValue display as base
+2. Input event listener - Handles both M:SS format and plain numbers, updates playback time
+3. Enter keydown listener - Handles three patterns:
+   - Time calculations (M:SS+N or M:SS-N)
+   - Relative adjustments (+N or -N)
+   - Direct time jumps (M:SS)
+4. Escape keydown - Changed from clear to focus+select
+
+### HTML Changes
+- Replaced loopTimeMinus30/loopTimePlus30 with loopTimeMinus15/loopTimePlus15
+- Removed loopTimePlus5, loopTimeMinus5, loopTimeMatch buttons
+- Removed timer30sBtn and timer60sBtn
+- Added playbackTimeValue display span
+- Updated keyboard shortcuts display panel
+
+### Event Listener Changes
+- Removed event listeners for removed buttons (timer30s, timer60s, loopTime±30, loopTime±5)
+- Updated keyboard event listener to only handle q, [, ], and \
+- Enhanced input event listener to update playback time display
+
+## User Workflow Examples
+
+### Example 1: Quick Pagination
+1. Video playing at 1:30
+2. Press `[` → Loop time becomes 1:15
+3. Press `]` twice → Loop time becomes 1:45
+
+### Example 2: Relative Adjustment
+1. Playback time shows 2:00
+2. Type `+15` and press Enter
+3. Result: 2:15 (shown in both input and Playback time)
+
+### Example 3: Time Calculation
+1. Want to practice 10 seconds before 2:01
+2. Type `2:01-10` and press Enter
+3. Result: 1:51
+
+### Example 4: Number Input
+1. Type `90` in input
+2. Automatically converts to 1:30
+3. Updates both input and Playback time display
+
+## Files Modified
+- `/Users/stanleytan/Documents/25-technical/01-github/vercel_youtube/public/index.html`
+
+## Impact
+- Simplified interface with fewer buttons
+- More flexible time adjustment options
+- Clearer visual feedback with persistent Playback time display
+- Faster workflow with keyboard shortcuts and inline calculations
+- Reduced cognitive load by removing redundant timer options
