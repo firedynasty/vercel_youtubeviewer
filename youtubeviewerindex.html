@@ -740,11 +740,13 @@
             <!-- Current Time Display (below video players) -->
             <div class="current-time-display" id="currentTimeDisplay" style="display: none;">
                 <label style="color: #FFC107; font-weight: 600; font-size: 12px;">🔄 Loop to:</label>
-                <input type="text" id="loopStartTime" class="time-input" placeholder="0:01" value="0:01" style="width: 65px; text-align: center; font-size: 12px; padding: 4px 6px; margin-right: 15px;">
-                <span class="time-label">Current Time:</span>
+                <button id="loopTimeMinus15" class="jump-btn" style="background: linear-gradient(45deg, #9e9e9e, #757575); padding: 4px 8px; font-size: 11px; margin-right: 4px;">−15s</button>
+                <input type="text" id="loopStartTime" class="time-input" placeholder="0:01" value="0:01" style="width: 65px; text-align: center; font-size: 12px; padding: 4px 6px;">
+                <button id="loopTimePlus15" class="jump-btn" style="background: linear-gradient(45deg, #9e9e9e, #757575); padding: 4px 8px; font-size: 11px; margin-left: 4px;">+15s</button>
+                <button id="loopTimePlus120" class="jump-btn" style="background: linear-gradient(45deg, #9e9e9e, #757575); padding: 4px 8px; font-size: 11px; margin-left: 4px;">+120s</button>
+                <span class="time-label" style="margin-left: 15px;">Current Time:</span>
                 <span class="time-value" id="currentTimeValue">--:--</span>
-                <button id="timer30sBtn" class="jump-btn" style="background: linear-gradient(45deg, #00BCD4, #0097A7); margin-left: 15px; padding: 6px 12px; font-size: 12px;">⏱️ 30s</button>
-                <button id="timer60sBtn" class="jump-btn" style="background: linear-gradient(45deg, #8BC34A, #689F38); margin-left: 10px; padding: 6px 12px; font-size: 12px;">⏱️ 1m</button>
+                <button id="timer15sBtn" class="jump-btn" style="background: linear-gradient(45deg, #00BCD4, #0097A7); margin-left: 15px; padding: 6px 12px; font-size: 12px;">⏱️ 15s</button>
                 <button id="timer3minBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); margin-left: 10px; padding: 6px 12px; font-size: 12px;">⏱️ 3m</button>
                 <select id="timerCustomSelect" style="margin-left: 10px; padding: 5px 8px; font-size: 12px; border-radius: 6px; border: 2px solid #9C27B0; background: linear-gradient(45deg, #E1BEE7, #CE93D8); cursor: pointer; font-weight: 600;">
                     <option value="">⏱️ Custom</option>
@@ -998,11 +1000,11 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                                         jumpToYouTubeTime(startSeconds);
                                     }
 
-                                    // Trigger the 30s timer button after a short delay
+                                    // Trigger the 15s timer button after a short delay
                                     setTimeout(() => {
-                                        const timer30sBtn = document.getElementById('timer30sBtn');
-                                        if (timer30sBtn) {
-                                            timer30sBtn.click();
+                                        const timer15sBtn = document.getElementById('timer15sBtn');
+                                        if (timer15sBtn) {
+                                            timer15sBtn.click();
                                         }
                                     }, 500);
                                 }, 1500);
@@ -2072,19 +2074,27 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                 });
             }
 
-            // 30-second play button - plays 30s, pauses, rewinds 30s
-            document.getElementById('timer30sBtn').addEventListener('click', function() {
-                play30sThenRewind(this);
-            });
-
-            // 1-minute play button - plays 1min, pauses, rewinds 1min
-            document.getElementById('timer60sBtn').addEventListener('click', function() {
-                play60sThenRewind(this);
+            // 15-second play button - plays 15s, pauses, rewinds 15s
+            document.getElementById('timer15sBtn').addEventListener('click', function() {
+                play15sThenRewind(this);
             });
 
             // 3-minute play button - plays 3min, pauses, rewinds 3min
             document.getElementById('timer3minBtn').addEventListener('click', function() {
                 play3minThenRewind(this);
+            });
+
+            // Loop time pagination buttons
+            document.getElementById('loopTimeMinus15').addEventListener('click', function() {
+                adjustLoopStartTime(-15);
+            });
+
+            document.getElementById('loopTimePlus15').addEventListener('click', function() {
+                adjustLoopStartTime(15);
+            });
+
+            document.getElementById('loopTimePlus120').addEventListener('click', function() {
+                adjustLoopStartTime(120);
             });
 
             // Custom timer dropdown - plays selected duration, pauses, rewinds
@@ -2121,6 +2131,56 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
 
             // Saved time buttons - jump directly to those times
             attachTimeButtonListeners();
+
+            // Global keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                // Ignore if user is typing in an input field (except loopStartTime)
+                const activeElement = document.activeElement;
+                const isTyping = activeElement &&
+                               (activeElement.tagName === 'INPUT' ||
+                                activeElement.tagName === 'TEXTAREA' ||
+                                activeElement.tagName === 'SELECT') &&
+                               activeElement.id !== 'loopStartTime';
+
+                // Allow keyboard shortcuts even when loopStartTime is focused
+                if (isTyping) return;
+
+                // Prevent default for our shortcuts
+                const handledKeys = ['q', '[', ']', '\\'];
+                if (handledKeys.includes(e.key)) {
+                    e.preventDefault();
+                }
+
+                switch(e.key) {
+                    case 'q':
+                        // Trigger 15s timer
+                        const timer15sBtn = document.getElementById('timer15sBtn');
+                        if (timer15sBtn) {
+                            timer15sBtn.click();
+                        }
+                        break;
+
+                    case '[':
+                        // Down pagination (-15s)
+                        adjustLoopStartTime(-15);
+                        break;
+
+                    case ']':
+                        // Up pagination (+15s)
+                        adjustLoopStartTime(15);
+                        break;
+
+                    case 'p':
+                        // Advance +120s
+                        adjustLoopStartTime(120);
+                        break;
+
+                    case '\\':
+                        // Match - set loop time to current playback time
+                        matchLoopTimeToCurrentTime();
+                        break;
+                }
+            });
         });
 
         // Attach click listeners to all saved time buttons
@@ -3295,16 +3355,16 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
             }, fadeStartDelay);
         }
 
-        // 30-second play then rewind function
-        function play30sThenRewind(buttonElement) {
+        // 15-second play then rewind function
+        function play15sThenRewind(buttonElement) {
             // If this timer is already running, cancel it
             if (timerTimeout && timerButtonRef === buttonElement) {
                 clearTimeout(timerTimeout);
                 timerTimeout = null;
                 timerLoopsRemaining = 0;
-                buttonElement.textContent = '⏱️ 30s';
+                buttonElement.textContent = '⏱️ 15s';
                 buttonElement.style.background = 'linear-gradient(45deg, #00BCD4, #0097A7)';
-                showStatus('30s timer cancelled', 'info');
+                showStatus('15s timer cancelled', 'info');
                 return;
             }
 
@@ -3315,9 +3375,9 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
             }
 
             // Setup timer
-            timerLabel = '⏱️ 30s';
+            timerLabel = '⏱️ 15s';
             timerDefaultBg = 'linear-gradient(45deg, #00BCD4, #0097A7)';
-            timerDurationMs = 30000;
+            timerDurationMs = 15000;
             timerTotalLoops = getRepeatCount();
             timerLoopsRemaining = timerTotalLoops;
             timerButtonRef = buttonElement;
@@ -3460,6 +3520,67 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
             jumpToYouTubeTime(timerStartTime);
 
             startTimerLoop();
+        }
+
+        // Adjust loop start time by pagination (±15s)
+        function adjustLoopStartTime(deltaSeconds) {
+            const loopStartTimeInput = document.getElementById('loopStartTime');
+            const currentTimeStr = loopStartTimeInput.value.trim();
+            let currentSeconds = parseTimeToSeconds(currentTimeStr);
+
+            // If invalid, start from 0
+            if (currentSeconds === null) {
+                currentSeconds = 0;
+            }
+
+            // Adjust by delta (ensure it doesn't go negative)
+            const newSeconds = Math.max(0, currentSeconds + deltaSeconds);
+
+            // Convert back to time string
+            const newTimeStr = formatSecondsToTime(newSeconds);
+
+            // Update the input
+            loopStartTimeInput.value = newTimeStr;
+
+            // If a loop timer is running, update loopBaseTime
+            if (loopTimerActive) {
+                loopBaseTime = newSeconds;
+            }
+
+            // If a duration timer is running, update timerStartTime
+            if (timerTimeout) {
+                timerStartTime = newSeconds;
+            }
+
+            // Show feedback
+            const direction = deltaSeconds > 0 ? '+' : '';
+            showStatus(`Loop time adjusted to ${newTimeStr} (${direction}${deltaSeconds}s)`, 'info');
+        }
+
+        // Match function - set loop start time to current playback time
+        function matchLoopTimeToCurrentTime() {
+            const currentTimeValue = document.getElementById('currentTimeValue');
+            const loopStartTimeInput = document.getElementById('loopStartTime');
+
+            if (currentTimeValue && currentTimeValue.textContent !== '--:--') {
+                const currentTime = currentTimeValue.textContent;
+                loopStartTimeInput.value = currentTime;
+
+                // Parse and update timer references if running
+                const currentSeconds = parseTimeToSeconds(currentTime);
+                if (currentSeconds !== null) {
+                    if (loopTimerActive) {
+                        loopBaseTime = currentSeconds;
+                    }
+                    if (timerTimeout) {
+                        timerStartTime = currentSeconds;
+                    }
+                }
+
+                showStatus(`Loop time set to current time: ${currentTime}`, 'success');
+            } else {
+                showStatus('No current time available', 'error');
+            }
         }
 
         // New version with fade out/in for smooth loop transitions
