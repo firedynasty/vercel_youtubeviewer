@@ -940,6 +940,17 @@
                     </label>
                 </span>
             </div>
+
+            <!-- URL History Navbar -->
+            <div id="urlHistoryNavbar" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; margin-top: 8px; background: rgba(0,0,0,0.05); border-radius: 10px; flex-wrap: wrap; font-size: 12px;">
+                <span style="color: #9C27B0; font-weight: 600;">History:</span>
+                <button id="urlHistPrevBtn" onclick="urlHistPrev()" style="padding: 4px 10px; border: none; border-radius: 6px; background: linear-gradient(45deg, #9C27B0, #7B1FA2); color: white; cursor: pointer; font-size: 12px; font-weight: 600;">&#9664;</button>
+                <button id="urlHistNextBtn" onclick="urlHistNext()" style="padding: 4px 10px; border: none; border-radius: 6px; background: linear-gradient(45deg, #9C27B0, #7B1FA2); color: white; cursor: pointer; font-size: 12px; font-weight: 600;">&#9654;</button>
+                <span id="urlHistLabel" style="flex: 1; color: #555; font-weight: 500; min-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">No history</span>
+                <span id="urlHistCounter" style="color: #9C27B0; font-weight: 600;">0/0</span>
+                <button onclick="loadUrlHistCurrent()" style="padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #4CAF50, #45a049); color: white; cursor: pointer; font-size: 12px; font-weight: 600;">Go</button>
+                <button onclick="clearUrlHistory()" style="padding: 4px 8px; border: none; border-radius: 6px; background: linear-gradient(45deg, #f44336, #d32f2f); color: white; cursor: pointer; font-size: 12px; font-weight: 600;">&#10005;</button>
+            </div>
         </div>
 
         <!-- Status Display -->
@@ -1390,6 +1401,7 @@
             const lines = template_for_copy_and_paste.split('\n');
 
             container.innerHTML = ''; // Clear existing content
+            let lastLabel = '';
 
             lines.forEach((line, index) => {
                 const trimmedLine = line.trim();
@@ -1401,6 +1413,7 @@
                     span.textContent = trimmedLine;
                     span.style.cssText = 'cursor: pointer; color: #2196F3; text-decoration: underline; transition: all 0.2s ease;';
                     span.dataset.url = trimmedLine;
+                    span.dataset.label = lastLabel;
 
                     // Hover effects
                     span.addEventListener('mouseenter', function() {
@@ -1415,7 +1428,11 @@
                     // Click to activate pagination and load video
                     span.addEventListener('click', function() {
                         const url = this.dataset.url;
+                        const title = this.dataset.label || url;
                         const autoTimerToggle = document.getElementById('autoTimerToggle');
+
+                        // Save to URL history
+                        saveToUrlHistory(url, title);
 
                         // Visual feedback
                         const originalText = this.textContent;
@@ -1467,6 +1484,7 @@
                     container.appendChild(span);
                 } else {
                     // Regular text (label)
+                    lastLabel = trimmedLine;
                     const textNode = document.createTextNode(trimmedLine);
                     container.appendChild(textNode);
                 }
@@ -1629,6 +1647,9 @@
                 urlSpan.style.cssText = 'flex: 1; color: #64B5F6; text-decoration: underline; cursor: pointer; min-width: 150px;';
                 urlSpan.title = entry.url;
                 urlSpan.addEventListener('click', function() {
+                    // Save to URL history
+                    saveToUrlHistory(entry.url, entry.name || entry.url);
+
                     // Visual feedback
                     urlSpan.textContent = '✅ Loading...';
                     urlSpan.style.color = '#4CAF50';
@@ -2195,6 +2216,90 @@
             }
         }
 
+        // ============================================
+        // URL HISTORY (last 5 URLs with pagination)
+        // ============================================
+        let urlHistoryArr = [];
+        let urlHistoryIndex = -1;
+        const URL_HISTORY_MAX = 5;
+
+        function saveToUrlHistory(url, title) {
+            if (!url) return;
+            title = title || url;
+            // Remove duplicate if exists
+            urlHistoryArr = urlHistoryArr.filter(item => item.url !== url);
+            // Add to end (most recent)
+            urlHistoryArr.push({ url: url, title: title });
+            // Enforce max 5 (FIFO - remove oldest)
+            if (urlHistoryArr.length > URL_HISTORY_MAX) {
+                urlHistoryArr.shift();
+            }
+            // Point to newest entry
+            urlHistoryIndex = urlHistoryArr.length - 1;
+            // Save to localStorage
+            localStorage.setItem('urlHistory', JSON.stringify(urlHistoryArr));
+            localStorage.setItem('lastLoadedVideo', url);
+            updateUrlHistNavbar();
+        }
+
+        function loadUrlHistory() {
+            try {
+                const saved = localStorage.getItem('urlHistory');
+                if (saved) {
+                    urlHistoryArr = JSON.parse(saved);
+                    if (urlHistoryArr.length > 0) {
+                        urlHistoryIndex = urlHistoryArr.length - 1;
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load URL history:', e);
+                urlHistoryArr = [];
+            }
+            updateUrlHistNavbar();
+        }
+
+        function urlHistNext() {
+            if (urlHistoryArr.length === 0) return;
+            urlHistoryIndex = (urlHistoryIndex + 1) % urlHistoryArr.length;
+            updateUrlHistNavbar();
+        }
+
+        function urlHistPrev() {
+            if (urlHistoryArr.length === 0) return;
+            urlHistoryIndex = (urlHistoryIndex - 1 + urlHistoryArr.length) % urlHistoryArr.length;
+            updateUrlHistNavbar();
+        }
+
+        function loadUrlHistCurrent() {
+            if (urlHistoryArr.length === 0 || urlHistoryIndex < 0) return;
+            const entry = urlHistoryArr[urlHistoryIndex];
+            loadMediaFromUrl(entry.url);
+            localStorage.setItem('lastLoadedVideo', entry.url);
+            showStatus('Loaded from history: ' + entry.title, 'success');
+        }
+
+        function updateUrlHistNavbar() {
+            const label = document.getElementById('urlHistLabel');
+            const counter = document.getElementById('urlHistCounter');
+            if (urlHistoryArr.length === 0) {
+                label.textContent = 'No history';
+                counter.textContent = '0/0';
+            } else {
+                const entry = urlHistoryArr[urlHistoryIndex];
+                label.textContent = entry.title || entry.url;
+                label.title = entry.url;
+                counter.textContent = (urlHistoryIndex + 1) + '/' + urlHistoryArr.length;
+            }
+        }
+
+        function clearUrlHistory() {
+            urlHistoryArr = [];
+            urlHistoryIndex = -1;
+            localStorage.removeItem('urlHistory');
+            updateUrlHistNavbar();
+            showStatus('URL history cleared', 'success');
+        }
+
         // YouTube API ready callback
         function onYouTubeIframeAPIReady() {
             console.log('🎬 YouTube IFrame API ready');
@@ -2247,8 +2352,14 @@
                         renderSavedTimes(savedTimes);
                         console.log('💾 Loaded saved times from IndexedDB on page load');
                     } else {
-                        // Load default if no saved times
-                        loadDefaultVideo();
+                        // Try last loaded video from localStorage, else default
+                        const lastVideo = localStorage.getItem('lastLoadedVideo');
+                        if (lastVideo) {
+                            console.log('🎬 Restoring last loaded video:', lastVideo);
+                            loadMediaFromUrl(lastVideo);
+                        } else {
+                            loadDefaultVideo();
+                        }
                     }
                 });
             }
@@ -2480,6 +2591,9 @@
 
         // Setup event listeners
         document.addEventListener('DOMContentLoaded', function() {
+            // Load URL history navbar
+            loadUrlHistory();
+
             // Create metronome iframe
             const metronomeContainer = document.getElementById('metronomeIframeContainer');
             if (metronomeContainer) {
