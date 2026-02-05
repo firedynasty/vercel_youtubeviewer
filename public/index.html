@@ -1917,8 +1917,9 @@
                 deleteBtn.addEventListener('click', function() {
                     if (confirm(`Delete "${entry.name || entry.url}"?`)) {
                         const allEntries = parseCloudLinks();
-                        allEntries.splice(index, 1);
-                        cloudLinksContent = rebuildCloudContent(allEntries);
+                        // Delete by URL match instead of index (safer)
+                        const filtered = allEntries.filter(e => e.url !== entry.url);
+                        cloudLinksContent = rebuildCloudContent(filtered);
                         populateCloudLinks();
                         const accessCode = document.getElementById('accessCodeInput').value.trim();
                         if (accessCode) saveLinksToCloud();
