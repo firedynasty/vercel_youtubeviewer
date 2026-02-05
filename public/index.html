@@ -1051,7 +1051,6 @@
             <button id="loadDefaultBtn" class="jump-btn" style="display: none; background: linear-gradient(45deg, #4CAF50, #45a049); font-size: 13px; padding: 10px 19px;">🎬 Load Default</button>
             <input type="text" id="accessCodeInput" placeholder="123" autocomplete="off" value="" style="width: 80px; padding: 8px 12px; font-size: 14px; border: 2px solid rgb(255, 152, 0); border-radius: 6px; background: rgb(42, 42, 42); color: white; outline: none;">
             <button id="loadYouTubeClipboardBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); font-size: 13px; padding: 10px 19px;">📋 Paste Media + Times</button>
-            <button id="cleanTranscriptBtn" class="jump-btn" style="background: linear-gradient(45deg, #2196F3, #1976D2); font-size: 13px; padding: 10px 19px;">✨ Clean & Copy Transcript</button>
             <a id="textProcessorLink" href="https://cdpn.io/pen/debug/KwVxmKR" class="jump-btn" style="background: linear-gradient(45deg, #E91E63, #C2185B); font-size: 13px; padding: 10px 19px; text-decoration: none; color: white;">📖 Bible Audio</a>
             <button id="cloudNotesToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #607D8B, #455A64); font-size: 13px; padding: 10px 19px;">☁️ Cloud Notes</button>
         </div>
@@ -2882,76 +2881,6 @@
             // Copy current state button
             document.getElementById('copyCurrentStateBtn').addEventListener('click', function() {
                 copyCurrentStateToClipboard();
-            });
-
-            // Clean & Copy Transcript button
-            document.getElementById('cleanTranscriptBtn').addEventListener('click', async function() {
-                try {
-                    // Read from clipboard
-                    const text = await navigator.clipboard.readText();
-                    console.log('📋 Clipboard content:', text.substring(0, 200) + '...');
-
-                    if (!text.trim()) {
-                        showStatus('Clipboard is empty - please copy transcript first', 'error');
-                        return;
-                    }
-
-                    // Clean the transcript
-                    const cleanedText = cleanTranscript(text);
-                    console.log('📋 Cleaned text:', cleanedText.substring(0, 200) + '...');
-
-                    if (!cleanedText) {
-                        showStatus('No valid transcript content found', 'error');
-                        return;
-                    }
-
-                    // Extract timestamps from the CLEANED text (which has one per minute)
-                    const cleanedLines = cleanedText.split('\n');
-                    const keptTimestamps = [];
-
-                    for (let line of cleanedLines) {
-                        line = line.trim();
-                        // Check if line is a timestamp (M:SS or H:MM:SS)
-                        const timeMatch = line.match(/^(\d+):(\d+)(?::(\d+))?$/);
-                        if (timeMatch) {
-                            keptTimestamps.push(line);
-                        }
-                    }
-
-                    console.log('📋 Kept timestamps:', keptTimestamps);
-
-                    if (keptTimestamps.length > 0) {
-                        renderSavedTimes(keptTimestamps);
-                        saveSavedTimesToIndexedDB();
-
-                        // Store cleaned text for restore functionality
-                        lastCleanedTranscript = cleanedText;
-
-                        // Copy cleaned text back to clipboard
-                        await navigator.clipboard.writeText(cleanedText);
-
-                        // Visual feedback
-                        const btn = this;
-                        const originalText = btn.textContent;
-                        btn.textContent = '✅ Cleaned & Copied!';
-                        btn.style.transform = 'scale(1.05)';
-
-                        setTimeout(() => {
-                            btn.textContent = originalText;
-                            btn.style.transform = '';
-                        }, 2000);
-
-                        showStatus(`Transcript cleaned, ${keptTimestamps.length} times added, and copied!`, 'success');
-                    } else {
-                        // No timestamps found - don't store, show error
-                        showStatus('No timestamps found in clipboard content - paste a transcript first', 'error');
-                        return;
-                    }
-
-                } catch (err) {
-                    console.error('Failed to process transcript:', err);
-                    showStatus('Failed to read/write clipboard. Please grant permission.', 'error');
-                }
             });
 
             // Loop timer buttons
