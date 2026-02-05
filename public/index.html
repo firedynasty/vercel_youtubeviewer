@@ -1257,6 +1257,7 @@
             <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 15px; align-items: center;">
                 <button id="loadCloudBtn" class="paste-btn" onclick="loadLinksFromCloud()" style="background: linear-gradient(45deg, #2196F3, #1976D2);">☁️ Load Cloud</button>
                 <button id="saveCloudBtn" class="paste-btn" onclick="saveLinksToCloud()" style="background: linear-gradient(45deg, #4CAF50, #45a049);">💾 Save to Cloud</button>
+                <button id="sortCloudBtn" class="paste-btn" onclick="sortCloudLinks()" style="background: linear-gradient(45deg, #FF9800, #F57C00);">🔤 Sort A-Z</button>
                 <button id="getYTTitleBtn" class="paste-btn" onclick="getAndAppendYouTubeTitle()" style="display: none; background: linear-gradient(45deg, #E91E63, #C2185B);">🎬 Get YT Title</button>
             </div>
             <div id="cloud-section" style="background: #2a2a2a; color: #fff; padding: 15px; border-radius: 8px; font-size: 1em; line-height: 1.6; white-space: pre-wrap; min-height: 100px;"></div>
@@ -2034,6 +2035,59 @@
                     saveBtn.disabled = false;
                 }, 2000);
                 return false;
+            }
+        }
+
+        // Sort cloud links alphabetically by name
+        async function sortCloudLinks() {
+            const sortBtn = document.getElementById('sortCloudBtn');
+            sortBtn.textContent = '⏳ Sorting...';
+            sortBtn.disabled = true;
+
+            try {
+                const entries = parseCloudLinks();
+
+                // Sort alphabetically by name (case-insensitive)
+                // Entries without names go to the end
+                entries.sort((a, b) => {
+                    const nameA = (a.name || '').toLowerCase();
+                    const nameB = (b.name || '').toLowerCase();
+
+                    // If both have no name, maintain order
+                    if (!nameA && !nameB) return 0;
+                    // No name goes to end
+                    if (!nameA) return 1;
+                    if (!nameB) return -1;
+                    // Alphabetical sort
+                    return nameA.localeCompare(nameB);
+                });
+
+                cloudLinksContent = rebuildCloudContent(entries);
+                populateCloudLinks();
+
+                sortBtn.textContent = '✓ Sorted!';
+                sortBtn.style.background = 'linear-gradient(45deg, #4CAF50, #45a049)';
+
+                // Auto-save to cloud if access code present
+                const accessCode = document.getElementById('accessCodeInput').value.trim();
+                if (accessCode) {
+                    await saveLinksToCloud();
+                }
+
+                setTimeout(() => {
+                    sortBtn.textContent = '🔤 Sort A-Z';
+                    sortBtn.style.background = 'linear-gradient(45deg, #FF9800, #F57C00)';
+                    sortBtn.disabled = false;
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error sorting cloud links:', error);
+                sortBtn.textContent = '❌ Error';
+                setTimeout(() => {
+                    sortBtn.textContent = '🔤 Sort A-Z';
+                    sortBtn.style.background = 'linear-gradient(45deg, #FF9800, #F57C00)';
+                    sortBtn.disabled = false;
+                }, 2000);
             }
         }
 
