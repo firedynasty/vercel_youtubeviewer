@@ -981,6 +981,27 @@
         .sidebar-save-btn:hover {
             opacity: 0.9;
         }
+        .sidebar-access-code {
+            padding: 10px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sidebar-access-code input {
+            width: 80px;
+            padding: 8px 12px;
+            font-size: 14px;
+            border: 2px solid #FF9800;
+            border-radius: 6px;
+            background: #2a2a2a;
+            color: white;
+            outline: none;
+        }
+        .sidebar-access-code span {
+            color: #888;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -989,6 +1010,10 @@
         <div class="sidebar-header">
             <span>📼 Saved Videos</span>
             <button class="sidebar-close-btn" onclick="toggleSavedVideosSidebar()">&times;</button>
+        </div>
+        <div class="sidebar-access-code">
+            <input type="text" id="sidebarAccessCode" placeholder="123" autocomplete="off">
+            <span>Access code</span>
         </div>
         <button class="sidebar-save-btn" onclick="saveCurrentVideoToSidebar()">💾 Save Current Video</button>
         <div id="sidebarList" class="sidebar-list">
@@ -2747,6 +2772,18 @@
             // Load saved times from cloud on page init
             loadSavedTimesFromCloud();
 
+            // Sync access code inputs (main page and sidebar)
+            const mainAccessCode = document.getElementById('accessCodeInput');
+            const sidebarAccessCode = document.getElementById('sidebarAccessCode');
+            if (mainAccessCode && sidebarAccessCode) {
+                mainAccessCode.addEventListener('input', () => {
+                    sidebarAccessCode.value = mainAccessCode.value;
+                });
+                sidebarAccessCode.addEventListener('input', () => {
+                    mainAccessCode.value = sidebarAccessCode.value;
+                });
+            }
+
             // Load URL history navbar
             loadUrlHistory();
 
@@ -3866,25 +3903,36 @@
         }
 
         // Cloud functions for saved times (Vercel Blob)
+        // Each video is saved as a separate file: "yt_VIDEO_ID.json" or "media_ENCODED.json"
+        let cloudFiles = {}; // Store raw file data from API
+
         async function loadSavedTimesFromCloud() {
             try {
                 const response = await fetch('/api/files');
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const data = await response.json();
-                const files = data.files || {};
-                if (files[SAVED_TIMES_FILENAME]) {
-                    try {
-                        allSavedTimes = JSON.parse(files[SAVED_TIMES_FILENAME]);
-                        console.log('☁️ Loaded saved times from cloud:', Object.keys(allSavedTimes).length, 'videos');
-                    } catch (parseErr) {
-                        console.error('☁️ Error parsing saved times:', parseErr);
-                        allSavedTimes = {};
+                cloudFiles = data.files || {};
+
+                // Parse video files (yt_*.json or media_*.json)
+                allSavedTimes = {};
+                Object.keys(cloudFiles).forEach(filename => {
+                    if (filename.startsWith('yt_') || filename.startsWith('media_')) {
+                        try {
+                            const parsed = JSON.parse(cloudFiles[filename]);
+                            // Extract key from filename
+                            const key = filename.replace(/^(yt_|media_)/, '').replace(/\.json$/, '');
+                            allSavedTimes[key] = parsed.times || [];
+                            // Store URL for display
+                            if (parsed.url) {
+                                allSavedTimes[key].url = parsed.url;
+                            }
+                        } catch (e) {
+                            console.error('Error parsing', filename, e);
+                        }
                     }
-                } else {
-                    console.log('☁️ No saved-times.json found in cloud');
-                    allSavedTimes = {};
-                }
-                // Render sidebar after loading
+                });
+
+                console.log('☁️ Loaded saved times from cloud:', Object.keys(allSavedTimes).length, 'videos');
                 renderSavedVideosSidebar();
             } catch (error) {
                 console.error('☁️ Error loading saved times from cloud:', error);
@@ -3892,38 +3940,93 @@
             }
         }
 
+        function getAccessCode() {
+            const mainAccessCode = document.getElementById('accessCodeInput')?.value?.trim();
+            const sidebarAccessCode = document.getElementById('sidebarAccessCode')?.value?.trim();
+            return mainAccessCode || sidebarAccessCode || '';
+        }
+
         async function saveSavedTimesToCloud() {
-            const accessCode = document.getElementById('accessCodeInput')?.value?.trim();
+            const accessCode = getAccessCode();
             if (!accessCode) {
                 console.log('☁️ No access code - skipping cloud save');
                 return;
             }
+
+            const key = getCurrentMediaKey();
+            if (!key || !savedTimesData || savedTimesData.length === 0) {
+                console.log('☁️ No data to save');
+                return;
+            }
+
+            // Determine filename prefix based on media type
+            const prefix = (playerType === 'youtube') ? 'yt_' : 'media_';
+            const filename = `${prefix}${key}.json`;
+
+            // Build URL for reference
+            let url = '';
+            if (playerType === 'youtube' && currentVideoId) {
+                url = `https://www.youtube.com/watch?v=${currentVideoId}`;
+            } else if (currentMediaUrl) {
+                url = currentMediaUrl;
+            }
+
             try {
                 const response = await fetch('/api/files', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        filename: SAVED_TIMES_FILENAME,
-                        content: JSON.stringify(allSavedTimes, null, 2),
+                        filename: filename,
+                        content: JSON.stringify({ url: url, times: savedTimesData }, null, 2),
                         accessCode: accessCode
                     })
                 });
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                console.log('☁️ Saved times to cloud');
-                // Update sidebar after saving
-                renderSavedVideosSidebar();
+                console.log('☁️ Saved times to cloud:', filename);
+
+                // Reload to refresh sidebar
+                await loadSavedTimesFromCloud();
             } catch (error) {
                 console.error('☁️ Error saving times to cloud:', error);
+            }
+        }
+
+        async function deleteVideoFromCloud(key) {
+            const accessCode = getAccessCode();
+            if (!accessCode) {
+                showStatus('Enter access code to delete', 'error');
+                return;
+            }
+
+            // Determine filename
+            const ytFilename = `yt_${key}.json`;
+            const mediaFilename = `media_${key}.json`;
+            const filename = cloudFiles[ytFilename] ? ytFilename : mediaFilename;
+
+            try {
+                const response = await fetch(`/api/files?filename=${encodeURIComponent(filename)}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ accessCode: accessCode })
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                console.log('☁️ Deleted from cloud:', filename);
+
+                // Reload to refresh sidebar
+                await loadSavedTimesFromCloud();
+            } catch (error) {
+                console.error('☁️ Error deleting from cloud:', error);
             }
         }
 
         function loadTimesForCurrentVideo() {
             const key = getCurrentMediaKey();
             if (key && allSavedTimes[key]) {
-                savedTimesData = allSavedTimes[key];
+                const data = allSavedTimes[key];
+                // Handle both array format and object with times property
+                savedTimesData = Array.isArray(data) ? data : (data || []);
             } else {
                 savedTimesData = [];
-                if (key) allSavedTimes[key] = savedTimesData;
             }
             renderSavedTimesTable();
             renderSavedVideosSidebar();
@@ -3940,7 +4043,10 @@
 
         function renderSavedVideosSidebar() {
             const list = document.getElementById('sidebarList');
-            const keys = Object.keys(allSavedTimes).filter(k => allSavedTimes[k] && allSavedTimes[k].length > 0);
+            const keys = Object.keys(allSavedTimes).filter(k => {
+                const data = allSavedTimes[k];
+                return data && (Array.isArray(data) ? data.length > 0 : true);
+            });
 
             if (keys.length === 0) {
                 list.innerHTML = '<div class="sidebar-empty">No saved videos yet</div>';
@@ -3950,25 +4056,29 @@
             const currentKey = getCurrentMediaKey();
 
             list.innerHTML = keys.map(key => {
-                const times = allSavedTimes[key];
+                const data = allSavedTimes[key];
+                const times = Array.isArray(data) ? data : [];
+                const storedUrl = data.url || '';
                 const isActive = key === currentKey;
-                // Decode URL for display (key is video ID or base64-encoded URL)
-                let displayUrl = key;
-                if (key.length === 11 && /^[a-zA-Z0-9_-]+$/.test(key)) {
-                    // YouTube video ID
-                    displayUrl = `youtube.com/watch?v=${key}`;
-                } else {
-                    // Try to decode base64
-                    try {
-                        displayUrl = atob(key.replace(/_/g, '/').replace(/-/g, '+'));
-                        // Truncate long URLs
-                        if (displayUrl.length > 50) {
-                            displayUrl = displayUrl.substring(0, 47) + '...';
+
+                // Use stored URL or decode from key
+                let displayUrl = storedUrl;
+                if (!displayUrl) {
+                    if (key.length === 11 && /^[a-zA-Z0-9_-]+$/.test(key)) {
+                        displayUrl = `youtube.com/watch?v=${key}`;
+                    } else {
+                        try {
+                            displayUrl = atob(key.replace(/_/g, '/').replace(/-/g, '+'));
+                        } catch (e) {
+                            displayUrl = key;
                         }
-                    } catch (e) {
-                        displayUrl = key.substring(0, 20) + '...';
                     }
                 }
+                // Truncate for display
+                if (displayUrl.length > 50) {
+                    displayUrl = displayUrl.substring(0, 47) + '...';
+                }
+
                 return `
                     <div class="sidebar-item ${isActive ? 'active' : ''}" data-key="${escapeHtml(key)}">
                         <button class="sidebar-item-delete" onclick="event.stopPropagation(); deleteSavedVideo('${escapeHtml(key)}')">&times;</button>
@@ -3988,26 +4098,29 @@
         }
 
         function loadVideoFromSidebar(key) {
-            // Determine URL from key
-            let url;
-            if (key.length === 11 && /^[a-zA-Z0-9_-]+$/.test(key)) {
-                // YouTube video ID
-                url = `https://www.youtube.com/watch?v=${key}`;
-            } else {
-                // Decode base64
-                try {
-                    url = atob(key.replace(/_/g, '/').replace(/-/g, '+'));
-                } catch (e) {
-                    showStatus('Could not decode video URL', 'error');
-                    return;
+            const data = allSavedTimes[key];
+            const storedUrl = data?.url;
+
+            // Determine URL - prefer stored URL, otherwise decode from key
+            let url = storedUrl;
+            if (!url) {
+                if (key.length === 11 && /^[a-zA-Z0-9_-]+$/.test(key)) {
+                    url = `https://www.youtube.com/watch?v=${key}`;
+                } else {
+                    try {
+                        url = atob(key.replace(/_/g, '/').replace(/-/g, '+'));
+                    } catch (e) {
+                        showStatus('Could not decode video URL', 'error');
+                        return;
+                    }
                 }
             }
 
             // Load the video
             loadMediaFromUrl(url);
 
-            // Load its saved times
-            savedTimesData = allSavedTimes[key] || [];
+            // Load its saved times (handle both array and object with times property)
+            savedTimesData = Array.isArray(data) ? data : (data || []);
             renderSavedTimesTable();
             renderSavedVideosSidebar();
 
@@ -4019,11 +4132,11 @@
             showStatus('Loaded video with saved times', 'success');
         }
 
-        function deleteSavedVideo(key) {
+        async function deleteSavedVideo(key) {
             if (!confirm('Delete all saved times for this video?')) return;
-            delete allSavedTimes[key];
-            saveSavedTimesToCloud();
-            renderSavedVideosSidebar();
+
+            // Delete from cloud
+            await deleteVideoFromCloud(key);
 
             // If we deleted the current video's times, clear the table
             if (key === getCurrentMediaKey()) {
