@@ -845,10 +845,8 @@
             <button id="loadDefaultBtn" class="jump-btn" style="display: none; background: linear-gradient(45deg, #4CAF50, #45a049); font-size: 13px; padding: 10px 19px;">🎬 Load Default</button>
             <input type="text" id="accessCodeInput" placeholder="123" autocomplete="off" value="" style="width: 80px; padding: 8px 12px; font-size: 14px; border: 2px solid rgb(255, 152, 0); border-radius: 6px; background: rgb(42, 42, 42); color: white; outline: none;">
             <button id="loadYouTubeClipboardBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); font-size: 13px; padding: 10px 19px;">📋 Paste Media + Times</button>
-            <button id="copyShareableLinkBtn" class="jump-btn" style="display: none; background: linear-gradient(45deg, #9C27B0, #7B1FA2); font-size: 13px; padding: 10px 19px;">🔗 Copy Shareable Link</button>
             <button id="cleanTranscriptBtn" class="jump-btn" style="background: linear-gradient(45deg, #2196F3, #1976D2); font-size: 13px; padding: 10px 19px;">✨ Clean & Copy Transcript</button>
-            <button id="restoreTranscriptBtn" class="jump-btn" style="background: linear-gradient(45deg, #00BCD4, #0097A7); font-size: 13px; padding: 10px 19px;">📄 Restore Prev. Pasted Trans.</button>
-            <a id="textProcessorLink" href="processedText.html" class="jump-btn" style="background: linear-gradient(45deg, #E91E63, #C2185B); font-size: 13px; padding: 10px 19px; text-decoration: none; color: white;">📝 Text Processor</a>
+            <a id="textProcessorLink" href="https://cdpn.io/pen/debug/KwVxmKR" class="jump-btn" style="background: linear-gradient(45deg, #E91E63, #C2185B); font-size: 13px; padding: 10px 19px; text-decoration: none; color: white;">📖 Bible Audio</a>
             <button id="cloudNotesToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #607D8B, #455A64); font-size: 13px; padding: 10px 19px;">☁️ Cloud Notes</button>
         </div>
 
@@ -2636,11 +2634,6 @@
                 copyCurrentStateToClipboard();
             });
 
-            // Copy shareable link button
-            document.getElementById('copyShareableLinkBtn').addEventListener('click', function() {
-                copyShareableLink();
-            });
-
             // Clean & Copy Transcript button
             document.getElementById('cleanTranscriptBtn').addEventListener('click', async function() {
                 try {
@@ -2708,40 +2701,6 @@
                 } catch (err) {
                     console.error('Failed to process transcript:', err);
                     showStatus('Failed to read/write clipboard. Please grant permission.', 'error');
-                }
-            });
-
-            // Restore Transcript button
-            document.getElementById('restoreTranscriptBtn').addEventListener('click', async function() {
-                if (!lastCleanedTranscript) {
-                    showStatus('No transcript to restore - use "Clean & Copy Transcript" first', 'error');
-                    return;
-                }
-
-                // Don't restore if it looks like a URL (not a transcript)
-                if (lastCleanedTranscript.trim().startsWith('http')) {
-                    showStatus('No valid transcript to restore', 'error');
-                    return;
-                }
-
-                try {
-                    await navigator.clipboard.writeText(lastCleanedTranscript);
-
-                    // Visual feedback
-                    const btn = this;
-                    const originalText = btn.textContent;
-                    btn.textContent = '✅ Restored!';
-                    btn.style.transform = 'scale(1.05)';
-
-                    setTimeout(() => {
-                        btn.textContent = originalText;
-                        btn.style.transform = '';
-                    }, 2000);
-
-                    showStatus('Transcript restored to clipboard!', 'success');
-                } catch (err) {
-                    console.error('Failed to restore transcript:', err);
-                    showStatus('Failed to write to clipboard', 'error');
                 }
             });
 
@@ -3146,57 +3105,6 @@
             } catch (err) {
                 console.error('Failed to copy:', err);
                 showStatus('Failed to copy to clipboard', 'error');
-            }
-        }
-
-        // Copy shareable link (full URL with query parameters)
-        async function copyShareableLink() {
-            // Get current URL
-            let currentUrl = '';
-
-            if (playerType === 'youtube' && currentVideoId) {
-                // Reconstruct YouTube URL
-                currentUrl = `https://www.youtube.com/watch?v=${currentVideoId}`;
-            } else if ((playerType === 'video' || playerType === 'audio') && currentMediaUrl) {
-                // Use the direct media URL
-                currentUrl = currentMediaUrl;
-            } else {
-                showStatus('No media loaded', 'error');
-                return;
-            }
-
-            // Get all saved times
-            const savedTimeButtons = document.querySelectorAll('.saved-time-btn');
-
-            if (savedTimeButtons.length === 0) {
-                showStatus('No saved times available', 'error');
-                return;
-            }
-
-            // Build the format: URL, time1, time2, time3, ...
-            const times = Array.from(savedTimeButtons).map(btn => btn.dataset.time);
-            const formattedString = `${currentUrl}, ${times.join(', ')}`;
-
-            // Build the shareable link
-            const shareableLink = `${window.location.origin}${window.location.pathname}?${encodeURIComponent(formattedString)}`;
-
-            // Copy to clipboard
-            try {
-                await navigator.clipboard.writeText(shareableLink);
-                showStatus('Shareable link copied!', 'success');
-
-                // Visual feedback on button
-                const btn = document.getElementById('copyShareableLinkBtn');
-                const originalText = btn.textContent;
-                btn.textContent = '✅ Copied!';
-                btn.style.transform = 'scale(1.05)';
-                setTimeout(() => {
-                    btn.textContent = originalText;
-                    btn.style.transform = '';
-                }, 2000);
-            } catch (err) {
-                console.error('Failed to copy:', err);
-                showStatus('Failed to copy shareable link', 'error');
             }
         }
 
