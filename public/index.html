@@ -4019,6 +4019,8 @@
 
                 console.log('☁️ Loaded saved times from cloud:', Object.keys(allSavedTimes).length, 'videos');
                 renderSavedVideosSidebar();
+                // Render saved times buttons for the currently playing video (if any)
+                loadTimesForCurrentVideo();
             } catch (error) {
                 console.error('☁️ Error loading saved times from cloud:', error);
                 allSavedTimes = {};
