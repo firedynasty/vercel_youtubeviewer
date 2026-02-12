@@ -1314,6 +1314,71 @@
             return entries;
         }
 
+        // Parse links from clipboard text (multi-line: markdown, YouTube with ?times, plain URLs, local paths)
+        function parseClipboardLinks(text) {
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+            const entries = [];
+            const markdownRe = /^!\[([^\]]*)\]\(([^)]+)\)$/;
+            const mediaExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v', '.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'];
+
+            for (const line of lines) {
+                // Skip label lines like "link 2 :"
+                if (/^link\s+\d+\s*:/i.test(line)) continue;
+
+                // Markdown: ![name](url)
+                const mdMatch = line.match(markdownRe);
+                if (mdMatch) {
+                    entries.push({ name: mdMatch[1], url: mdMatch[2], inlineTimes: [] });
+                    continue;
+                }
+
+                // YouTube URL with inline ?times (e.g. ...?v=xxx?3:55,4:39)
+                // The second ? separates times from the URL
+                if (isYouTubeURL(line)) {
+                    const parts = line.split('?');
+                    if (parts.length >= 3) {
+                        // URL is everything up to the last ? segment, times are in the last segment
+                        const timePart = parts[parts.length - 1];
+                        const urlPart = parts.slice(0, -1).join('?');
+                        // Check if the last segment looks like times (contains digits and colons/commas)
+                        if (/^\d/.test(timePart)) {
+                            const times = timePart.split(',').map(t => t.trim()).filter(t => t);
+                            entries.push({ name: '', url: urlPart, inlineTimes: times });
+                        } else {
+                            entries.push({ name: '', url: line, inlineTimes: [] });
+                        }
+                    } else {
+                        entries.push({ name: '', url: line, inlineTimes: [] });
+                    }
+                    continue;
+                }
+
+                // Plain URL (http/https)
+                if (line.startsWith('http://') || line.startsWith('https://')) {
+                    entries.push({ name: '', url: line, inlineTimes: [] });
+                    continue;
+                }
+
+                // Relative path with media extension
+                const lowerLine = line.toLowerCase();
+                if (mediaExtensions.some(ext => lowerLine.endsWith(ext))) {
+                    entries.push({ name: '', url: line, inlineTimes: [] });
+                    continue;
+                }
+            }
+            return entries;
+        }
+
+        // Activate pagination from clipboard links
+        function activatePaginationFromClipboard(links) {
+            allPaginationLinks = links;
+            paginationSource = 'clipboard';
+            currentPaginationIndex = 0;
+            showPagination();
+            loadCurrentPaginationLink();
+            loadTimesForCurrentVideo();
+        }
+
         // Activate pagination from text-section
         function activatePaginationFromText(clickedUrl) {
             allPaginationLinks = parseTextSectionLinks();
@@ -1397,6 +1462,7 @@
             if (allPaginationLinks.length === 0) return;
             const current = allPaginationLinks[currentPaginationIndex];
             loadMediaFromUrl(current.url, autoplay);
+            loadTimesForCurrentVideo();
         }
 
         function toggleNavbarLoop(buttonElement) {
@@ -3575,6 +3641,41 @@
 
                 if (!text.trim()) {
                     showStatus('Clipboard is empty', 'error');
+                    return;
+                }
+
+                // Check for multi-link clipboard (2+ media links across lines)
+                const clipboardLinks = parseClipboardLinks(text);
+                if (clipboardLinks.length >= 2) {
+                    // Store inline times into allSavedTimes for links that have them
+                    for (const link of clipboardLinks) {
+                        if (link.inlineTimes && link.inlineTimes.length > 0) {
+                            // Compute the media key for this link
+                            let key = null;
+                            if (isYouTubeURL(link.url)) {
+                                key = extractVideoId(link.url);
+                            } else {
+                                key = btoa(link.url).replace(/[/+=]/g, '_');
+                            }
+                            if (key) {
+                                const timesData = link.inlineTimes.map(t => ({ time: t.trim(), name: '' }));
+                                allSavedTimes[key] = timesData;
+                            }
+                        }
+                    }
+                    activatePaginationFromClipboard(clipboardLinks);
+                    renderSavedVideosSidebar();
+                    showStatus(`Loaded ${clipboardLinks.length} links into pagination`, 'success');
+
+                    // Visual feedback
+                    const btn = document.getElementById('loadYouTubeClipboardBtn');
+                    const originalText = btn.textContent;
+                    btn.textContent = '✅ Loaded!';
+                    btn.style.transform = 'scale(1.05)';
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.style.transform = '';
+                    }, 2000);
                     return;
                 }
 
