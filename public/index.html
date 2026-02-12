@@ -1051,9 +1051,11 @@
             <button id="loadDefaultBtn" class="jump-btn" style="display: none; background: linear-gradient(45deg, #4CAF50, #45a049); font-size: 13px; padding: 10px 19px;">🎬 Load Default</button>
             <input type="text" id="accessCodeInput" placeholder="123" autocomplete="off" value="" style="width: 80px; padding: 8px 12px; font-size: 14px; border: 2px solid rgb(255, 152, 0); border-radius: 6px; background: rgb(42, 42, 42); color: white; outline: none;">
             <button id="loadYouTubeClipboardBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); font-size: 13px; padding: 10px 19px;">📋 Paste Media + Times</button>
+            <button id="loadPasteFromCloudBtn" class="jump-btn" style="background: linear-gradient(45deg, #2196F3, #1976D2); font-size: 13px; padding: 10px 19px;">☁️ Load Paste</button>
             <a id="textProcessorLink" href="https://cdpn.io/pen/debug/KwVxmKR" class="jump-btn" style="background: linear-gradient(45deg, #E91E63, #C2185B); font-size: 13px; padding: 10px 19px; text-decoration: none; color: white;">📖 Bible Audio</a>
             <button id="cloudNotesToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #607D8B, #455A64); font-size: 13px; padding: 10px 19px;">☁️ Cloud Notes</button>
         </div>
+        <textarea id="pasteMediaTextarea" style="display: none;"></textarea>
 
         <!-- Inline Cloud Notes Section -->
         <div id="cloudNotesSection" style="display:none; margin-bottom: 20px; padding: 15px; background: #1a1a2e; border-radius: 8px; border: 1px solid #333;">
@@ -1865,6 +1867,7 @@
         // ============================================
 
         const CLOUD_LINKS_FILENAME = 'youtube_quick_links.txt';
+        const PASTE_MEDIA_FILENAME = 'youtube_paste_media.txt';
         let cloudLinksContent = '';
 
         // Populate cloud-section with clickable URLs (similar to text-section)
@@ -2100,6 +2103,85 @@
                     saveBtn.disabled = false;
                 }, 2000);
                 return false;
+            }
+        }
+
+        // Save paste media text to cloud (silent background save)
+        async function savePasteToCloud(rawText) {
+            const accessCode = getAccessCode();
+            if (!accessCode) {
+                console.log('☁️ No access code - skipping paste media cloud save');
+                return;
+            }
+            if (!rawText || !rawText.trim()) return;
+
+            try {
+                const response = await fetch('/api/files', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        filename: PASTE_MEDIA_FILENAME,
+                        content: rawText,
+                        accessCode: accessCode
+                    })
+                });
+                if (response.ok) {
+                    console.log('☁️ Paste media saved to cloud');
+                } else {
+                    console.error('☁️ Failed to save paste media:', response.status);
+                }
+            } catch (error) {
+                console.error('☁️ Error saving paste media to cloud:', error);
+            }
+        }
+
+        // Load paste media text from cloud
+        async function loadPasteFromCloud() {
+            const btn = document.getElementById('loadPasteFromCloudBtn');
+            const originalText = btn.textContent;
+            btn.textContent = '⏳ Loading...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/files');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const files = data.files || {};
+
+                if (files[PASTE_MEDIA_FILENAME]) {
+                    const rawText = files[PASTE_MEDIA_FILENAME];
+                    document.getElementById('pasteMediaTextarea').value = rawText;
+
+                    const success = processClipboardText(rawText);
+                    if (success) {
+                        btn.textContent = '✅ Loaded!';
+                        btn.style.background = 'linear-gradient(45deg, #4CAF50, #45a049)';
+                        console.log('☁️ Loaded paste media from cloud');
+                    } else {
+                        btn.textContent = '❌ Invalid';
+                    }
+                } else {
+                    btn.textContent = '☁️ No file';
+                    console.log('No paste media file found in cloud');
+                }
+
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = 'linear-gradient(45deg, #2196F3, #1976D2)';
+                    btn.disabled = false;
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error loading paste media from cloud:', error);
+                btn.textContent = '❌ Error';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = 'linear-gradient(45deg, #2196F3, #1976D2)';
+                    btn.disabled = false;
+                }, 2000);
             }
         }
 
@@ -2926,6 +3008,11 @@
                 loadYouTubeFromClipboard();
             });
 
+            // Load Paste from Cloud button
+            document.getElementById('loadPasteFromCloudBtn').addEventListener('click', function() {
+                loadPasteFromCloud();
+            });
+
             // Add custom times button
             document.getElementById('addTimesBtn').addEventListener('click', function() {
                 addCustomTimes();
@@ -3633,39 +3720,137 @@
             showStatus(`${mediaType === 'audio' ? 'Audio' : 'Video'} loaded!`, 'success');
         }
 
+        // Shared processing logic for clipboard/cloud paste media text
+        // Returns true on success, false on failure
+        function processClipboardText(text) {
+            console.log('🎬 DEBUG: Processing text:', text);
+
+            if (!text.trim()) {
+                showStatus('Text is empty', 'error');
+                return false;
+            }
+
+            // Check for multi-link clipboard (2+ media links across lines)
+            const clipboardLinks = parseClipboardLinks(text);
+            if (clipboardLinks.length >= 2) {
+                // Store inline times into allSavedTimes for links that have them
+                for (const link of clipboardLinks) {
+                    if (link.inlineTimes && link.inlineTimes.length > 0) {
+                        let key = null;
+                        if (isYouTubeURL(link.url)) {
+                            key = extractVideoId(link.url);
+                        } else {
+                            key = btoa(link.url).replace(/[/+=]/g, '_');
+                        }
+                        if (key) {
+                            const timesData = link.inlineTimes.map(t => ({ time: t.trim(), name: '' }));
+                            allSavedTimes[key] = timesData;
+                        }
+                    }
+                }
+                activatePaginationFromClipboard(clipboardLinks);
+                renderSavedVideosSidebar();
+                showStatus(`Loaded ${clipboardLinks.length} links into pagination`, 'success');
+                return true;
+            }
+
+            // Split by comma to check if there are times included
+            const entries = text.split(',').map(t => t.trim()).filter(t => t);
+            const firstEntry = entries[0];
+
+            // Detect media type
+            const mediaType = detectMediaType(firstEntry);
+
+            if (!mediaType) {
+                showStatus('Not a valid media URL (YouTube, MP4, MP3, etc.)', 'error');
+                return false;
+            }
+
+            if (mediaType === 'youtube') {
+                const videoId = extractVideoId(firstEntry);
+                if (!videoId) {
+                    showStatus('Could not extract YouTube video ID', 'error');
+                    return false;
+                }
+
+                currentVideoId = videoId;
+                switchToPlayer('youtube');
+
+                const container = document.getElementById('youtubeContainer');
+                container.innerHTML = '<div id="youtube-player"></div>';
+
+                const initPlayer = () => {
+                    if (typeof YT !== 'undefined' && YT.Player) {
+                        player = new YT.Player('youtube-player', {
+                            height: '100%',
+                            width: '100%',
+                            videoId: videoId,
+                            playerVars: {
+                                'enablejsapi': 1,
+                                'rel': 0,
+                                'modestbranding': 1,
+                                'iv_load_policy': 3
+                            },
+                            events: {
+                                'onReady': onPlayerReady,
+                                'onStateChange': onPlayerStateChange
+                            }
+                        });
+                    } else {
+                        setTimeout(initPlayer, 500);
+                    }
+                };
+
+                initPlayer();
+            } else {
+                switchToPlayer(mediaType);
+                loadHTML5Media(firstEntry, mediaType);
+            }
+
+            // Check if there are times after the URL
+            if (entries.length > 1) {
+                const timeEntries = entries.slice(1);
+
+                savedTimesData = [];
+                currentTimeIndex = -1;
+
+                timeEntries.forEach((timeEntry) => {
+                    const timeStr = timeEntry.trim();
+                    const seconds = parseTimeToSeconds(timeStr);
+                    if (seconds !== null) {
+                        savedTimesData.push({ time: timeStr, name: '' });
+                    }
+                });
+
+                const key = getCurrentMediaKey();
+                if (key) allSavedTimes[key] = savedTimesData;
+                renderSavedTimesTable();
+
+                if (savedTimesData.length > 0) {
+                    saveSavedTimesToCloud();
+                    console.log(`🎬 DEBUG: Added ${savedTimesData.length} times`);
+                }
+            } else {
+                loadTimesForCurrentVideo();
+            }
+
+            console.log('🎬 DEBUG: Loaded media:', firstEntry, 'type:', mediaType);
+            showStatus(`${mediaType === 'audio' ? 'Audio' : 'Video'} loaded!`, 'success');
+            return true;
+        }
+
         // Clipboard Loading Function (handles YouTube, Dropbox, and direct media URLs)
         async function loadYouTubeFromClipboard() {
             try {
                 const text = await navigator.clipboard.readText();
-                console.log('🎬 DEBUG: Clipboard text:', text);
 
-                if (!text.trim()) {
-                    showStatus('Clipboard is empty', 'error');
-                    return;
-                }
+                // Store in hidden textarea for reference
+                document.getElementById('pasteMediaTextarea').value = text;
 
-                // Check for multi-link clipboard (2+ media links across lines)
-                const clipboardLinks = parseClipboardLinks(text);
-                if (clipboardLinks.length >= 2) {
-                    // Store inline times into allSavedTimes for links that have them
-                    for (const link of clipboardLinks) {
-                        if (link.inlineTimes && link.inlineTimes.length > 0) {
-                            // Compute the media key for this link
-                            let key = null;
-                            if (isYouTubeURL(link.url)) {
-                                key = extractVideoId(link.url);
-                            } else {
-                                key = btoa(link.url).replace(/[/+=]/g, '_');
-                            }
-                            if (key) {
-                                const timesData = link.inlineTimes.map(t => ({ time: t.trim(), name: '' }));
-                                allSavedTimes[key] = timesData;
-                            }
-                        }
-                    }
-                    activatePaginationFromClipboard(clipboardLinks);
-                    renderSavedVideosSidebar();
-                    showStatus(`Loaded ${clipboardLinks.length} links into pagination`, 'success');
+                const success = processClipboardText(text);
+                if (success) {
+                    // Auto-save to cloud
+                    savePasteToCloud(text);
 
                     // Visual feedback
                     const btn = document.getElementById('loadYouTubeClipboardBtn');
@@ -3676,108 +3861,7 @@
                         btn.textContent = originalText;
                         btn.style.transform = '';
                     }, 2000);
-                    return;
                 }
-
-                // Split by comma to check if there are times included
-                const entries = text.split(',').map(t => t.trim()).filter(t => t);
-                const firstEntry = entries[0];
-
-                // Detect media type
-                const mediaType = detectMediaType(firstEntry);
-
-                if (!mediaType) {
-                    showStatus('Not a valid media URL (YouTube, MP4, MP3, etc.)', 'error');
-                    return;
-                }
-
-                if (mediaType === 'youtube') {
-                    // Handle YouTube URL
-                    const videoId = extractVideoId(firstEntry);
-                    if (!videoId) {
-                        showStatus('Could not extract YouTube video ID', 'error');
-                        return;
-                    }
-
-                    currentVideoId = videoId;
-                    switchToPlayer('youtube');
-
-                    // Clear the container and create player div
-                    const container = document.getElementById('youtubeContainer');
-                    container.innerHTML = '<div id="youtube-player"></div>';
-
-                    // Wait for API to be ready then create player
-                    const initPlayer = () => {
-                        if (typeof YT !== 'undefined' && YT.Player) {
-                            player = new YT.Player('youtube-player', {
-                                height: '100%',
-                                width: '100%',
-                                videoId: videoId,
-                                playerVars: {
-                                    'enablejsapi': 1,
-                                    'rel': 0,
-                                    'modestbranding': 1,
-                                    'iv_load_policy': 3
-                                },
-                                events: {
-                                    'onReady': onPlayerReady,
-                                    'onStateChange': onPlayerStateChange
-                                }
-                            });
-                        } else {
-                            setTimeout(initPlayer, 500);
-                        }
-                    };
-
-                    initPlayer();
-                } else {
-                    // Handle HTML5 media (video or audio)
-                    switchToPlayer(mediaType);
-                    loadHTML5Media(firstEntry, mediaType);
-                }
-
-                // Check if there are times after the URL
-                if (entries.length > 1) {
-                    const timeEntries = entries.slice(1); // Get all entries after the URL
-
-                    // Clear and populate savedTimesData
-                    savedTimesData = [];
-                    currentTimeIndex = -1;
-
-                    timeEntries.forEach((timeEntry) => {
-                        const timeStr = timeEntry.trim();
-                        const seconds = parseTimeToSeconds(timeStr);
-                        if (seconds !== null) {
-                            savedTimesData.push({ time: timeStr, name: '' });
-                        }
-                    });
-
-                    // Update allSavedTimes and render
-                    const key = getCurrentMediaKey();
-                    if (key) allSavedTimes[key] = savedTimesData;
-                    renderSavedTimesTable();
-
-                    if (savedTimesData.length > 0) {
-                        saveSavedTimesToCloud();
-                        console.log(`🎬 DEBUG: Added ${savedTimesData.length} times`);
-                    }
-                } else {
-                    // No times in clipboard - load times from cloud for this video
-                    loadTimesForCurrentVideo();
-                }
-
-                console.log('🎬 DEBUG: Loaded media from clipboard:', firstEntry, 'type:', mediaType);
-                showStatus(`${mediaType === 'audio' ? 'Audio' : 'Video'} loaded from clipboard!`, 'success');
-
-                // Visual feedback
-                const btn = document.getElementById('loadYouTubeClipboardBtn');
-                const originalText = btn.textContent;
-                btn.textContent = '✅ Loaded!';
-                btn.style.transform = 'scale(1.05)';
-                setTimeout(() => {
-                    btn.textContent = originalText;
-                    btn.style.transform = '';
-                }, 2000);
 
             } catch (err) {
                 console.error('🎬 DEBUG: Failed to read clipboard:', err);
