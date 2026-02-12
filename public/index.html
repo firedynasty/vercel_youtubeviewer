@@ -1002,6 +1002,62 @@
             color: #888;
             font-size: 12px;
         }
+        /* Audio Recording Controls */
+        .record-btn {
+            width: 40px;
+            height: 40px;
+            background: rgba(239, 68, 68, 0.9);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .record-btn:hover:not(:disabled) {
+            background: rgba(220, 38, 38, 1);
+            transform: scale(1.1);
+        }
+
+        .record-btn:disabled {
+            background: rgba(100, 100, 100, 0.5);
+            cursor: not-allowed;
+        }
+
+        .record-btn.recording {
+            background: rgba(239, 68, 68, 1);
+            animation: pulse-record 1s infinite;
+        }
+
+        @keyframes pulse-record {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+        }
+
+        .recording-indicator {
+            color: #ef4444;
+            font-size: 12px;
+            font-weight: bold;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .processing-indicator {
+            color: #fbbf24;
+            font-size: 12px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -1054,6 +1110,9 @@
             <button id="loadPasteFromCloudBtn" class="jump-btn" style="background: linear-gradient(45deg, #2196F3, #1976D2); font-size: 13px; padding: 10px 19px;">☁️ Load Paste</button>
             <a id="textProcessorLink" href="https://cdpn.io/pen/debug/KwVxmKR" class="jump-btn" style="background: linear-gradient(45deg, #E91E63, #C2185B); font-size: 13px; padding: 10px 19px; text-decoration: none; color: white;">📖 Bible Audio</a>
             <button id="cloudNotesToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #607D8B, #455A64); font-size: 13px; padding: 10px 19px;">☁️ Cloud Notes</button>
+            <button id="recordBtn" class="record-btn" title="Start Recording">🎙️</button>
+            <span id="recordingIndicator" class="recording-indicator" style="display:none;">REC</span>
+            <span id="processingIndicator" class="processing-indicator" style="display:none;">Saving...</span>
         </div>
 
         <!-- Inline Cloud Notes Section -->
@@ -5934,6 +5993,137 @@
     <div style="max-width: 900px; margin: 40px auto 20px; padding: 0 15px;">
         <textarea id="pasteMediaTextarea" placeholder="Paste media content appears here..." style="width: 100%; min-height: 80px; padding: 12px; font-size: 14px; border: 2px solid #333; border-radius: 6px; background: #2a2a2a; color: #fff; resize: vertical; outline: none; font-family: inherit; line-height: 1.5; box-sizing: border-box;"></textarea>
     </div>
+    <!-- Audio Recording Libraries -->
+    <script src="https://cdn.rawgit.com/mattdiamond/Recorderjs/08e7abd9/dist/recorder.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+    <script>
+        // ============================================
+        // AUDIO RECORDING
+        // ============================================
+        (function() {
+            let isRecording = false;
+            let isProcessing = false;
+            let gumStream = null;
+            let recorder = null;
+            let audioContext = null;
+
+            const recordBtn = document.getElementById('recordBtn');
+            const recordingIndicator = document.getElementById('recordingIndicator');
+            const processingIndicator = document.getElementById('processingIndicator');
+
+            recordBtn.addEventListener('click', function() {
+                if (isProcessing) return;
+                if (!isRecording) {
+                    startRecording();
+                } else {
+                    stopRecording();
+                }
+            });
+
+            async function startRecording() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    audioContext = new AudioContextClass();
+                    gumStream = stream;
+
+                    const input = audioContext.createMediaStreamSource(stream);
+                    recorder = new Recorder(input, { numChannels: 1 });
+                    recorder.record();
+
+                    isRecording = true;
+                    recordBtn.classList.add('recording');
+                    recordBtn.textContent = '⏹️';
+                    recordBtn.title = 'Stop & Save Recording';
+                    recordingIndicator.style.display = '';
+                } catch (err) {
+                    console.error('Error accessing microphone:', err);
+                    alert('Microphone access denied. Please allow microphone access to record.');
+                }
+            }
+
+            function stopRecording() {
+                if (!recorder || !gumStream) return;
+
+                isRecording = false;
+                isProcessing = true;
+                recordBtn.classList.remove('recording');
+                recordBtn.textContent = '🎙️';
+                recordBtn.title = 'Start Recording';
+                recordBtn.disabled = true;
+                recordingIndicator.style.display = 'none';
+                processingIndicator.style.display = '';
+
+                recorder.stop();
+                gumStream.getAudioTracks()[0].stop();
+
+                recorder.exportWAV(async function(wavBlob) {
+                    const mp3Blob = await convertToMp3(wavBlob);
+                    downloadMp3(mp3Blob);
+                    isProcessing = false;
+                    recordBtn.disabled = false;
+                    processingIndicator.style.display = 'none';
+                });
+            }
+
+            function convertToMp3(wavBlob) {
+                return new Promise(function(resolve) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const wavData = new DataView(e.target.result);
+                        const sampleRate = wavData.getUint32(24, true);
+                        const numChannels = wavData.getUint16(22, true);
+                        const samples = new Int16Array(e.target.result, 44);
+
+                        const mp3encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, 128);
+                        const mp3Data = [];
+                        const sampleBlockSize = 1152;
+
+                        for (let i = 0; i < samples.length; i += sampleBlockSize) {
+                            const sampleChunk = samples.subarray(i, i + sampleBlockSize);
+                            const mp3buf = mp3encoder.encodeBuffer(sampleChunk);
+                            if (mp3buf.length > 0) {
+                                mp3Data.push(mp3buf);
+                            }
+                        }
+
+                        const finalBuf = mp3encoder.flush();
+                        if (finalBuf.length > 0) {
+                            mp3Data.push(finalBuf);
+                        }
+
+                        const mp3Blob = new Blob(mp3Data, { type: 'audio/mp3' });
+                        resolve(mp3Blob);
+                    };
+                    reader.readAsArrayBuffer(wavBlob);
+                });
+            }
+
+            function downloadMp3(blob) {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                let hours = now.getHours();
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                const isPM = hours >= 12;
+                hours = hours % 12 || 12;
+
+                const filename = 'Screenshot ' + year + '-' + month + '-' + day + ' at ' + hours + '.' + minutes + '.' + seconds + ' ' + (isPM ? 'PM' : 'AM') + '.mp3';
+                const url = URL.createObjectURL(blob);
+
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                URL.revokeObjectURL(url);
+            }
+        })();
+    </script>
 </body>
 </html>
 
