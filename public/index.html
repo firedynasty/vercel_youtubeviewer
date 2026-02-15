@@ -3236,9 +3236,11 @@
             // Loop time adjustment buttons (-15s and +15s)
             document.getElementById('loopTimeMinus15').addEventListener('click', function() {
                 adjustLoopTime(-15);
+                document.getElementById('timer15sBtn').focus();
             });
             document.getElementById('loopTimePlus15').addEventListener('click', function() {
                 adjustLoopTime(15);
+                document.getElementById('timer15sBtn').focus();
             });
 
             // Match button - set loop time to current playback time (kept for backward compatibility)

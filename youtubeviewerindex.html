@@ -678,6 +678,36 @@
             left: 6px;
             transform: skewX(-30deg);
         }
+        /* Saved Times Table */
+        #savedTimesTable tbody tr {
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        #savedTimesTable tbody tr:hover {
+            background: rgba(255, 193, 7, 0.12);
+        }
+        #savedTimesTable tbody tr.active-time-row {
+            background: rgba(255, 193, 7, 0.25);
+            font-weight: 600;
+        }
+        #savedTimesTable tbody td {
+            padding: 4px 8px;
+            font-size: 12px;
+            border-bottom: 1px solid rgba(255, 193, 7, 0.1);
+        }
+        .delete-time-btn {
+            background: none;
+            border: none;
+            color: #f44336;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: background 0.15s;
+        }
+        .delete-time-btn:hover {
+            background: rgba(244, 67, 54, 0.15);
+        }
     </style>
 </head>
 <body>
@@ -707,12 +737,27 @@
 
         <!-- Saved Times Section (directly above video) -->
         <div style="margin-bottom: 5px; padding: 10px; background: rgba(255, 193, 7, 0.05); border-radius: 10px;">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;">
                 <label style="color: #FFC107; font-weight: 600; font-size: 1rem; margin: 0;">⚡ Saved Times:</label>
+                <input type="text" id="savedTimeInput" class="time-input" placeholder="1:15" style="width: 70px; text-align: center; font-size: 12px; padding: 4px 6px;">
+                <input type="text" id="savedTimeComment" class="time-input" placeholder="Comment" style="width: 120px; font-size: 12px; padding: 4px 6px;">
+                <button id="addSingleTimeBtn" class="time-btn" style="background: linear-gradient(45deg, #4CAF50, #45a049); padding: 4px 10px; font-size: 10px;">+ Add</button>
+                <button id="addCurrentTimeBtn" class="time-btn" style="background: linear-gradient(45deg, #2196F3, #1976D2); padding: 4px 10px; font-size: 10px;">+ Current</button>
                 <button id="clearSavedTimesBtn" class="time-btn" style="background: linear-gradient(45deg, #f44336, #d32f2f); padding: 4px 10px; font-size: 10px;">🗑️ Clear</button>
             </div>
+            <table id="savedTimesTable" style="width: 100%; border-collapse: collapse; margin-bottom: 8px; display: none;">
+                <thead>
+                    <tr style="border-bottom: 2px solid rgba(255, 193, 7, 0.3);">
+                        <th style="padding: 4px 8px; color: #FFC107; font-size: 11px; text-align: center; width: 30px;">#</th>
+                        <th style="padding: 4px 8px; color: #FFC107; font-size: 11px; text-align: left;">Name</th>
+                        <th style="padding: 4px 8px; color: #FFC107; font-size: 11px; text-align: center; width: 70px;">Time</th>
+                        <th style="padding: 4px 8px; color: #FFC107; font-size: 11px; text-align: center; width: 40px;">X</th>
+                    </tr>
+                </thead>
+                <tbody id="savedTimesTableBody"></tbody>
+            </table>
             <div id="savedTimesButtons" style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
-                <!-- Buttons will be loaded from localStorage or default video -->
+                <!-- Color button row rendered from savedTimesData -->
             </div>
         </div>
 
@@ -1566,6 +1611,11 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
         let audioPlayer = null;
         let currentMediaUrl = null;
 
+        // Saved Times cloud persistence
+        const SAVED_TIMES_FILENAME = 'saved-times.json';
+        let allSavedTimes = {}; // { videoId: [{time, name}, ...], ... }
+        let savedTimesData = []; // current video's times (reference into allSavedTimes)
+
         // Loop Timer variables
         let loopTimerActive = false;
         let loopTimerInterval = null;
@@ -1754,16 +1804,13 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                         // Check if URL parameter includes times (has commas)
                         const hasTimes = cleanUrlParam.includes(',');
 
-                        // Save to IndexedDB only if URL includes times
+                        // Load cloud times first, then process URL
+                        await loadSavedTimesFromCloud();
                         processVideoAndTimes(cleanUrlParam, hasTimes);
 
-                        // If URL doesn't have times, load saved times from IndexedDB
+                        // If URL doesn't have times, load cloud times for this video
                         if (!hasTimes) {
-                            const savedTimes = await loadSavedTimesFromIndexedDB();
-                            if (savedTimes && savedTimes.length > 0) {
-                                renderSavedTimes(savedTimes);
-                                console.log('💾 Loaded saved times from IndexedDB (URL had no times)');
-                            }
+                            loadTimesForCurrentVideo();
                         }
 
                         showStatus('Loaded from URL!', 'success');
@@ -1779,25 +1826,20 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                     }
                 }, 500);
             } else {
-                // Try to load saved times from IndexedDB
-                loadSavedTimesFromIndexedDB().then(savedTimes => {
-                    if (savedTimes && savedTimes.length > 0) {
-                        // Load saved times from IndexedDB
-                        renderSavedTimes(savedTimes);
-                        console.log('💾 Loaded saved times from IndexedDB on page load');
-                    } else {
-                        // Try last loaded video from localStorage, else default
-                        const lastVideo = localStorage.getItem('lastLoadedVideo');
-                        if (lastVideo) {
-                            console.log('🎬 Restoring last loaded video:', lastVideo);
-                            navigator.clipboard.writeText(lastVideo).then(() => {
-                                document.getElementById('loadYouTubeClipboardBtn').click();
-                            }).catch(() => {
-                                loadDefaultVideo();
-                            });
-                        } else {
+                // Load cloud times, then try to restore last video
+                loadSavedTimesFromCloud().then(() => {
+                    const lastVideo = localStorage.getItem('lastLoadedVideo');
+                    if (lastVideo) {
+                        console.log('🎬 Restoring last loaded video:', lastVideo);
+                        navigator.clipboard.writeText(lastVideo).then(() => {
+                            document.getElementById('loadYouTubeClipboardBtn').click();
+                        }).catch(() => {
                             loadDefaultVideo();
-                        }
+                            loadTimesForCurrentVideo();
+                        });
+                    } else {
+                        loadDefaultVideo();
+                        loadTimesForCurrentVideo();
                     }
                 });
             }
@@ -1856,45 +1898,10 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
             showStatus('Default video loaded!', 'success');
         }
 
-        // Update URL parameter to reflect current state
-        function updateUrlParameter() {
-            // Get current URL
-            let currentUrl = '';
-
-            if (playerType === 'youtube' && currentVideoId) {
-                // Reconstruct YouTube URL
-                currentUrl = `https://www.youtube.com/watch?v=${currentVideoId}`;
-            } else if ((playerType === 'video' || playerType === 'audio') && currentMediaUrl) {
-                // Use the direct media URL
-                currentUrl = currentMediaUrl;
-            } else {
-                return; // No media loaded
-            }
-
-            // Get all saved times
-            const savedTimeButtons = document.querySelectorAll('.saved-time-btn');
-
-            if (savedTimeButtons.length === 0) {
-                return; // No times to save
-            }
-
-            // Build the format: URL, time1, time2, time3, ...
-            const times = Array.from(savedTimeButtons).map(btn => btn.dataset.time);
-            const formattedString = `${currentUrl}, ${times.join(', ')}`;
-
-            // Update URL without reloading
-            const newUrl = `${window.location.pathname}?${encodeURIComponent(formattedString)}`;
-            window.history.replaceState({}, '', newUrl);
-        }
-
         // Shared function to process "URL, time1, time2, ..." format
         function processVideoAndTimes(inputString, saveToIndexedDB = false) {
             console.log('🎬 DEBUG processVideoAndTimes called with:', inputString);
 
-            const container = document.getElementById('savedTimesButtons');
-
-            // Clear all existing buttons first
-            container.innerHTML = '';
             currentTimeIndex = -1; // Reset cycle index when loading new times
 
             // Split by comma and process each entry
@@ -1971,48 +1978,23 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                 timeEntries = entries.slice(1);
             }
 
-            // Process time entries
-            let addedCount = 0;
-            const colors = [
-                'linear-gradient(45deg, #4CAF50, #45a049)',
-                'linear-gradient(45deg, #2196F3, #1976D2)',
-                'linear-gradient(45deg, #9C27B0, #7B1FA2)',
-                'linear-gradient(45deg, #FF9800, #F57C00)',
-                'linear-gradient(45deg, #607D8B, #455A64)',
-                'linear-gradient(45deg, #E91E63, #C2185B)',
-                'linear-gradient(45deg, #00BCD4, #0097A7)',
-                'linear-gradient(45deg, #8BC34A, #689F38)',
-                'linear-gradient(45deg, #FF5722, #E64A19)'
-            ];
-
-            timeEntries.forEach((timeEntry, index) => {
+            // Process time entries into savedTimesData
+            savedTimesData = [];
+            timeEntries.forEach((timeEntry) => {
                 const timeStr = timeEntry.trim();
-
-                // Validate the time string
                 const seconds = parseTimeToSeconds(timeStr);
                 if (seconds !== null) {
-                    // Create button element
-                    const button = document.createElement('button');
-                    button.className = 'saved-time-btn time-btn';
-                    button.dataset.time = timeStr;
-                    button.textContent = timeStr;
-                    button.style.background = colors[addedCount % colors.length];
-
-                    container.appendChild(button);
-                    addedCount++;
+                    savedTimesData.push({ time: timeStr, name: '' });
                 }
             });
 
-            if (addedCount > 0) {
-                // Re-attach listeners to new buttons
-                attachTimeButtonListeners();
+            const key = getCurrentMediaKey();
+            if (key) allSavedTimes[key] = savedTimesData;
 
-                // Update URL to reflect new state
-                updateUrlParameter();
-
-                // Save to IndexedDB only if requested (when URL has times or from Paste button)
+            if (savedTimesData.length > 0) {
+                renderSavedTimesTable();
                 if (saveToIndexedDB) {
-                    saveSavedTimesToIndexedDB();
+                    saveSavedTimesToCloud();
                 }
             }
         }
@@ -2062,6 +2044,46 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
             // Copy current state button
             document.getElementById('copyCurrentStateBtn').addEventListener('click', function() {
                 copyCurrentStateToClipboard();
+            });
+
+            // Add Single Time button
+            document.getElementById('addSingleTimeBtn').addEventListener('click', function() {
+                const timeVal = document.getElementById('savedTimeInput').value.trim();
+                const comment = document.getElementById('savedTimeComment').value.trim();
+                if (!timeVal) { showStatus('Enter a time first', 'error'); return; }
+                addTimeToTable(timeVal, comment);
+                document.getElementById('savedTimeInput').value = '';
+                document.getElementById('savedTimeComment').value = '';
+            });
+
+            // Add Current Time button
+            document.getElementById('addCurrentTimeBtn').addEventListener('click', function() {
+                let currentTime = null;
+                if (playerType === 'youtube' && player && playerReady && typeof player.getCurrentTime === 'function') {
+                    currentTime = player.getCurrentTime();
+                } else if ((playerType === 'video' || playerType === 'audio') && playerReady) {
+                    const activeP = getActivePlayer();
+                    if (activeP && !isNaN(activeP.currentTime)) currentTime = activeP.currentTime;
+                }
+                if (currentTime === null) { showStatus('No media playing', 'error'); return; }
+                const timeStr = formatSecondsToTime(currentTime);
+                const comment = document.getElementById('savedTimeComment').value.trim();
+                addTimeToTable(timeStr, comment);
+                document.getElementById('savedTimeComment').value = '';
+            });
+
+            // Enter key on saved time inputs
+            document.getElementById('savedTimeInput').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('addSingleTimeBtn').click();
+                }
+            });
+            document.getElementById('savedTimeComment').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('addSingleTimeBtn').click();
+                }
             });
 
             // Clean & Copy Transcript button
@@ -2164,10 +2186,12 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
             // Loop time pagination buttons
             document.getElementById('loopTimeMinus15').addEventListener('click', function() {
                 adjustLoopStartTime(-15);
+                document.getElementById('timer15sBtn').focus();
             });
 
             document.getElementById('loopTimePlus15').addEventListener('click', function() {
                 adjustLoopStartTime(15);
+                document.getElementById('timer15sBtn').focus();
             });
 
             document.getElementById('loopTimePlus120').addEventListener('click', function() {
@@ -2198,6 +2222,68 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                             timerStartTime = newTime;
                         }
                     }
+                }
+            });
+
+            // Enter key in loopStartTime input - handle +N/-N to adjust from current playback time
+            document.getElementById('loopStartTime').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const timeStr = this.value.trim();
+
+                    // Check for +/- notation (e.g., "+5" or "-10")
+                    const deltaMatch = timeStr.match(/^([+-])(\d+)$/);
+                    if (deltaMatch) {
+                        const operator = deltaMatch[1];
+                        const deltaSeconds = parseInt(deltaMatch[2]);
+                        const adjustment = operator === '+' ? deltaSeconds : -deltaSeconds;
+
+                        // Get current playback time as the base
+                        const currentTimeStr = document.getElementById('currentTimeValue').textContent.trim();
+                        let currentSeconds = parseTimeToSeconds(currentTimeStr);
+                        if (currentSeconds === null) currentSeconds = 0;
+
+                        const newSeconds = Math.max(0, currentSeconds + adjustment);
+
+                        // Format back to time string
+                        const hours = Math.floor(newSeconds / 3600);
+                        const minutes = Math.floor((newSeconds % 3600) / 60);
+                        const seconds = Math.floor(newSeconds % 60);
+                        let resultTime;
+                        if (hours > 0) {
+                            resultTime = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                        } else {
+                            resultTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                        }
+
+                        this.value = resultTime;
+
+                        // Update timers if running
+                        if (loopTimerActive) loopBaseTime = newSeconds;
+                        if (timerTimeout) timerStartTime = newSeconds;
+
+                        jumpToYouTubeTime(newSeconds);
+                        showStatus(`${currentTimeStr} ${operator}${deltaSeconds}s = ${resultTime}`, 'success');
+                        this.select();
+                        return;
+                    }
+
+                    // Otherwise, treat as a time to jump to
+                    const seconds = parseTimeToSeconds(timeStr);
+                    if (seconds !== null) {
+                        if (loopTimerActive) loopBaseTime = seconds;
+                        if (timerTimeout) {
+                            timerStartTime = seconds;
+                            clearTimeout(timerTimeout);
+                            startTimerLoop();
+                        }
+                        jumpToYouTubeTime(seconds);
+                        showStatus('Jumped to ' + timeStr, 'success');
+                    }
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    this.focus();
+                    this.select();
                 }
             });
 
@@ -2318,48 +2404,8 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
 
             // If no media URL detected and it's just a single time, ADD to existing times
             if (!mediaType && entries.length === 1) {
-                const timeStr = firstEntry;
-                const seconds = parseTimeToSeconds(timeStr);
-
-                if (seconds === null) {
-                    showStatus('Invalid time format. Use MM:SS or H:MM:SS', 'error');
-                    return;
-                }
-
-                // Get the container and count existing buttons
-                const container = document.getElementById('savedTimesButtons');
-                const existingButtons = container.querySelectorAll('.saved-time-btn');
-
-                // Color palette for new buttons
-                const colors = [
-                    'linear-gradient(45deg, #4CAF50, #45a049)',
-                    'linear-gradient(45deg, #2196F3, #1976D2)',
-                    'linear-gradient(45deg, #9C27B0, #7B1FA2)',
-                    'linear-gradient(45deg, #FF9800, #F57C00)',
-                    'linear-gradient(45deg, #607D8B, #455A64)',
-                    'linear-gradient(45deg, #E91E63, #C2185B)',
-                    'linear-gradient(45deg, #00BCD4, #0097A7)',
-                    'linear-gradient(45deg, #8BC34A, #689F38)',
-                    'linear-gradient(45deg, #FF5722, #E64A19)'
-                ];
-
-                // Create and add the new button
-                const button = document.createElement('button');
-                button.className = 'saved-time-btn time-btn';
-                button.dataset.time = timeStr;
-                button.textContent = timeStr;
-                button.style.background = colors[existingButtons.length % colors.length];
-
-                container.appendChild(button);
-
-                // Re-attach listeners to include the new button
-                attachTimeButtonListeners();
-
-                // NOTE: Don't save to IndexedDB when adding single times manually
-                // Only save when pasting full sets of times
-
-                showStatus(`Added time: ${timeStr}`, 'success');
-                input.value = ''; // Clear input
+                addTimeToTable(firstEntry, '');
+                input.value = '';
                 return;
             }
 
@@ -2373,18 +2419,12 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
 
         // Clear all time buttons
         async function clearAllTimes() {
-            const container = document.getElementById('savedTimesButtons');
-            container.innerHTML = '';
-            currentTimeIndex = -1; // Reset cycle index
-
-            // Clear IndexedDB
-            try {
-                await indexedDBWrapper.delete(DB_NAME, SAVED_TIMES_KEY);
-                console.log('💾 Cleared saved times from IndexedDB');
-            } catch (error) {
-                console.error('💾 Error clearing saved times from IndexedDB:', error);
-            }
-
+            savedTimesData = [];
+            currentTimeIndex = -1;
+            const key = getCurrentMediaKey();
+            if (key) delete allSavedTimes[key];
+            renderSavedTimesTable();
+            saveSavedTimesToCloud();
             showStatus('All times cleared', 'info');
         }
 
@@ -2404,16 +2444,14 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                 return;
             }
 
-            // Get all saved times
-            const savedTimeButtons = document.querySelectorAll('.saved-time-btn');
-
-            if (savedTimeButtons.length === 0) {
+            // Get all saved times from data model
+            if (savedTimesData.length === 0) {
                 showStatus('No saved times available', 'error');
                 return;
             }
 
             // Build the format: URL, time1, time2, time3, ...
-            const times = Array.from(savedTimeButtons).map(btn => btn.dataset.time);
+            const times = savedTimesData.map(t => t.time);
             const formattedString = `${currentUrl}, ${times.join(', ')}`;
 
             // Copy to clipboard
@@ -2654,53 +2692,26 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
 
                 // Check if there are times after the URL
                 if (entries.length > 1) {
-                    const timeEntries = entries.slice(1); // Get all entries after the URL
-                    const timesContainer = document.getElementById('savedTimesButtons');
-
-                    // Clear all existing buttons first
-                    timesContainer.innerHTML = '';
-                    currentTimeIndex = -1; // Reset cycle index when loading new times
-
-                    let addedCount = 0;
-                    const colors = [
-                        'linear-gradient(45deg, #4CAF50, #45a049)',
-                        'linear-gradient(45deg, #2196F3, #1976D2)',
-                        'linear-gradient(45deg, #9C27B0, #7B1FA2)',
-                        'linear-gradient(45deg, #FF9800, #F57C00)',
-                        'linear-gradient(45deg, #607D8B, #455A64)',
-                        'linear-gradient(45deg, #E91E63, #C2185B)',
-                        'linear-gradient(45deg, #00BCD4, #0097A7)',
-                        'linear-gradient(45deg, #8BC34A, #689F38)',
-                        'linear-gradient(45deg, #FF5722, #E64A19)'
-                    ];
-
-                    timeEntries.forEach((timeEntry, index) => {
+                    const timeEntries = entries.slice(1);
+                    currentTimeIndex = -1;
+                    savedTimesData = [];
+                    timeEntries.forEach((timeEntry) => {
                         const timeStr = timeEntry.trim();
-
-                        // Validate the time string
                         const seconds = parseTimeToSeconds(timeStr);
                         if (seconds !== null) {
-                            // Create button element
-                            const button = document.createElement('button');
-                            button.className = 'saved-time-btn time-btn';
-                            button.dataset.time = timeStr;
-                            button.textContent = timeStr;
-                            button.style.background = colors[addedCount % colors.length];
-
-                            timesContainer.appendChild(button);
-                            addedCount++;
+                            savedTimesData.push({ time: timeStr, name: '' });
                         }
                     });
-
-                    if (addedCount > 0) {
-                        // Re-attach listeners to new buttons
-                        attachTimeButtonListeners();
-
-                        // Save to IndexedDB
-                        saveSavedTimesToIndexedDB();
-
-                        console.log(`🎬 DEBUG: Added ${addedCount} time buttons`);
+                    const key = getCurrentMediaKey();
+                    if (key) allSavedTimes[key] = savedTimesData;
+                    if (savedTimesData.length > 0) {
+                        renderSavedTimesTable();
+                        saveSavedTimesToCloud();
+                        console.log(`🎬 DEBUG: Added ${savedTimesData.length} times`);
                     }
+                } else {
+                    // No times in clipboard — load from cloud for this video
+                    loadTimesForCurrentVideo();
                 }
 
                 console.log('🎬 DEBUG: Loaded media from clipboard:', firstEntry, 'type:', mediaType);
@@ -2920,42 +2931,45 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
             }
         }
 
-        // IndexedDB functions for saved times
-        async function saveSavedTimesToIndexedDB() {
-            const savedTimeButtons = document.querySelectorAll('.saved-time-btn');
-            const times = Array.from(savedTimeButtons).map(btn => btn.dataset.time);
+        // ========== SAVED TIMES CLOUD PERSISTENCE ==========
 
-            try {
-                await indexedDBWrapper.set(DB_NAME, SAVED_TIMES_KEY, times);
-                console.log('💾 Saved times to IndexedDB:', times);
-            } catch (error) {
-                console.error('💾 Error saving times to IndexedDB:', error);
+        // Get a unique key for the current media
+        function getCurrentMediaKey() {
+            if (playerType === 'youtube' && currentVideoId) {
+                return currentVideoId;
+            } else if ((playerType === 'video' || playerType === 'audio') && currentMediaUrl) {
+                return btoa(currentMediaUrl).replace(/[/+=]/g, '_');
             }
+            return null;
         }
 
-        async function loadSavedTimesFromIndexedDB() {
-            try {
-                const snapshot = await indexedDBWrapper.get(DB_NAME, SAVED_TIMES_KEY);
-
-                if (!snapshot.exists()) {
-                    console.log('💾 No saved times found in IndexedDB');
-                    return null;
-                }
-
-                const times = snapshot.val();
-                console.log('💾 Loaded times from IndexedDB:', times);
-                return times;
-            } catch (error) {
-                console.error('💾 Error loading saved times from IndexedDB:', error);
-                return null;
+        // Format seconds to time string (M:SS or H:MM:SS)
+        function formatSecondsToTime(totalSeconds) {
+            totalSeconds = Math.floor(totalSeconds);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            if (hours > 0) {
+                return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             }
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
 
-        function renderSavedTimes(times) {
-            if (!times || times.length === 0) return;
+        // Render the saved times table + button row from savedTimesData
+        function renderSavedTimesTable() {
+            const table = document.getElementById('savedTimesTable');
+            const tbody = document.getElementById('savedTimesTableBody');
+            const btnContainer = document.getElementById('savedTimesButtons');
 
-            const container = document.getElementById('savedTimesButtons');
-            container.innerHTML = ''; // Clear existing buttons
+            tbody.innerHTML = '';
+            btnContainer.innerHTML = '';
+
+            if (savedTimesData.length === 0) {
+                table.style.display = 'none';
+                return;
+            }
+
+            table.style.display = 'table';
 
             const colors = [
                 'linear-gradient(45deg, #4CAF50, #45a049)',
@@ -2969,19 +2983,180 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                 'linear-gradient(45deg, #FF5722, #E64A19)'
             ];
 
-            times.forEach((timeStr, index) => {
+            savedTimesData.forEach((item, index) => {
+                // Table row
+                const tr = document.createElement('tr');
+                tr.dataset.index = index;
+                tr.addEventListener('click', () => jumpToSavedTime(index));
+                tr.innerHTML = `
+                    <td style="text-align: center; color: #999;">${index + 1}</td>
+                    <td>${escapeHtml(item.name || '')}</td>
+                    <td style="text-align: center; font-weight: 600; color: #FFC107;">${escapeHtml(item.time)}</td>
+                    <td style="text-align: center;"><button class="delete-time-btn" data-index="${index}" title="Delete">&times;</button></td>
+                `;
+                tbody.appendChild(tr);
+
+                // Color button
                 const button = document.createElement('button');
                 button.className = 'saved-time-btn time-btn';
-                button.dataset.time = timeStr;
-                button.textContent = timeStr;
+                button.dataset.time = item.time;
+                button.dataset.index = index;
+                button.textContent = item.time;
                 button.style.background = colors[index % colors.length];
-                container.appendChild(button);
+                btnContainer.appendChild(button);
             });
 
-            // Re-attach listeners to new buttons
-            attachTimeButtonListeners();
+            // Wire up delete buttons (stop propagation so row click doesn't fire)
+            tbody.querySelectorAll('.delete-time-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteSavedTime(parseInt(btn.dataset.index));
+                });
+            });
 
-            console.log('✅ Rendered', times.length, 'saved time buttons');
+            // Re-attach button listeners
+            attachTimeButtonListeners();
+        }
+
+        // Jump to a saved time by index (from table row click)
+        function jumpToSavedTime(index) {
+            if (index < 0 || index >= savedTimesData.length) return;
+            const item = savedTimesData[index];
+            const seconds = parseTimeToSeconds(item.time);
+            if (seconds === null) return;
+
+            // Highlight table row
+            document.querySelectorAll('#savedTimesTableBody tr').forEach(tr => tr.classList.remove('active-time-row'));
+            const rows = document.querySelectorAll('#savedTimesTableBody tr');
+            if (rows[index]) rows[index].classList.add('active-time-row');
+
+            // Highlight button
+            document.querySelectorAll('.saved-time-btn').forEach(b => b.classList.remove('active'));
+            const btns = document.querySelectorAll('.saved-time-btn');
+            if (btns[index]) btns[index].classList.add('active');
+
+            // Update loop start time
+            const loopStartTimeInput = document.getElementById('loopStartTime');
+            if (loopStartTimeInput) loopStartTimeInput.value = item.time;
+
+            lastClickedTime = seconds;
+            currentTimeIndex = index;
+            jumpToYouTubeTime(seconds);
+        }
+
+        // Delete a saved time by index
+        function deleteSavedTime(index) {
+            savedTimesData.splice(index, 1);
+            const key = getCurrentMediaKey();
+            if (key) allSavedTimes[key] = savedTimesData;
+            renderSavedTimesTable();
+            saveSavedTimesToCloud();
+        }
+
+        // Add a time+name to the table
+        function addTimeToTable(timeStr, name) {
+            timeStr = timeStr.trim();
+            const seconds = parseTimeToSeconds(timeStr);
+            if (seconds === null) {
+                showStatus('Invalid time format. Use M:SS or H:MM:SS', 'error');
+                return;
+            }
+            savedTimesData.push({ time: timeStr, name: (name || '').trim() });
+            const key = getCurrentMediaKey();
+            if (key) allSavedTimes[key] = savedTimesData;
+            renderSavedTimesTable();
+            saveSavedTimesToCloud();
+            showStatus(`Added time: ${timeStr}${name ? ' (' + name + ')' : ''}`, 'success');
+        }
+
+        // Load all saved times from cloud (Vercel Blob)
+        async function loadSavedTimesFromCloud() {
+            try {
+                const response = await fetch('/api/files');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                const files = data.files || {};
+                if (files[SAVED_TIMES_FILENAME]) {
+                    try {
+                        allSavedTimes = JSON.parse(files[SAVED_TIMES_FILENAME]);
+                    } catch (e) {
+                        console.error('☁️ Failed to parse saved-times.json:', e);
+                        allSavedTimes = {};
+                    }
+                } else {
+                    allSavedTimes = {};
+                }
+                console.log('☁️ Loaded saved times from cloud:', Object.keys(allSavedTimes).length, 'videos');
+            } catch (error) {
+                console.error('☁️ Error loading saved times from cloud:', error);
+                allSavedTimes = {};
+            }
+        }
+
+        // Save all saved times to cloud (Vercel Blob)
+        async function saveSavedTimesToCloud() {
+            const accessCode = document.getElementById('accessCodeInput').value.trim();
+            if (!accessCode) {
+                console.log('☁️ No access code — skipping cloud save');
+                return;
+            }
+            try {
+                const response = await fetch('/api/files', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        filename: SAVED_TIMES_FILENAME,
+                        content: JSON.stringify(allSavedTimes),
+                        accessCode: accessCode
+                    })
+                });
+                if (!response.ok) {
+                    const data = await response.json();
+                    console.error('☁️ Cloud save failed:', data.error || response.statusText);
+                } else {
+                    console.log('☁️ Saved times to cloud');
+                }
+            } catch (error) {
+                console.error('☁️ Error saving times to cloud:', error);
+            }
+        }
+
+        // Load times for the currently playing video
+        function loadTimesForCurrentVideo() {
+            const key = getCurrentMediaKey();
+            if (key && allSavedTimes[key]) {
+                savedTimesData = allSavedTimes[key];
+            } else {
+                savedTimesData = [];
+                if (key) allSavedTimes[key] = savedTimesData;
+            }
+            currentTimeIndex = -1;
+            renderSavedTimesTable();
+        }
+
+        // Render saved times — accepts strings (legacy) or objects
+        function renderSavedTimes(times) {
+            if (!times || times.length === 0) return;
+            savedTimesData = times.map(t => {
+                if (typeof t === 'string') return { time: t, name: '' };
+                return t;
+            });
+            const key = getCurrentMediaKey();
+            if (key) allSavedTimes[key] = savedTimesData;
+            renderSavedTimesTable();
+        }
+
+        // Keep old name as alias for backward compat within the file
+        async function saveSavedTimesToIndexedDB() {
+            saveSavedTimesToCloud();
+        }
+        async function loadSavedTimesFromIndexedDB() {
+            // Legacy callers — return current video's times as string array
+            const key = getCurrentMediaKey();
+            if (key && allSavedTimes[key] && allSavedTimes[key].length > 0) {
+                return allSavedTimes[key].map(t => t.time);
+            }
+            return null;
         }
 
         // Clean transcript: Keep the first timestamp in each minute (starting from minute 1)
