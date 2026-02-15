@@ -1188,7 +1188,8 @@
             <div class="current-time-display" id="currentTimeDisplay" style="display: none;">
                 <label style="color: #FFC107; font-weight: 600; font-size: 12px;">🔄 Go/loop to:</label>
                 <button id="loopTimeMinus15" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-right: 4px;">−15s</button>
-                <input type="text" id="loopStartTime" class="time-input" placeholder="0:01" value="0:01" style="width: 65px; text-align: center; font-size: 12px; padding: 4px 6px;">
+                <input type="text" id="loopStartTime" class="time-input" placeholder="0:01" value="0:01" style="width: 65px; text-align: center; font-size: 12px; padding: 4px 6px; display: none;">
+                <button id="jumpToZeroBtn" class="jump-btn" style="background: linear-gradient(45deg, #607D8B, #455A64); padding: 4px 8px; font-size: 11px;">0</button>
                 <button id="loopTimePlus15" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-left: 4px;">+15s</button>
                 <span class="time-label" style="margin-left: 15px;">Current Time:</span>
                 <span class="time-value" id="currentTimeValue">--:--</span>
@@ -3234,13 +3235,19 @@
                 }
             });
 
-            // Loop time adjustment buttons (-15s and +15s)
+            // Playback jump buttons (-15s and +15s) - only jump video, don't change loop start time
             document.getElementById('loopTimeMinus15').addEventListener('click', function() {
-                adjustLoopTime(-15);
+                jumpPlayback(-15);
                 document.getElementById('timer15sBtn').focus();
             });
             document.getElementById('loopTimePlus15').addEventListener('click', function() {
-                adjustLoopTime(15);
+                jumpPlayback(15);
+                document.getElementById('timer15sBtn').focus();
+            });
+            // "0" button - jump to time 0:00
+            document.getElementById('jumpToZeroBtn').addEventListener('click', function() {
+                jumpToYouTubeTime(0);
+                document.getElementById('playbackTimeValue').textContent = '0:00';
                 document.getElementById('timer15sBtn').focus();
             });
 
@@ -3353,15 +3360,15 @@
                     return;
                 }
 
-                // Pagination keys: [=down (-15s), ]=up (+15s)
+                // Pagination keys: [=down (-15s), ]=up (+15s) - jump playback only
                 if (e.key === '[' || e.key === ']') {
                     e.preventDefault();
                     if (e.key === '[') {
-                        adjustLoopTime(-15);  // Down pagination
+                        jumpPlayback(-15);
                     } else if (e.key === ']') {
-                        adjustLoopTime(15);   // Up pagination
+                        jumpPlayback(15);
                     }
-                    document.getElementById('loopStartTime')?.focus();
+                    document.getElementById('timer15sBtn')?.focus();
                     return;
                 }
 
@@ -3515,6 +3522,29 @@
                 console.error('Failed to copy:', err);
                 showStatus('Failed to copy to clipboard', 'error');
             }
+        }
+
+        // Jump video playback by delta seconds from current position (doesn't change loop start time)
+        function jumpPlayback(deltaSeconds) {
+            const currentTimeStr = document.getElementById('currentTimeValue').textContent.trim();
+            let currentSeconds = parseTimeToSeconds(currentTimeStr);
+            if (currentSeconds === null) currentSeconds = 0;
+
+            let newSeconds = Math.max(0, currentSeconds + deltaSeconds);
+
+            const hours = Math.floor(newSeconds / 3600);
+            const minutes = Math.floor((newSeconds % 3600) / 60);
+            const seconds = Math.floor(newSeconds % 60);
+
+            let timeStr;
+            if (hours > 0) {
+                timeStr = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            } else {
+                timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            document.getElementById('playbackTimeValue').textContent = timeStr;
+            jumpToYouTubeTime(newSeconds);
         }
 
         // Adjust loop time by a given number of seconds
@@ -4105,20 +4135,8 @@
                 // Detect user seeking (time jump greater than threshold)
                 const timeDifference = Math.abs(currentTimeSeconds - lastKnownTime);
                 if (timeDifference > seekDetectionThreshold && lastKnownTime > 0) {
-                    // User manually seeked - update loop start time
-                    if (loopStartTimeInput) {
-                        loopStartTimeInput.value = timeStr;
-                    }
-
-                    // If a timer is running, update and RESTART the timer
-                    if (timerTimeout && timerLoopsRemaining > 0) {
-                        timerStartTime = currentTimeSeconds;
-                        console.log('⏱️ Timer restarted from:', timeStr);
-
-                        // Clear the current timer and restart fresh
-                        clearTimeout(timerTimeout);
-                        startTimerLoop();
-                    }
+                    // Update playback time display only (loop start time stays stable in input)
+                    document.getElementById('playbackTimeValue').textContent = timeStr;
                 }
 
                 lastKnownTime = currentTimeSeconds;
