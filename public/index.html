@@ -4931,8 +4931,9 @@
                 fadeOut().then(() => {
                     timerLoopsRemaining--;
 
-                    // Rewind to start
-                    const rewindTime = Math.max(0, timerStartTime);
+                    // Rewind to start - always re-read from input so saved time changes are picked up
+                    const currentInputTime = parseTimeToSeconds(document.getElementById('loopStartTime').value.trim());
+                    const rewindTime = Math.max(0, currentInputTime !== null ? currentInputTime : timerStartTime);
                     jumpToYouTubeTime(rewindTime);
 
                     if (timerLoopsRemaining > 0) {
@@ -5194,7 +5195,9 @@
 
             // Fade out, then jump and fade in
             fadeOut().then(() => {
-                // Jump back to the loop time
+                // Jump back to the loop time - re-read from input so saved time changes are picked up
+                const inputTime = parseTimeToSeconds(document.getElementById('loopStartTime').value.trim());
+                if (inputTime !== null) loopBaseTime = inputTime;
                 jumpToYouTubeTime(loopBaseTime);
 
                 // Fade back in
@@ -5226,7 +5229,9 @@
                 return;
             }
 
-            // Jump back to the loop time
+            // Jump back to the loop time - re-read from input so saved time changes are picked up
+            const inputTime2 = parseTimeToSeconds(document.getElementById('loopStartTime').value.trim());
+            if (inputTime2 !== null) loopBaseTime = inputTime2;
             jumpToYouTubeTime(loopBaseTime);
 
             // Set next reset time
