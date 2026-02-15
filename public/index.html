@@ -1781,7 +1781,6 @@
                         const url = this.dataset.url;
                         const title = this.dataset.label || url;
                         const tMatch = url.match(/[?&]t=(\d+)s?/);
-                        console.log('🎯 YouTube content clicked: url=', url, 'timestamp=', tMatch ? tMatch[1] + 's' : 'none', 'input value=', document.getElementById('loopStartTime').value);
                         const autoTimerToggle = document.getElementById('autoTimerToggle');
 
                         // Save to URL history
@@ -1823,12 +1822,9 @@
                                     const mins = Math.floor(startSeconds / 60);
                                     const secs = startSeconds % 60;
                                     const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
-                                    console.log('🔵 Content selected: setting input to', timeStr, 'startSeconds=', startSeconds);
                                     document.getElementById('loopStartTime').value = timeStr;
                                     document.getElementById('playbackTimeValue').textContent = timeStr;
                                     jumpToYouTubeTime(startSeconds);
-                                } else {
-                                    console.log('🔵 Content selected: no timestamp found, startSeconds=', startSeconds);
                                 }
 
                                 // Trigger the 15s timer button after a short delay
@@ -3430,7 +3426,6 @@
                         // Update the loop start time input
                         const loopStartTimeInput = document.getElementById('loopStartTime');
                         if (loopStartTimeInput) {
-                            console.log('🟢 Saved time btn: setting input to', JSON.stringify(time));
                             loopStartTimeInput.value = time;
                         }
 
@@ -3653,7 +3648,6 @@
 
         // Jump to specific time in any player (YouTube or HTML5)
         function jumpToYouTubeTime(seconds) {
-            console.log('⏩ jumpToYouTubeTime called:', seconds, 'input=', document.getElementById('loopStartTime').value, 'caller=', new Error().stack.split('\n')[2]?.trim());
             if (playerType === 'youtube') {
                 if (!currentVideoId) {
                     showStatus('No video loaded', 'error');
@@ -4153,10 +4147,7 @@
                 if (timeDifference > seekDetectionThreshold && lastKnownTime > 0) {
                     document.getElementById('playbackTimeValue').textContent = timeStr;
                     if (!skipSeekDetection && loopStartTimeInput) {
-                        console.log('🔍 User seek detected: updating input to', timeStr, '(was', loopStartTimeInput.value + ')');
                         loopStartTimeInput.value = timeStr;
-                    } else {
-                        console.log('🔍 Timer rewind seek (skipped input update): playbackTimeValue=', timeStr, 'input stays=', loopStartTimeInput.value);
                     }
                 }
 
@@ -4383,7 +4374,6 @@
             }
 
             // Load the video
-            console.log('🎯 loadVideoFromSidebar: url=', url, 'input value=', document.getElementById('loopStartTime').value);
             loadMediaFromUrl(url);
 
             // Load its saved times (handle both array and object with times property)
@@ -4544,7 +4534,6 @@
             // Update loop start time
             const loopStartTimeInput = document.getElementById('loopStartTime');
             if (loopStartTimeInput) {
-                console.log('🟢 navigateToSavedTime: setting input to', JSON.stringify(item.time));
                 loopStartTimeInput.value = item.time;
             }
 
@@ -4960,7 +4949,6 @@
                     const inputVal = document.getElementById('loopStartTime').value.trim();
                     const currentInputTime = parseTimeToSeconds(inputVal);
                     const rewindTime = Math.max(0, currentInputTime !== null ? currentInputTime : timerStartTime);
-                    console.log('🔴 Timer LOOP rewind: input value=', JSON.stringify(inputVal), 'parsed=', currentInputTime, 'timerStartTime=', timerStartTime, 'rewindTime=', rewindTime);
                     skipSeekDetection = true;
                     setTimeout(() => { skipSeekDetection = false; }, 3000);
                     jumpToYouTubeTime(rewindTime);
@@ -5030,7 +5018,6 @@
             if (timerStartTime === null) {
                 timerStartTime = 0;
             }
-            console.log('🟡 15s timer START: input value=', JSON.stringify(timeStr), 'timerStartTime=', timerStartTime);
 
             // Jump to the start time immediately
             jumpToYouTubeTime(timerStartTime);
