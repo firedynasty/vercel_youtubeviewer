@@ -3109,6 +3109,7 @@
             // 15-second play button - plays 15s, pauses, rewinds 15s
             document.getElementById('timer15sBtn').addEventListener('click', function() {
                 play15sThenRewind(this);
+                document.getElementById('timer3minBtn').focus();
             });
 
             // 3-minute play button - plays 3min, pauses, rewinds 3min

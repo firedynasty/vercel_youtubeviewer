@@ -2176,6 +2176,7 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
             // 15-second play button - plays 15s, pauses, rewinds 15s
             document.getElementById('timer15sBtn').addEventListener('click', function() {
                 play15sThenRewind(this);
+                document.getElementById('timer3minBtn').focus();
             });
 
             // 3-minute play button - plays 3min, pauses, rewinds 3min
