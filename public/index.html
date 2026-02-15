@@ -1813,8 +1813,13 @@
 
                             // Wait for video to load, then seek to timestamp and start timer
                             setTimeout(() => {
-                                // Jump to the extracted timestamp
+                                // Jump to the extracted timestamp and update loop start time
                                 if (startSeconds > 0) {
+                                    const mins = Math.floor(startSeconds / 60);
+                                    const secs = startSeconds % 60;
+                                    const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+                                    document.getElementById('loopStartTime').value = timeStr;
+                                    document.getElementById('playbackTimeValue').textContent = timeStr;
                                     jumpToYouTubeTime(startSeconds);
                                 }
 
