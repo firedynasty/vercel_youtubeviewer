@@ -4148,6 +4148,7 @@
                 const timeDifference = Math.abs(currentTimeSeconds - lastKnownTime);
                 if (timeDifference > seekDetectionThreshold && lastKnownTime > 0) {
                     // Update playback time display only (loop start time stays stable in input)
+                    console.log('🔍 Seek detected: playbackTimeValue=', timeStr, 'input=', loopStartTimeInput.value, 'timeDiff=', timeDifference.toFixed(1));
                     document.getElementById('playbackTimeValue').textContent = timeStr;
                 }
 
