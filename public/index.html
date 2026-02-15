@@ -2614,6 +2614,7 @@
         let timeUpdateInterval = null;
         let lastKnownTime = 0;
         let seekDetectionThreshold = 1.5; // If time jumps more than 1.5 seconds, it's a seek
+        let skipSeekDetection = false; // Flag to skip seek detection during timer rewinds
         let lastClickedTime = null; // Track the last clicked timestamp
         let currentTimeIndex = -1; // Track current position in saved times for cycling
 
@@ -4147,9 +4148,13 @@
                 // Detect user seeking (time jump greater than threshold)
                 const timeDifference = Math.abs(currentTimeSeconds - lastKnownTime);
                 if (timeDifference > seekDetectionThreshold && lastKnownTime > 0) {
-                    // Update playback time display only (loop start time stays stable in input)
-                    console.log('🔍 Seek detected: playbackTimeValue=', timeStr, 'input=', loopStartTimeInput.value, 'timeDiff=', timeDifference.toFixed(1));
                     document.getElementById('playbackTimeValue').textContent = timeStr;
+                    if (!skipSeekDetection && loopStartTimeInput) {
+                        console.log('🔍 User seek detected: updating input to', timeStr, '(was', loopStartTimeInput.value + ')');
+                        loopStartTimeInput.value = timeStr;
+                    } else {
+                        console.log('🔍 Timer rewind seek (skipped input update): playbackTimeValue=', timeStr, 'input stays=', loopStartTimeInput.value);
+                    }
                 }
 
                 lastKnownTime = currentTimeSeconds;
@@ -4953,6 +4958,8 @@
                     const currentInputTime = parseTimeToSeconds(inputVal);
                     const rewindTime = Math.max(0, currentInputTime !== null ? currentInputTime : timerStartTime);
                     console.log('🔴 Timer LOOP rewind: input value=', JSON.stringify(inputVal), 'parsed=', currentInputTime, 'timerStartTime=', timerStartTime, 'rewindTime=', rewindTime);
+                    skipSeekDetection = true;
+                    setTimeout(() => { skipSeekDetection = false; }, 3000);
                     jumpToYouTubeTime(rewindTime);
 
                     if (timerLoopsRemaining > 0) {
