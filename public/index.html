@@ -3649,6 +3649,7 @@
 
         // Jump to specific time in any player (YouTube or HTML5)
         function jumpToYouTubeTime(seconds) {
+            console.log('⏩ jumpToYouTubeTime called:', seconds, 'input=', document.getElementById('loopStartTime').value, 'caller=', new Error().stack.split('\n')[2]?.trim());
             if (playerType === 'youtube') {
                 if (!currentVideoId) {
                     showStatus('No video loaded', 'error');
