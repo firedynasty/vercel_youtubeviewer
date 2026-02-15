@@ -1777,6 +1777,8 @@
                     span.addEventListener('click', function() {
                         const url = this.dataset.url;
                         const title = this.dataset.label || url;
+                        const tMatch = url.match(/[?&]t=(\d+)s?/);
+                        console.log('🎯 YouTube content clicked: url=', url, 'timestamp=', tMatch ? tMatch[1] + 's' : 'none', 'input value=', document.getElementById('loopStartTime').value);
                         const autoTimerToggle = document.getElementById('autoTimerToggle');
 
                         // Save to URL history
@@ -4371,6 +4373,7 @@
             }
 
             // Load the video
+            console.log('🎯 loadVideoFromSidebar: url=', url, 'input value=', document.getElementById('loopStartTime').value);
             loadMediaFromUrl(url);
 
             // Load its saved times (handle both array and object with times property)
