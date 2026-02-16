@@ -2063,10 +2063,11 @@
                 });
 
                 // URL span (clickable to load video)
+                const displayUrl = entry.rawUrl || entry.url;
                 const urlSpan = document.createElement('span');
-                urlSpan.textContent = entry.url.length > 50 ? entry.url.substring(0, 50) + '...' : entry.url;
+                urlSpan.textContent = displayUrl.length > 50 ? displayUrl.substring(0, 50) + '...' : displayUrl;
                 urlSpan.style.cssText = 'flex: 1; color: #64B5F6; text-decoration: underline; cursor: pointer; min-width: 150px;';
-                urlSpan.title = entry.url;
+                urlSpan.title = displayUrl;
                 urlSpan.addEventListener('click', function() {
                     // Save to URL history
                     saveToUrlHistory(entry.url, entry.name || entry.url);
@@ -2079,7 +2080,7 @@
                     activatePaginationFromCloud(entry.url);
 
                     setTimeout(() => {
-                        urlSpan.textContent = entry.url.length > 50 ? entry.url.substring(0, 50) + '...' : entry.url;
+                        urlSpan.textContent = displayUrl.length > 50 ? displayUrl.substring(0, 50) + '...' : displayUrl;
                         urlSpan.style.color = '#64B5F6';
                     }, 1500);
                 });
