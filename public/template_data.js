@@ -24,7 +24,7 @@ https://www.youtube.com/watch?v=KPtAsf-FAYM&list=OLAK5uy_mRsgu8J1TyBRQP7lf430PcR
 indianPlaylist
 https://music.youtube.com/playlist?list=OLAK5uy_kh5igPOnxZhbSkb_W65c0kS68NPhPEYQE
 proverbs
-https://www.youtube.com/watch?v=FCwXdqwKcPU
+https://www.youtube.com/watch?v=FCwXdqwKcPU?1:00,2:00,3:00
 1 Kings
 https://www.youtube.com/watch?v=-NRVyc8oWG0
 aSoaringPlaylist

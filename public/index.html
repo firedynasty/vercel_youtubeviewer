@@ -1496,7 +1496,26 @@
         function activatePaginationFromCloud(clickedUrl) {
             allPaginationLinks = parseCloudLinks();
             paginationSource = 'cloud';
-            const index = allPaginationLinks.findIndex(l => l.url === clickedUrl);
+            // Store inline times into allSavedTimes for links that have them
+            for (const link of allPaginationLinks) {
+                if (link.inlineTimes && link.inlineTimes.length > 0) {
+                    let key = null;
+                    if (isYouTubeURL(link.url)) {
+                        key = extractVideoId(link.url);
+                    } else {
+                        key = btoa(link.url).replace(/[/+=]/g, '_');
+                    }
+                    if (key) {
+                        const timesData = link.inlineTimes.map(t => ({ time: t.trim(), name: '' }));
+                        allSavedTimes[key] = timesData;
+                    }
+                }
+            }
+            // Match by clean URL or raw URL
+            let index = allPaginationLinks.findIndex(l => l.url === clickedUrl);
+            if (index < 0) {
+                index = allPaginationLinks.findIndex(l => clickedUrl.startsWith(l.url));
+            }
             currentPaginationIndex = index >= 0 ? index : 0;
             showPagination();
             loadCurrentPaginationLink();
@@ -1978,7 +1997,7 @@
         let cloudLinksContent = '';
 
         // Populate cloud-section with clickable URLs (similar to text-section)
-        // Parse cloud content into array of {name, url} objects
+        // Parse cloud content into array of {name, url, inlineTimes, rawUrl} objects
         function parseCloudLinks() {
             const lines = cloudLinksContent.split('\n').map(l => l.trim()).filter(l => l);
             const entries = [];
@@ -1986,23 +2005,28 @@
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
                 if (line.startsWith('http://') || line.startsWith('https://')) {
-                    // URL without a name before it
-                    entries.push({ name: '', url: line });
+                    const parsed = parseInlineTimes(line, '');
+                    parsed.rawUrl = line;
+                    entries.push(parsed);
                 } else if (i + 1 < lines.length) {
                     const nextLine = lines[i + 1];
                     if (nextLine.startsWith('http://') || nextLine.startsWith('https://')) {
-                        // This is a name, next is URL
-                        entries.push({ name: line, url: nextLine });
-                        i++; // Skip the URL line
+                        const parsed = parseInlineTimes(nextLine, line);
+                        parsed.rawUrl = nextLine;
+                        entries.push(parsed);
+                        i++;
                     }
                 }
             }
             return entries;
         }
 
-        // Rebuild cloud content from entries array
+        // Rebuild cloud content from entries array (preserves inline times via rawUrl)
         function rebuildCloudContent(entries) {
-            return entries.map(e => e.name ? `${e.name}\n${e.url}` : e.url).join('\n');
+            return entries.map(e => {
+                const url = e.rawUrl || e.url;
+                return e.name ? `${e.name}\n${url}` : url;
+            }).join('\n');
         }
 
         function populateCloudLinks() {
@@ -2068,16 +2092,36 @@
                     this.style.background = 'transparent';
                 });
 
-                // Edit button
-                const editBtn = document.createElement('button');
-                editBtn.textContent = '✏️';
-                editBtn.style.cssText = 'padding: 4px 8px; border: none; border-radius: 4px; background: #2196F3; color: white; cursor: pointer; font-size: 12px;';
-                editBtn.title = 'Edit name';
-                editBtn.addEventListener('click', function() {
+                // Edit name button
+                const editNameBtn = document.createElement('button');
+                editNameBtn.textContent = '✏️';
+                editNameBtn.style.cssText = 'padding: 4px 8px; border: none; border-radius: 4px; background: #2196F3; color: white; cursor: pointer; font-size: 12px;';
+                editNameBtn.title = 'Edit name';
+                editNameBtn.addEventListener('click', function() {
                     const newName = prompt('Edit name:', entry.name);
                     if (newName !== null) {
                         const allEntries = parseCloudLinks();
                         allEntries[index].name = newName;
+                        cloudLinksContent = rebuildCloudContent(allEntries);
+                        populateCloudLinks();
+                        const accessCode = document.getElementById('accessCodeInput').value.trim();
+                        if (accessCode) saveLinksToCloud();
+                    }
+                });
+
+                // Edit URL button
+                const editUrlBtn = document.createElement('button');
+                editUrlBtn.textContent = '🔗';
+                editUrlBtn.style.cssText = 'padding: 4px 8px; border: none; border-radius: 4px; background: #FF9800; color: white; cursor: pointer; font-size: 12px;';
+                editUrlBtn.title = 'Edit URL (add times with ?1:00,2:00,3:00)';
+                editUrlBtn.addEventListener('click', function() {
+                    const currentRaw = entry.rawUrl || entry.url;
+                    const newUrl = prompt('Edit URL (add times like ?1:00,2:00,3:00):', currentRaw);
+                    if (newUrl !== null && newUrl.trim()) {
+                        const allEntries = parseCloudLinks();
+                        const parsed = parseInlineTimes(newUrl.trim(), allEntries[index].name);
+                        parsed.rawUrl = newUrl.trim();
+                        allEntries[index] = parsed;
                         cloudLinksContent = rebuildCloudContent(allEntries);
                         populateCloudLinks();
                         const accessCode = document.getElementById('accessCodeInput').value.trim();
@@ -2104,7 +2148,8 @@
 
                 row.appendChild(nameSpan);
                 row.appendChild(urlSpan);
-                row.appendChild(editBtn);
+                row.appendChild(editNameBtn);
+                row.appendChild(editUrlBtn);
                 row.appendChild(deleteBtn);
                 container.appendChild(row);
             });
