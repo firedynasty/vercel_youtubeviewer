@@ -1225,6 +1225,9 @@
             <!-- Large +15s Playback Jump Button -->
             <button id="jumpPlus15Large" onclick="jumpPlayback(15); document.getElementById('timer15sBtn')?.focus();" style="width: 100%; padding: 15px; background: linear-gradient(45deg, #9E9E9E, #757575); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; margin-top: 8px;">+15s</button>
 
+            <!-- Next Saved Time Button -->
+            <button id="nextSavedTimeBtn" onclick="goToNextSavedTime()" style="width: 100%; padding: 15px; background: linear-gradient(45deg, #7E57C2, #5E35B1); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; margin-top: 6px;">Next Saved Time ▶</button>
+
             <!-- URL History Navbar -->
             <div id="urlHistoryNavbar" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; margin-top: 8px; background: rgba(0,0,0,0.05); border-radius: 10px; flex-wrap: wrap; font-size: 12px;">
                 <span style="color: #9C27B0; font-weight: 600;">History:</span>
@@ -1359,23 +1362,39 @@
         let paginationSource = null;  // 'text' or 'cloud'
         let goAutoplayPending = false; // Flag: Go button was clicked, play after embed + 500ms
 
-        // Parse links from text-section template
+        // Parse links from text-section template (with inline times support)
         function parseTextSectionLinks() {
             const lines = template_for_copy_and_paste.split('\n').map(l => l.trim()).filter(l => l);
             const entries = [];
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
                 if (line.startsWith('http://') || line.startsWith('https://')) {
-                    entries.push({ name: '', url: line });
+                    entries.push(parseInlineTimes(line, ''));
                 } else if (i + 1 < lines.length) {
                     const nextLine = lines[i + 1];
                     if (nextLine.startsWith('http://') || nextLine.startsWith('https://')) {
-                        entries.push({ name: line, url: nextLine });
+                        entries.push(parseInlineTimes(nextLine, line));
                         i++;
                     }
                 }
             }
             return entries;
+        }
+
+        // Extract inline times from a URL (e.g. ...?v=xxx?1:00,2:00,3:00)
+        function parseInlineTimes(rawUrl, name) {
+            if (isYouTubeURL(rawUrl)) {
+                const parts = rawUrl.split('?');
+                if (parts.length >= 3) {
+                    const timePart = parts[parts.length - 1];
+                    const urlPart = parts.slice(0, -1).join('?');
+                    if (/^\d/.test(timePart)) {
+                        const times = timePart.split(',').map(t => t.trim()).filter(t => t);
+                        return { name: name, url: urlPart, inlineTimes: times };
+                    }
+                }
+            }
+            return { name: name, url: rawUrl, inlineTimes: [] };
         }
 
         // Parse links from clipboard text (multi-line: markdown, YouTube with ?times, plain URLs, local paths)
@@ -1447,7 +1466,27 @@
         function activatePaginationFromText(clickedUrl) {
             allPaginationLinks = parseTextSectionLinks();
             paginationSource = 'text';
-            const index = allPaginationLinks.findIndex(l => l.url === clickedUrl);
+            // Store inline times into allSavedTimes for links that have them
+            for (const link of allPaginationLinks) {
+                if (link.inlineTimes && link.inlineTimes.length > 0) {
+                    let key = null;
+                    if (isYouTubeURL(link.url)) {
+                        key = extractVideoId(link.url);
+                    } else {
+                        key = btoa(link.url).replace(/[/+=]/g, '_');
+                    }
+                    if (key) {
+                        const timesData = link.inlineTimes.map(t => ({ time: t.trim(), name: '' }));
+                        allSavedTimes[key] = timesData;
+                    }
+                }
+            }
+            // Match by clean URL or raw URL (clickedUrl may still have inline times)
+            let index = allPaginationLinks.findIndex(l => l.url === clickedUrl);
+            if (index < 0) {
+                // clickedUrl has times appended — match by checking if clickedUrl starts with the clean url
+                index = allPaginationLinks.findIndex(l => clickedUrl.startsWith(l.url));
+            }
             currentPaginationIndex = index >= 0 ? index : 0;
             showPagination();
             loadCurrentPaginationLink();
@@ -4540,6 +4579,34 @@
             lastClickedTime = seconds;
             currentTimeIndex = index;
             jumpToYouTubeTime(seconds);
+        }
+
+        // Go to the next saved time (updates loopStartTime + playbackTimeValue and jumps)
+        function goToNextSavedTime() {
+            if (!savedTimesData || savedTimesData.length === 0) {
+                showStatus('No saved times', 'error');
+                return;
+            }
+            let nextIndex = (currentTimeIndex < 0) ? 0 : currentTimeIndex + 1;
+            if (nextIndex >= savedTimesData.length) {
+                nextIndex = 0;
+            }
+            const item = savedTimesData[nextIndex];
+            const seconds = parseTimeToSeconds(item.time);
+            if (seconds === null) return;
+
+            currentTimeIndex = nextIndex;
+
+            // Update playback inputs
+            document.getElementById('loopStartTime').value = item.time;
+            document.getElementById('playbackTimeValue').textContent = item.time;
+
+            // Jump to that time
+            skipSeekDetection = true;
+            setTimeout(() => { skipSeekDetection = false; }, 3000);
+            jumpToYouTubeTime(seconds);
+
+            showStatus(`Saved time ${nextIndex + 1}/${savedTimesData.length}: ${item.time}`, 'info');
         }
 
         // Delete a saved time by index
