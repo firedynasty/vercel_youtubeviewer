@@ -1305,16 +1305,21 @@
 
         <!-- Quick Links -->
         <div class="section" style="margin-top: 30px;">
-            <h3 class="section-title">Quick Links</h3>
-            <button class="paste-btn" onclick="pasteQuickLinks()" style="margin-bottom: 15px; background: linear-gradient(45deg, #8B5CF6, #7C3AED);">📋 Paste Links from Clipboard</button>
-            <div class="toggle-group">
-                <label class="switch">
-                    <input type="checkbox" id="autoTimerToggle">
-                    <span class="slider-toggle"></span>
-                </label>
-                <span class="toggle-label" id="autoTimerLabel">Normal Mode</span>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 class="section-title" style="margin: 0;">Quick Links</h3>
+                <button id="toggleQuickLinksBtn" onclick="toggleQuickLinks()" style="padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #607D8B, #455A64); color: white; cursor: pointer; font-size: 12px; font-weight: 600;">▼ Minimize</button>
             </div>
-            <div id="text-section" style="background: #f5f5f5; padding: 15px; border-radius: 8px; font-size: 1em; line-height: 1.6; white-space: pre-wrap;"></div>
+            <div id="quickLinksContent">
+                <button class="paste-btn" onclick="pasteQuickLinks()" style="margin-bottom: 15px; background: linear-gradient(45deg, #8B5CF6, #7C3AED);">📋 Paste Links from Clipboard</button>
+                <div class="toggle-group">
+                    <label class="switch">
+                        <input type="checkbox" id="autoTimerToggle">
+                        <span class="slider-toggle"></span>
+                    </label>
+                    <span class="toggle-label" id="autoTimerLabel">Normal Mode</span>
+                </div>
+                <div id="text-section" style="background: #f5f5f5; padding: 15px; border-radius: 8px; font-size: 1em; line-height: 1.6; white-space: pre-wrap;"></div>
+            </div>
         </div>
 
         <!-- Cloud Links Section -->
@@ -1805,6 +1810,18 @@
         // ============================================
 
         // Populate text-section with clickable URLs
+        function toggleQuickLinks() {
+            const content = document.getElementById('quickLinksContent');
+            const btn = document.getElementById('toggleQuickLinksBtn');
+            if (content.style.display === 'none') {
+                content.style.display = '';
+                btn.textContent = '▼ Minimize';
+            } else {
+                content.style.display = 'none';
+                btn.textContent = '▶ Show';
+            }
+        }
+
         function populateQuickLinks() {
             const container = document.getElementById('text-section');
             const lines = template_for_copy_and_paste.split('\n');
