@@ -3500,6 +3500,13 @@
                     document.getElementById('loopStartTime')?.focus();
                     return;
                 }
+
+                // Cmd+Ctrl+1: trigger +15s loop time button
+                if ((e.metaKey && e.ctrlKey) && e.key === '1') {
+                    e.preventDefault();
+                    document.getElementById('loopTimePlus15')?.click();
+                    return;
+                }
             });
         });
 
