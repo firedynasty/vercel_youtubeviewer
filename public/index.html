@@ -1058,6 +1058,269 @@
             font-size: 12px;
             font-weight: bold;
         }
+
+        /* Dropbox Sidebar Styles */
+        .dbx-sidebar {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #333;
+            z-index: 1001;
+            background: #1a1a2e;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .dbx-sidebar.open {
+            transform: translateX(0);
+        }
+
+        .dbx-sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 10px;
+            font-size: 14px;
+            font-weight: bold;
+            border-bottom: 1px solid #333;
+            color: #4da6ff;
+        }
+
+        .dbx-sidebar-header button {
+            background: transparent;
+            border: none;
+            color: #888;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .dbx-sidebar-header button:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .dbx-sidebar-file-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 5px;
+        }
+
+        .dbx-app-key-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .dbx-app-key-row input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .dbx-app-key-row input:focus {
+            border-color: #4da6ff;
+        }
+
+        .dbx-app-key-row button {
+            padding: 10px 16px;
+            background: #0061FF;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .dbx-app-key-row button:hover {
+            background: #0052d4;
+        }
+
+        .dbx-search-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .dbx-search-row input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .dbx-search-row input:focus {
+            border-color: #4da6ff;
+        }
+
+        .dbx-search-row button {
+            padding: 10px 16px;
+            background: #0061FF;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .dbx-search-row button:hover {
+            background: #0052d4;
+        }
+
+        .dbx-result-item.selected {
+            background: rgba(77, 166, 255, 0.2);
+            border-left: 3px solid #4da6ff;
+        }
+
+        .dbx-show-all-btn {
+            background: transparent;
+            border: none;
+            color: #4da6ff;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+
+        .dbx-show-all-btn:hover {
+            text-decoration: underline;
+        }
+
+        .dbx-breadcrumb {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 6px 10px;
+            font-size: 12px;
+            color: #888;
+            gap: 2px;
+        }
+
+        .dbx-breadcrumb-link {
+            color: #4da6ff;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 12px;
+            padding: 0;
+        }
+
+        .dbx-breadcrumb-link:hover {
+            text-decoration: underline;
+        }
+
+        .dbx-breadcrumb-sep {
+            color: #666;
+            margin: 0 2px;
+        }
+
+        .dbx-result-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .dbx-result-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .dbx-result-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .dbx-result-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .dbx-result-name {
+            font-size: 14px;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .dbx-result-path {
+            font-size: 11px;
+            color: #888;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .dbx-sign-out-btn {
+            width: calc(100% - 20px);
+            margin: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #f87171;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .dbx-sign-out-btn:hover {
+            background: rgba(248, 113, 113, 0.15);
+        }
+
+        .dbx-status {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 10px;
+            min-height: 18px;
+        }
+
+        .dbx-save-btn {
+            background: #0061FF;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .dbx-save-btn:hover {
+            background: #0052d4;
+        }
+
+        #dbxContentTextarea {
+            width: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 13px;
+            padding: 12px;
+            border: 2px solid rgba(255, 107, 53, 0.3);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            resize: vertical;
+            outline: none;
+            line-height: 1.5;
+        }
+
+        #dbxContentTextarea:focus {
+            border-color: #0061FF;
+        }
     </style>
 </head>
 <body>
@@ -1077,6 +1340,35 @@
         </div>
     </div>
     <button class="sidebar-toggle-btn" onclick="toggleSavedVideosSidebar()">📼 Saved</button>
+
+    <!-- Dropbox Sidebar -->
+    <div class="dbx-sidebar" id="dbxSidebar">
+        <div class="dbx-sidebar-header">
+            <span>DROPBOX</span>
+            <button id="dbxCloseBtn">&#10005;</button>
+        </div>
+        <!-- Sign-in (shown when not authenticated) -->
+        <div id="dbxSignInSection" style="padding: 15px;">
+            <div class="dbx-app-key-row" id="dbxAppKeyRow" style="display: none;">
+                <input type="text" id="dbxAppKeyInput" placeholder="Dropbox App Key">
+            </div>
+            <div class="dbx-app-key-row">
+                <button id="dbxSignInBtn" style="flex: 1;">Sign In</button>
+            </div>
+        </div>
+        <!-- File browsing (shown when authenticated) -->
+        <div id="dbxSearchSection" style="display: none; flex-direction: column; flex: 1; overflow: hidden;">
+            <div class="dbx-status" id="dbxStatus" style="padding: 5px 10px 0;"></div>
+            <div class="dbx-search-row" style="padding: 5px 10px 10px;">
+                <input type="text" id="dbxSearchInput" placeholder="Search files...">
+                <button id="dbxSearchBtn">Go</button>
+                <button id="dbxCreateTxtBtn">+ txt</button>
+            </div>
+            <div class="dbx-breadcrumb" id="dbxBreadcrumb"></div>
+            <div class="dbx-sidebar-file-list" id="dbxResults"></div>
+            <button id="dbxSignOutBtn" class="dbx-sign-out-btn">Sign Out</button>
+        </div>
+    </div>
 
     <!-- Link Pagination Navbar -->
     <div id="linkPaginationNavbar" class="link-pagination-navbar">
@@ -1204,8 +1496,7 @@
                     <option value="45">45s</option>
                     <option value="50">50s</option>
                 </select>
-                <span style="margin-left: 15px; color: #9C27B0; font-size: 12px; font-weight: 600;">🔄 Repeat:</span>
-                <span style="margin-left: 5px; color: #757575; font-size: 11px; font-style: italic;">timers auto-repeat for ~25 mins</span>
+                <button id="dropboxBtn" onclick="toggleDropboxSidebar()" style="margin-left: 15px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #0061FF, #0052d4); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">DB</button>
                 <span style="display: none;">
                     <label style="margin-left: 8px; cursor: pointer; font-size: 12px;">
                         <input type="radio" name="timerRepeat" value="40" style="cursor: pointer;"> 40 times
@@ -1220,6 +1511,15 @@
                         <input type="radio" name="timerRepeat" value="80" style="cursor: pointer;"> 80 times
                     </label>
                 </span>
+            </div>
+
+            <!-- Dropbox Content Textarea -->
+            <div id="dbxContentSection" style="display: none; margin-top: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                    <span id="dbxFileLabel" style="color: #0061FF; font-size: 13px; font-weight: 600;"></span>
+                    <button id="dbxSaveBtn" class="dbx-save-btn" style="display: none;">Save &#8593; DB</button>
+                </div>
+                <textarea id="dbxContentTextarea" rows="25" placeholder="Dropbox file content will appear here..."></textarea>
             </div>
 
             <!-- Large +15s Playback Jump Button -->
@@ -6303,6 +6603,456 @@
                 URL.revokeObjectURL(url);
             }
         })();
+    </script>
+
+    <!-- Dropbox Integration -->
+    <script>
+    (function() {
+        // ============ DROPBOX INTEGRATION ============
+        let dropboxAccessToken = null;
+        let dropboxAppKey = '';
+        let currentDropboxFilePath = '';
+        let currentDropboxFileName = '';
+        let dbxRootFilesLoaded = false;
+
+        const dbxIsLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+        // PKCE helpers
+        function generateCodeVerifier() {
+            const array = new Uint8Array(64);
+            crypto.getRandomValues(array);
+            return btoa(String.fromCharCode(...array))
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/, '');
+        }
+
+        async function generateCodeChallenge(verifier) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(verifier);
+            const digest = await crypto.subtle.digest('SHA-256', data);
+            return btoa(String.fromCharCode(...new Uint8Array(digest)))
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/, '');
+        }
+
+        async function fetchDropboxAppKey() {
+            if (dbxIsLocalhost) {
+                return localStorage.getItem('dropbox-app-key') || '';
+            }
+            try {
+                const res = await fetch('/api/dropbox-key');
+                const data = await res.json();
+                return data.key || '';
+            } catch {
+                return '';
+            }
+        }
+
+        function setDbxStatus(msg) {
+            document.getElementById('dbxStatus').textContent = msg;
+        }
+
+        window.toggleDropboxSidebar = async function() {
+            const sidebar = document.getElementById('dbxSidebar');
+            sidebar.classList.toggle('open');
+
+            if (!sidebar.classList.contains('open')) return;
+
+            if (dbxIsLocalhost) {
+                document.getElementById('dbxAppKeyRow').style.display = 'flex';
+                const savedKey = localStorage.getItem('dropbox-app-key');
+                if (savedKey) {
+                    document.getElementById('dbxAppKeyInput').value = savedKey;
+                }
+            } else {
+                document.getElementById('dbxAppKeyRow').style.display = 'none';
+            }
+
+            if (dropboxAccessToken) {
+                document.getElementById('dbxSignInSection').style.display = 'none';
+                document.getElementById('dbxSearchSection').style.display = 'flex';
+                if (!dbxRootFilesLoaded) {
+                    dbxRootFilesLoaded = true;
+                    loadDropboxFolder('');
+                }
+            } else {
+                document.getElementById('dbxSignInSection').style.display = 'block';
+                document.getElementById('dbxSearchSection').style.display = 'none';
+            }
+        };
+
+        function closeDropboxSidebar() {
+            document.getElementById('dbxSidebar').classList.remove('open');
+        }
+
+        async function handleDropboxSignIn() {
+            let appKey;
+            if (dbxIsLocalhost) {
+                appKey = document.getElementById('dbxAppKeyInput').value.trim();
+                if (!appKey) {
+                    alert('Please enter a Dropbox App Key');
+                    return;
+                }
+                localStorage.setItem('dropbox-app-key', appKey);
+            } else {
+                appKey = await fetchDropboxAppKey();
+                if (!appKey) {
+                    alert('Dropbox App Key not configured on server');
+                    return;
+                }
+            }
+            dropboxAppKey = appKey;
+
+            const verifier = generateCodeVerifier();
+            const challenge = await generateCodeChallenge(verifier);
+            sessionStorage.setItem('dropbox_code_verifier', verifier);
+
+            const redirectUri = window.location.origin + window.location.pathname;
+            const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${appKey}&response_type=code&code_challenge=${challenge}&code_challenge_method=S256&redirect_uri=${encodeURIComponent(redirectUri)}&token_access_type=online`;
+            window.location.href = authUrl;
+        }
+
+        async function handleDropboxOAuthRedirect() {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+            if (!code) return;
+
+            const verifier = sessionStorage.getItem('dropbox_code_verifier');
+            const appKey = await fetchDropboxAppKey();
+            if (!verifier || !appKey) return;
+            dropboxAppKey = appKey;
+
+            const redirectUri = window.location.origin + window.location.pathname;
+            const body = new URLSearchParams({
+                code,
+                grant_type: 'authorization_code',
+                client_id: appKey,
+                redirect_uri: redirectUri,
+                code_verifier: verifier,
+            });
+
+            try {
+                const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: body.toString(),
+                });
+                const data = await res.json();
+                if (data.access_token) {
+                    dropboxAccessToken = data.access_token;
+                    sessionStorage.removeItem('dropbox_code_verifier');
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    toggleDropboxSidebar();
+                } else {
+                    console.error('Dropbox auth failed:', data);
+                }
+            } catch (err) {
+                console.error('Dropbox auth error:', err);
+            }
+        }
+
+        async function handleDropboxSignOut() {
+            if (dropboxAccessToken) {
+                try {
+                    await fetch('https://api.dropboxapi.com/2/auth/token/revoke', {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${dropboxAccessToken}` },
+                    });
+                } catch { /* ignore */ }
+            }
+            dropboxAccessToken = null;
+            currentDropboxFilePath = '';
+            currentDropboxFileName = '';
+            dbxRootFilesLoaded = false;
+            document.getElementById('dbxSaveBtn').style.display = 'none';
+            document.getElementById('dbxContentSection').style.display = 'none';
+            document.getElementById('dbxSignInSection').style.display = 'block';
+            document.getElementById('dbxSearchSection').style.display = 'none';
+            document.getElementById('dbxResults').innerHTML = '';
+            document.getElementById('dbxBreadcrumb').innerHTML = '';
+            setDbxStatus('Signed out');
+        }
+
+        async function searchDropboxFiles(query) {
+            if (!query.trim() || !dropboxAccessToken) return;
+            setDbxStatus('Searching...');
+            document.getElementById('dbxBreadcrumb').innerHTML = '';
+
+            try {
+                const response = await fetch('https://api.dropboxapi.com/2/files/search_v2', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${dropboxAccessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        options: { max_results: 20 },
+                    }),
+                });
+                if (!response.ok) throw new Error('Search failed');
+                const data = await response.json();
+                const results = (data.matches || []).map(m => {
+                    const metadata = m.metadata?.metadata || m.metadata;
+                    return {
+                        name: metadata.name,
+                        path: metadata.path_lower || metadata.path_display,
+                        isFolder: metadata['.tag'] === 'folder',
+                    };
+                }).filter(item => !item.isFolder);
+                setDbxStatus(`Found ${results.length} files`);
+                renderDbxResults(results, true);
+            } catch (error) {
+                setDbxStatus('Error: ' + error.message);
+            }
+        }
+
+        async function loadDropboxFolder(path) {
+            setDbxStatus('Loading folder...');
+            try {
+                const response = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${dropboxAccessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ path: path }),
+                });
+                if (!response.ok) throw new Error('Failed to list folder');
+                const data = await response.json();
+                const entries = (data.entries || []).map(entry => ({
+                    name: entry.name,
+                    path: entry.path_lower || entry.path_display,
+                    isFolder: entry['.tag'] === 'folder',
+                }));
+                entries.sort((a, b) => {
+                    if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
+                    return a.name.localeCompare(b.name);
+                });
+                setDbxStatus(`Loaded ${entries.length} items`);
+                renderDbxBreadcrumb(path);
+                renderDbxResults(entries);
+            } catch (error) {
+                setDbxStatus('Error: ' + error.message);
+            }
+        }
+
+        function renderDbxBreadcrumb(path) {
+            const container = document.getElementById('dbxBreadcrumb');
+            if (!path) {
+                container.innerHTML = '';
+                return;
+            }
+            const parts = path.replace(/^\//, '').split('/').filter(Boolean);
+            let html = '';
+            parts.forEach((part, i) => {
+                const crumbPath = '/' + parts.slice(0, i + 1).join('/');
+                if (i > 0) html += '<span class="dbx-breadcrumb-sep">/</span>';
+                html += `<button class="dbx-breadcrumb-link" data-path="${crumbPath}">${part}</button>`;
+            });
+            container.innerHTML = html;
+        }
+
+        async function loadDropboxFile(path, name) {
+            setDbxStatus(`Loading ${name}...`);
+            try {
+                const response = await fetch('https://content.dropboxapi.com/2/files/download', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${dropboxAccessToken}`,
+                        'Dropbox-API-Arg': JSON.stringify({ path: path }),
+                    },
+                });
+                if (!response.ok) throw new Error('Download failed');
+                const content = await response.text();
+
+                // Load into the Dropbox content textarea
+                document.getElementById('dbxContentTextarea').value = content;
+                document.getElementById('dbxContentSection').style.display = 'block';
+                document.getElementById('dbxFileLabel').textContent = name;
+                document.getElementById('dbxSaveBtn').style.display = '';
+
+                // Track for saving back
+                currentDropboxFilePath = path;
+                currentDropboxFileName = name;
+
+                // Highlight the loaded file in sidebar
+                document.querySelectorAll('#dbxResults .dbx-result-item').forEach(el => {
+                    el.classList.toggle('selected', el.dataset.path === path);
+                });
+                setDbxStatus(`Loaded: ${name}`);
+            } catch (error) {
+                setDbxStatus('Error: ' + error.message);
+            }
+        }
+
+        async function saveToDropbox() {
+            if (!currentDropboxFilePath || !dropboxAccessToken) return;
+
+            const btn = document.getElementById('dbxSaveBtn');
+            const origText = btn.textContent;
+            btn.textContent = 'Saving...';
+            btn.disabled = true;
+
+            try {
+                const content = document.getElementById('dbxContentTextarea').value;
+
+                const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${dropboxAccessToken}`,
+                        'Dropbox-API-Arg': JSON.stringify({
+                            path: currentDropboxFilePath,
+                            mode: { '.tag': 'overwrite' },
+                            mute: true,
+                        }),
+                        'Content-Type': 'application/octet-stream',
+                    },
+                    body: content,
+                });
+                if (response.ok) {
+                    btn.textContent = 'Saved!';
+                    setTimeout(() => { btn.textContent = origText; }, 1500);
+                } else {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error_summary || `HTTP ${response.status}`);
+                }
+            } catch (error) {
+                alert('Error saving to Dropbox: ' + error.message);
+                btn.textContent = origText;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function renderDbxResults(items, isSearch) {
+            const container = document.getElementById('dbxResults');
+            if (items.length === 0) {
+                container.innerHTML = '<div style="padding: 15px; color: #888; text-align: center;">No results</div>';
+                return;
+            }
+            let html = '';
+            if (isSearch) {
+                html += '<div style="padding: 2px 10px;"><button class="dbx-show-all-btn" id="dbxShowAllBtn">Show All</button></div>';
+            }
+            html += items.map(item => {
+                const icon = item.isFolder ? '\uD83D\uDCC1' : '\uD83D\uDCC4';
+                const isSelected = !item.isFolder && currentDropboxFilePath && item.path === currentDropboxFilePath;
+                const pathHtml = isSearch ? `<div class="dbx-result-path">${item.path}</div>` : '';
+                return `
+                    <div class="dbx-result-item${isSelected ? ' selected' : ''}" data-path="${item.path}" data-name="${item.name}" data-folder="${item.isFolder}">
+                        <span class="dbx-result-icon">${icon}</span>
+                        <div class="dbx-result-info">
+                            <div class="dbx-result-name">${item.name}</div>
+                            ${pathHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            container.innerHTML = html;
+        }
+
+        function handleDbxResultClick(e) {
+            if (e.target.id === 'dbxShowAllBtn') {
+                document.getElementById('dbxSearchInput').value = '';
+                document.getElementById('dbxBreadcrumb').innerHTML = '';
+                loadDropboxFolder('');
+                return;
+            }
+            if (e.target.closest('.dbx-breadcrumb-link')) {
+                const crumbPath = e.target.dataset.path;
+                loadDropboxFolder(crumbPath);
+                return;
+            }
+            const item = e.target.closest('.dbx-result-item');
+            if (!item) return;
+            const path = item.dataset.path;
+            const name = item.dataset.name;
+            const isFolder = item.dataset.folder === 'true';
+            if (isFolder) {
+                loadDropboxFolder(path);
+            } else {
+                loadDropboxFile(path, name);
+            }
+        }
+
+        function handleDbxSearch() {
+            const query = document.getElementById('dbxSearchInput').value.trim();
+            if (!query) {
+                loadDropboxFolder('');
+                return;
+            }
+            if (query.startsWith('/')) {
+                const path = query.replace(/\/+$/, '') || '';
+                loadDropboxFolder(path);
+                return;
+            }
+            searchDropboxFiles(query);
+        }
+
+        async function createDbxTxtFile() {
+            if (!dropboxAccessToken) return;
+
+            const lastCrumb = document.querySelector('#dbxBreadcrumb .dbx-breadcrumb-link:last-child');
+            const folderPath = lastCrumb ? lastCrumb.dataset.path : '';
+
+            const name = window.prompt('Enter filename (without .txt):');
+            if (name === null || name.trim() === '') return;
+
+            const fileName = name.trim().endsWith('.txt') ? name.trim() : name.trim() + '.txt';
+            const targetPath = (folderPath || '') + '/' + fileName;
+
+            setDbxStatus('Creating "' + fileName + '"...');
+            try {
+                const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: 'Bearer ' + dropboxAccessToken,
+                        'Dropbox-API-Arg': JSON.stringify({
+                            path: targetPath,
+                            mode: 'add',
+                            autorename: true,
+                            mute: true,
+                        }),
+                        'Content-Type': 'application/octet-stream',
+                    },
+                    body: '',
+                });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error_summary || 'HTTP ' + response.status);
+                }
+                setDbxStatus('Created "' + fileName + '"');
+                loadDropboxFolder(folderPath);
+            } catch (error) {
+                setDbxStatus('Error creating file: ' + error.message);
+            }
+        }
+
+        // Setup event listeners on DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle OAuth redirect
+            handleDropboxOAuthRedirect();
+
+            // Dropbox button listeners
+            document.getElementById('dbxCloseBtn').addEventListener('click', closeDropboxSidebar);
+            document.getElementById('dbxSignInBtn').addEventListener('click', handleDropboxSignIn);
+            document.getElementById('dbxSignOutBtn').addEventListener('click', handleDropboxSignOut);
+            document.getElementById('dbxSearchBtn').addEventListener('click', handleDbxSearch);
+            document.getElementById('dbxCreateTxtBtn').addEventListener('click', createDbxTxtFile);
+            document.getElementById('dbxSearchInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleDbxSearch();
+            });
+            document.getElementById('dbxResults').addEventListener('click', handleDbxResultClick);
+            document.getElementById('dbxBreadcrumb').addEventListener('click', (e) => {
+                const link = e.target.closest('.dbx-breadcrumb-link');
+                if (link) loadDropboxFolder(link.dataset.path);
+            });
+            document.getElementById('dbxSaveBtn').addEventListener('click', saveToDropbox);
+        });
+    })();
     </script>
 </body>
 </html>
