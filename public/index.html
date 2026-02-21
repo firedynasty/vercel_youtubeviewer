@@ -1547,6 +1547,7 @@
                     <option value="50">50s</option>
                 </select>
                 <button id="dropboxBtn" onclick="toggleDropboxSidebar()" style="margin-left: 15px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #0061FF, #0052d4); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">DB</button>
+                <button id="clipboardTimeBtn" onclick="jumpToClipboardTime()" style="margin-left: 8px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #E91E63, #C2185B); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">📋T</button>
                 <span style="display: none;">
                     <label style="margin-left: 8px; cursor: pointer; font-size: 12px;">
                         <input type="radio" name="timerRepeat" value="40" style="cursor: pointer;"> 40 times
@@ -4070,6 +4071,41 @@
 
             // Jump to the new time
             jumpToYouTubeTime(newSeconds);
+        }
+
+        // Jump to time from clipboard text (e.g. "1:58 some text" or just "1:58")
+        async function jumpToClipboardTime() {
+            try {
+                const text = (await navigator.clipboard.readText()).trim();
+                if (!text) {
+                    showStatus('Clipboard is empty', 'error');
+                    return;
+                }
+
+                // Extract time from the beginning of the string (MM:SS, H:MM:SS, or just seconds)
+                const timeMatch = text.match(/^(\d+:\d+:\d+|\d+:\d+|\d+)/);
+                if (!timeMatch) {
+                    showStatus('No time found in clipboard', 'error');
+                    return;
+                }
+
+                const timeStr = timeMatch[1];
+                const seconds = parseTimeToSeconds(timeStr);
+                if (seconds === null) {
+                    showStatus(`Invalid time: ${timeStr}`, 'error');
+                    return;
+                }
+
+                // Update playback time display
+                document.getElementById('playbackTimeValue').textContent = timeStr;
+                document.getElementById('loopStartTime').value = timeStr;
+
+                // Jump to the time
+                jumpToYouTubeTime(seconds);
+                showStatus(`Jumped to ${timeStr}`, 'success');
+            } catch (err) {
+                showStatus('Clipboard access denied', 'error');
+            }
         }
 
         // Parse time string to seconds (supports "1:23" or "83")
