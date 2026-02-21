@@ -1548,6 +1548,7 @@
                 </select>
                 <button id="dropboxBtn" onclick="toggleDropboxSidebar()" style="margin-left: 15px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #0061FF, #0052d4); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">DB</button>
                 <button id="clipboardTimeBtn" onclick="jumpToClipboardTime()" style="margin-left: 8px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #E91E63, #C2185B); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">📋T</button>
+                <button id="clipboardPasteMediaBtn" onclick="pasteMediaOrTimes()" style="margin-left: 8px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #FF9800, #F57C00); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">📋c Link</button>
                 <span style="display: none;">
                     <label style="margin-left: 8px; cursor: pointer; font-size: 12px;">
                         <input type="radio" name="timerRepeat" value="40" style="cursor: pointer;"> 40 times
@@ -4103,6 +4104,62 @@
                 // Jump to the time
                 jumpToYouTubeTime(seconds);
                 showStatus(`Jumped to ${timeStr}`, 'success');
+            } catch (err) {
+                showStatus('Clipboard access denied', 'error');
+            }
+        }
+
+        // Paste media URL + times or just times from clipboard
+        async function pasteMediaOrTimes() {
+            try {
+                const text = (await navigator.clipboard.readText()).trim();
+                if (!text) {
+                    showStatus('Clipboard is empty', 'error');
+                    return;
+                }
+
+                // Check if it contains a URL (starts with http or has youtube/dropbox patterns)
+                const hasURL = /https?:\/\//.test(text) || isYouTubeURL(text);
+
+                if (hasURL) {
+                    // Treat like the main Paste Media + Times button
+                    document.getElementById('pasteMediaTextarea').value = text;
+                    const success = processClipboardText(text);
+                    if (success) {
+                        savePasteToCloud(text);
+                        const btn = document.getElementById('clipboardPasteMediaBtn');
+                        const originalText = btn.textContent;
+                        btn.textContent = '✅ Loaded!';
+                        setTimeout(() => { btn.textContent = originalText; }, 2000);
+                    }
+                } else {
+                    // Times only (e.g. "1:00,2:00,3:00,4:00")
+                    const timeEntries = text.split(',').map(t => t.trim()).filter(t => t);
+                    savedTimesData = [];
+                    currentTimeIndex = -1;
+
+                    timeEntries.forEach((timeEntry) => {
+                        const seconds = parseTimeToSeconds(timeEntry);
+                        if (seconds !== null) {
+                            savedTimesData.push({ time: timeEntry, name: '' });
+                        }
+                    });
+
+                    const key = getCurrentMediaKey();
+                    if (key) allSavedTimes[key] = savedTimesData;
+                    renderSavedTimesTable();
+
+                    if (savedTimesData.length > 0) {
+                        saveSavedTimesToCloud();
+                        const btn = document.getElementById('clipboardPasteMediaBtn');
+                        const originalText = btn.textContent;
+                        btn.textContent = '✅ Loaded!';
+                        setTimeout(() => { btn.textContent = originalText; }, 2000);
+                        showStatus(`Added ${savedTimesData.length} saved times`, 'success');
+                    } else {
+                        showStatus('No valid times found in clipboard', 'error');
+                    }
+                }
             } catch (err) {
                 showStatus('Clipboard access denied', 'error');
             }
