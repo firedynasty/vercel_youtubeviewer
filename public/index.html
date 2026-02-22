@@ -1779,6 +1779,32 @@
                     continue;
                 }
 
+                // "Name, URL" or "Name, URL?times" format (e.g. "Edge, https://...?1:00,2:00")
+                const nameUrlMatch = line.match(/^([^,]+),\s*(https?:\/\/.+)$/);
+                if (nameUrlMatch && !nameUrlMatch[1].trim().startsWith('http')) {
+                    const name = nameUrlMatch[1].trim();
+                    const urlWithTimes = nameUrlMatch[2].trim();
+
+                    if (isYouTubeURL(urlWithTimes)) {
+                        const parts = urlWithTimes.split('?');
+                        if (parts.length >= 3) {
+                            const timePart = parts[parts.length - 1];
+                            const urlPart = parts.slice(0, -1).join('?');
+                            if (/^\d/.test(timePart)) {
+                                const times = timePart.split(',').map(t => t.trim()).filter(t => t);
+                                entries.push({ name: name, url: urlPart, inlineTimes: times });
+                            } else {
+                                entries.push({ name: name, url: urlWithTimes, inlineTimes: [] });
+                            }
+                        } else {
+                            entries.push({ name: name, url: urlWithTimes, inlineTimes: [] });
+                        }
+                    } else {
+                        entries.push({ name: name, url: urlWithTimes, inlineTimes: [] });
+                    }
+                    continue;
+                }
+
                 // YouTube URL with inline ?times (e.g. ...?v=xxx?3:55,4:39)
                 // The second ? separates times from the URL
                 if (isYouTubeURL(line)) {
@@ -4412,6 +4438,15 @@
                 renderSavedVideosSidebar();
                 showStatus(`Loaded ${clipboardLinks.length} links into pagination`, 'success');
                 return true;
+            }
+
+            // Single named link (e.g. "Edge, https://...?1:00,2:00") — normalize to "URL,time1,time2"
+            if (clipboardLinks.length === 1) {
+                const link = clipboardLinks[0];
+                text = link.url;
+                if (link.inlineTimes && link.inlineTimes.length > 0) {
+                    text += ',' + link.inlineTimes.join(',');
+                }
             }
 
             // Split by comma to check if there are times included
