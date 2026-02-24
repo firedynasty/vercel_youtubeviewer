@@ -1527,29 +1527,29 @@
             </div>
 
             <!-- Current Time Display (below video players) -->
-            <div class="current-time-display" id="currentTimeDisplay" style="display: none;">
-                <label style="color: #FFC107; font-weight: 600; font-size: 12px;">🔄 Go/loop to:</label>
+            <div class="current-time-display" id="currentTimeDisplay" style="display: none; flex-wrap: wrap;">
                 <button id="loopTimeMinus15" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-right: 4px;">−15s</button>
                 <input type="text" id="loopStartTime" class="time-input" placeholder="0:01" value="0:01" style="width: 65px; text-align: center; font-size: 12px; padding: 4px 6px; display: none;">
                 <button id="jumpToZeroBtn" class="jump-btn" style="background: linear-gradient(45deg, #607D8B, #455A64); padding: 4px 8px; font-size: 11px;">0</button>
                 <button id="loopTimePlus15" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-left: 4px;">+15s</button>
-                <span class="time-label" style="margin-left: 15px;">Current Time:</span>
-                <span class="time-value" id="currentTimeValue">--:--</span>
-                <span class="time-label" style="margin-left: 15px;">Playback time:</span>
+                <span class="time-value" id="currentTimeValue" style="margin-left: 15px;">--:--</span>
+                <span class="time-label" style="margin-left: 15px;">playback</span>
                 <span class="time-value" id="playbackTimeValue" style="color: #FFC107; font-weight: 700;">0:01</span>
-                <button id="timer15sBtn" class="jump-btn" style="background: linear-gradient(45deg, #7E57C2, #5E35B1); margin-left: 15px; padding: 6px 12px; font-size: 12px;">⏱️ 15s</button>
-                <button id="timer30sBtn" class="jump-btn" style="background: linear-gradient(45deg, #00BCD4, #0097A7); margin-left: 10px; padding: 6px 12px; font-size: 12px;">⏱️ 30s</button>
-                <button id="timer3minBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); margin-left: 10px; padding: 6px 12px; font-size: 12px;">⏱️ 3m</button>
-                <select id="timerCustomSelect" style="display: none; margin-left: 10px; padding: 5px 8px; font-size: 12px; border-radius: 6px; border: 2px solid #9C27B0; background: linear-gradient(45deg, #E1BEE7, #CE93D8); cursor: pointer; font-weight: 600;">
-                    <option value="">⏱️ Custom</option>
-                    <option value="35">35s</option>
-                    <option value="40">40s</option>
-                    <option value="45">45s</option>
-                    <option value="50">50s</option>
-                </select>
                 <button id="dropboxBtn" onclick="toggleDropboxSidebar()" style="margin-left: 15px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #0061FF, #0052d4); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">DB</button>
                 <button id="clipboardTimeBtn" onclick="jumpToClipboardTime()" style="margin-left: 8px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #E91E63, #C2185B); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">📋Time</button>
                 <button id="clipboardPasteMediaBtn" onclick="pasteMediaOrTimes()" style="margin-left: 8px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #FF9800, #F57C00); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">📋c Link</button>
+                <div style="width: 100%; display: flex; align-items: center; gap: 6px; margin-top: 6px;">
+                    <button id="timer15sBtn" class="jump-btn" style="background: linear-gradient(45deg, #7E57C2, #5E35B1); padding: 6px 12px; font-size: 12px;">⏱️ 15s</button>
+                    <button id="timer30sBtn" class="jump-btn" style="background: linear-gradient(45deg, #00BCD4, #0097A7); padding: 6px 12px; font-size: 12px;">⏱️ 30s</button>
+                    <button id="timer3minBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); padding: 6px 12px; font-size: 12px;">⏱️ 3m</button>
+                    <select id="timerCustomSelect" style="display: none; padding: 5px 8px; font-size: 12px; border-radius: 6px; border: 2px solid #9C27B0; background: linear-gradient(45deg, #E1BEE7, #CE93D8); cursor: pointer; font-weight: 600;">
+                        <option value="">⏱️ Custom</option>
+                        <option value="35">35s</option>
+                        <option value="40">40s</option>
+                        <option value="45">45s</option>
+                        <option value="50">50s</option>
+                    </select>
+                </div>
                 <span style="display: none;">
                     <label style="margin-left: 8px; cursor: pointer; font-size: 12px;">
                         <input type="radio" name="timerRepeat" value="40" style="cursor: pointer;"> 40 times
