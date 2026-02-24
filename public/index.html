@@ -6729,10 +6729,27 @@
 
                 recorder.exportWAV(async function(wavBlob) {
                     const mp3Blob = await convertToMp3(wavBlob);
-                    downloadMp3(mp3Blob);
+                    const filename = generateFilename();
+
+                    // Upload to Dropbox /recordings/vercel/
+                    if (window.uploadToDropboxRecordings) {
+                        processingIndicator.textContent = 'Uploading...';
+                        const uploaded = await window.uploadToDropboxRecordings(mp3Blob, filename);
+                        if (uploaded) {
+                            processingIndicator.textContent = 'Uploaded!';
+                            await new Promise(r => setTimeout(r, 1000));
+                        } else {
+                            // Fallback to local download if Dropbox not signed in
+                            downloadMp3(mp3Blob, filename);
+                        }
+                    } else {
+                        downloadMp3(mp3Blob, filename);
+                    }
+
                     isProcessing = false;
                     recordBtn.disabled = false;
                     processingIndicator.style.display = 'none';
+                    processingIndicator.textContent = 'Saving...';
                 });
             }
 
@@ -6769,7 +6786,7 @@
                 });
             }
 
-            function downloadMp3(blob) {
+            function generateFilename() {
                 const now = new Date();
                 const year = now.getFullYear();
                 const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -6779,17 +6796,17 @@
                 const seconds = String(now.getSeconds()).padStart(2, '0');
                 const isPM = hours >= 12;
                 hours = hours % 12 || 12;
+                return 'Recording ' + year + '-' + month + '-' + day + ' at ' + hours + '.' + minutes + '.' + seconds + ' ' + (isPM ? 'PM' : 'AM') + '.mp3';
+            }
 
-                const filename = 'Screenshot ' + year + '-' + month + '-' + day + ' at ' + hours + '.' + minutes + '.' + seconds + ' ' + (isPM ? 'PM' : 'AM') + '.mp3';
+            function downloadMp3(blob, filename) {
                 const url = URL.createObjectURL(blob);
-
                 const link = document.createElement('a');
                 link.href = url;
                 link.download = filename;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-
                 URL.revokeObjectURL(url);
             }
         })();
@@ -7252,6 +7269,40 @@
                 setDbxStatus('Error creating file: ' + error.message);
             }
         }
+
+        // Expose upload function for recording integration
+        window.uploadToDropboxRecordings = async function(blob, filename) {
+            if (!dropboxAccessToken) {
+                console.warn('Dropbox not signed in — recording saved locally only');
+                return false;
+            }
+            const targetPath = '/recordings/vercel/' + filename;
+            try {
+                const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: 'Bearer ' + dropboxAccessToken,
+                        'Dropbox-API-Arg': JSON.stringify({
+                            path: targetPath,
+                            mode: 'add',
+                            autorename: true,
+                            mute: true,
+                        }),
+                        'Content-Type': 'application/octet-stream',
+                    },
+                    body: blob,
+                });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error_summary || 'HTTP ' + response.status);
+                }
+                console.log('Recording uploaded to Dropbox:', targetPath);
+                return true;
+            } catch (error) {
+                console.error('Dropbox upload failed:', error);
+                return false;
+            }
+        };
 
         // Setup event listeners on DOMContentLoaded
         document.addEventListener('DOMContentLoaded', function() {
