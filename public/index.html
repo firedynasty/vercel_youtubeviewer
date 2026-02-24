@@ -6736,7 +6736,7 @@
                         processingIndicator.textContent = 'Uploading...';
                         const uploaded = await window.uploadToDropboxRecordings(mp3Blob, filename);
                         if (uploaded) {
-                            processingIndicator.textContent = 'Uploaded!';
+                            processingIndicator.textContent = 'Uploaded! get it with grabrecording()';
                             await new Promise(r => setTimeout(r, 1000));
                         } else {
                             // Fallback to local download if Dropbox not signed in
