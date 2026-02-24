@@ -16,7 +16,7 @@ grabrecording() {
     # Find the latest file in the Dropbox folder (sorted by modification time)
     echo "Fetching file list from $DROPBOX_REMOTE..."
     local LATEST_FILE
-    LATEST_FILE=$(rclone lsf "$DROPBOX_REMOTE" --files-only -t --format "tp" | sort -r | head -n1 | sed 's/^[^;]*;//')
+    LATEST_FILE=$(rclone lsf "$DROPBOX_REMOTE" --files-only --format "tp" --separator ";" | sort -r | head -n1 | sed 's/^[^;]*;//')
 
     if [ -z "$LATEST_FILE" ]; then
         echo "No recordings found in $DROPBOX_REMOTE"
