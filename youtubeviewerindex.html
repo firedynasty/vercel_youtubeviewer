@@ -785,7 +785,7 @@
                 <label style="color: #FFC107; font-weight: 600; font-size: 12px;">🔄 Loop to:</label>
                 <button id="loopTimeMinus15" class="jump-btn" style="background: linear-gradient(45deg, #9e9e9e, #757575); padding: 4px 8px; font-size: 11px; margin-right: 4px;">−15s</button>
                 <input type="text" id="loopStartTime" class="time-input" placeholder="0:01" value="0:01" style="width: 65px; text-align: center; font-size: 12px; padding: 4px 6px;">
-                <button id="loopTimePlus15" class="jump-btn" style="background: linear-gradient(45deg, #9e9e9e, #757575); padding: 4px 8px; font-size: 11px; margin-left: 4px;">+15s</button>
+                <button id="loopTimePlus30" class="jump-btn" style="background: linear-gradient(45deg, #9e9e9e, #757575); padding: 4px 8px; font-size: 11px; margin-left: 4px;">+30s</button>
                 <button id="loopTimePlus120" class="jump-btn" style="background: linear-gradient(45deg, #9e9e9e, #757575); padding: 4px 8px; font-size: 11px; margin-left: 4px;">+120s</button>
                 <span class="time-label" style="margin-left: 15px;">Current Time:</span>
                 <span class="time-value" id="currentTimeValue">--:--</span>
@@ -2190,8 +2190,8 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                 document.getElementById('timer15sBtn').focus();
             });
 
-            document.getElementById('loopTimePlus15').addEventListener('click', function() {
-                adjustLoopStartTime(15);
+            document.getElementById('loopTimePlus30').addEventListener('click', function() {
+                adjustLoopStartTime(30);
                 document.getElementById('timer15sBtn').focus();
             });
 

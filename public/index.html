@@ -1531,7 +1531,7 @@
                 <button id="loopTimeMinus15" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-right: 4px;">−15s</button>
                 <input type="text" id="loopStartTime" class="time-input" placeholder="0:01" value="0:01" style="width: 65px; text-align: center; font-size: 12px; padding: 4px 6px; display: none;">
                 <button id="jumpToZeroBtn" class="jump-btn" style="background: linear-gradient(45deg, #607D8B, #455A64); padding: 4px 8px; font-size: 11px;">0</button>
-                <button id="loopTimePlus15" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-left: 4px;">+15s</button>
+                <button id="loopTimePlus30" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-left: 4px;">+30s</button>
                 <span class="time-value" id="currentTimeValue" style="margin-left: 15px;">--:--</span>
                 <span class="time-label" style="margin-left: 15px;">playback</span>
                 <span class="time-value" id="playbackTimeValue" style="color: #FFC107; font-weight: 700;">0:01</span>
@@ -1581,8 +1581,8 @@
                 <div id="dbxContentView"></div>
             </div>
 
-            <!-- Large +15s Playback Jump Button -->
-            <button id="jumpPlus15Large" onclick="jumpPlayback(15); document.getElementById('timer15sBtn')?.focus();" style="width: 100%; padding: 15px; background: linear-gradient(45deg, #9E9E9E, #757575); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; margin-top: 8px;">+15s</button>
+            <!-- Large +30s Playback Jump Button -->
+            <button id="jumpPlus30Large" onclick="jumpPlayback(30); document.getElementById('timer15sBtn')?.focus();" style="width: 100%; padding: 15px; background: linear-gradient(45deg, #9E9E9E, #757575); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; margin-top: 8px;">+30s</button>
 
             <!-- Next Saved Time Button -->
             <button id="nextSavedTimeBtn" onclick="goToNextSavedTime()" style="width: 100%; padding: 15px; background: linear-gradient(45deg, #7E57C2, #5E35B1); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; margin-top: 6px;">Next Saved Time ▶</button>
@@ -3742,8 +3742,8 @@
                 jumpPlayback(-15);
                 document.getElementById('timer15sBtn').focus();
             });
-            document.getElementById('loopTimePlus15').addEventListener('click', function() {
-                jumpPlayback(15);
+            document.getElementById('loopTimePlus30').addEventListener('click', function() {
+                jumpPlayback(30);
                 document.getElementById('timer15sBtn').focus();
             });
             // "0" button - jump to time 0:00
@@ -3891,10 +3891,10 @@
                     return;
                 }
 
-                // Cmd+Ctrl+1: trigger +15s loop time button
+                // Cmd+Ctrl+1: trigger +30s loop time button
                 if ((e.metaKey && e.ctrlKey) && e.key === '1') {
                     e.preventDefault();
-                    document.getElementById('loopTimePlus15')?.click();
+                    document.getElementById('loopTimePlus30')?.click();
                     return;
                 }
             });
