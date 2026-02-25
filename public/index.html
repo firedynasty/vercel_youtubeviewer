@@ -5576,13 +5576,17 @@
                 fadeOut().then(() => {
                     timerLoopsRemaining--;
 
-                    // Auto-advance: every N loops, increment start time by M seconds
+                    // Auto-advance: every N loops, read playback time and advance by M seconds
                     const completedLoops = timerTotalLoops - timerLoopsRemaining;
                     if (timerAdvanceEvery > 0 && timerLoopsRemaining > 0 && completedLoops % timerAdvanceEvery === 0) {
-                        timerStartTime += timerAdvanceSeconds;
-                        const loopStartInput = document.getElementById('loopStartTime');
-                        loopStartInput.value = formatSecondsToTime(timerStartTime);
-                        showStatus(`Advanced +${timerAdvanceSeconds}s → ${formatSecondsToTime(timerStartTime)}`, 'info');
+                        const playbackStr = document.getElementById('playbackTimeValue').textContent.trim();
+                        const playbackSeconds = parseTimeToSeconds(playbackStr) || 0;
+                        const newTime = playbackSeconds + timerAdvanceSeconds;
+                        const newTimeStr = formatSecondsToTime(newTime);
+                        timerStartTime = newTime;
+                        document.getElementById('loopStartTime').value = newTimeStr;
+                        document.getElementById('playbackTimeValue').textContent = newTimeStr;
+                        showStatus(`Advanced +${timerAdvanceSeconds}s → ${newTimeStr}`, 'info');
                     }
 
                     // Rewind to start - always re-read from input so saved time changes are picked up
