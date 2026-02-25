@@ -26,7 +26,7 @@ export default async function handler(req, res) {
       const files = {};
       for (const blob of blobs) {
         try {
-          const response = await fetch(blob.url);
+          const response = await fetch(blob.url + '?t=' + Date.now());
           const content = await response.text();
           // Remove 'docs/' prefix from pathname for display
           const filename = blob.pathname.replace('docs/', '');
@@ -36,6 +36,7 @@ export default async function handler(req, res) {
         }
       }
 
+      res.setHeader('Cache-Control', 'no-store');
       return res.status(200).json({ files });
     }
 

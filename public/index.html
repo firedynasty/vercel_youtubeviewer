@@ -1449,7 +1449,7 @@
             <button id="loadDefaultBtn" class="jump-btn" style="display: none; background: linear-gradient(45deg, #4CAF50, #45a049); font-size: 13px; padding: 10px 19px;">🎬 Load Default</button>
             <input type="text" id="accessCodeInput" placeholder="123" autocomplete="off" value="" style="width: 80px; padding: 8px 12px; font-size: 14px; border: 2px solid rgb(255, 152, 0); border-radius: 6px; background: rgb(42, 42, 42); color: white; outline: none;">
             <button id="loadYouTubeClipboardBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); font-size: 13px; padding: 10px 19px;">📋 Paste Media + Times</button>
-            <button id="loadPasteFromCloudBtn" class="jump-btn" style="background: linear-gradient(45deg, #2196F3, #1976D2); font-size: 13px; padding: 10px 19px;">☁️ Load Paste</button>
+            <button id="loadPasteFromCloudBtn" class="jump-btn" style="display:none; background: linear-gradient(45deg, #2196F3, #1976D2); font-size: 13px; padding: 10px 19px;">☁️ Load Paste</button>
             <a id="textProcessorLink" href="https://cdpn.io/pen/debug/KwVxmKR" class="jump-btn" style="background: linear-gradient(45deg, #E91E63, #C2185B); font-size: 13px; padding: 10px 19px; text-decoration: none; color: white;">📖 Bible Audio</a>
             <button id="cloudNotesToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #607D8B, #455A64); font-size: 13px; padding: 10px 19px;">☁️ Cloud Notes</button>
             <button id="recordBtn" class="record-btn" title="Start Recording">🎙️</button>
@@ -1462,6 +1462,7 @@
             <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center; flex-wrap: wrap;">
                 <button id="cloudNotesLoadBtn" class="jump-btn" style="background: linear-gradient(45deg, #2196F3, #1976D2); font-size: 12px; padding: 8px 16px;">📥 Load</button>
                 <button id="cloudNotesSaveBtn" class="jump-btn" style="background: linear-gradient(45deg, #4CAF50, #45a049); font-size: 12px; padding: 8px 16px;">💾 Save</button>
+                <button id="cloudNotesLoadToNavbarBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); font-size: 12px; padding: 8px 16px;">📋 Load to Navbar</button>
                 <span id="cloudNotesStatus" style="font-size: 13px; color: #888;"></span>
             </div>
             <textarea id="cloudNotesTextarea" placeholder="Your cloud notes..." style="width: 100%; min-height: 150px; padding: 12px; font-size: 14px; border: 2px solid #333; border-radius: 6px; background: #2a2a2a; color: #fff; resize: vertical; outline: none; font-family: inherit; line-height: 1.5; box-sizing: border-box;"></textarea>
@@ -6635,7 +6636,7 @@
             statusEl.style.color = '#FFC107';
 
             try {
-                const response = await fetch('/api/files');
+                const response = await fetch('/api/files?t=' + Date.now());
                 if (response.ok) {
                     const data = await response.json();
                     textarea.value = data.files?.[CLOUD_NOTES_FILENAME] || '';
@@ -6685,6 +6686,19 @@
             } finally {
                 saveBtn.disabled = false;
             }
+        });
+
+        // Load to Navbar — feed Cloud Notes textarea content through processClipboardText
+        document.getElementById('cloudNotesLoadToNavbarBtn').addEventListener('click', function() {
+            const textarea = document.getElementById('cloudNotesTextarea');
+            const text = textarea.value.trim();
+            if (!text) {
+                const statusEl = document.getElementById('cloudNotesStatus');
+                statusEl.textContent = 'Textarea is empty';
+                statusEl.style.color = '#f44336';
+                return;
+            }
+            processClipboardText(text);
         });
     </script>
     <div style="max-width: 900px; margin: 40px auto 20px; padding: 0 15px;">
