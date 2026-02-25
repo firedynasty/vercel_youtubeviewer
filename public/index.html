@@ -2006,6 +2006,8 @@
             timerTotalLoops = 8;
             timerLoopsRemaining = 8;
             timerButtonRef = buttonElement;
+            timerAdvanceEvery = 0;
+            timerAdvanceSeconds = 0;
 
             // Get start time from loopStartTime input
             const loopStartTimeInput = document.getElementById('loopStartTime');
@@ -5393,6 +5395,8 @@
         let timerTotalLoops = 0;
         let timerLabel = '';
         let timerDefaultBg = '';
+        let timerAdvanceEvery = 0;    // auto-advance every N loops (0 = disabled)
+        let timerAdvanceSeconds = 0;  // seconds to advance by
 
         // Fade state variables
         const FADE_OUT_DURATION_MS = 1500;  // 1.5 second fade out
@@ -5572,6 +5576,15 @@
                 fadeOut().then(() => {
                     timerLoopsRemaining--;
 
+                    // Auto-advance: every N loops, increment start time by M seconds
+                    const completedLoops = timerTotalLoops - timerLoopsRemaining;
+                    if (timerAdvanceEvery > 0 && timerLoopsRemaining > 0 && completedLoops % timerAdvanceEvery === 0) {
+                        timerStartTime += timerAdvanceSeconds;
+                        const loopStartInput = document.getElementById('loopStartTime');
+                        loopStartInput.value = formatSecondsToTime(timerStartTime);
+                        showStatus(`Advanced +${timerAdvanceSeconds}s → ${formatSecondsToTime(timerStartTime)}`, 'info');
+                    }
+
                     // Rewind to start - always re-read from input so saved time changes are picked up
                     const inputVal = document.getElementById('loopStartTime').value.trim();
                     const currentInputTime = parseTimeToSeconds(inputVal);
@@ -5637,6 +5650,8 @@
             timerTotalLoops = 80;  // 15s × 80 = 20 minutes
             timerLoopsRemaining = timerTotalLoops;
             timerButtonRef = buttonElement;
+            timerAdvanceEvery = 0;
+            timerAdvanceSeconds = 0;
 
             // Get start time from loopStartTime input
             const loopStartTimeInput = document.getElementById('loopStartTime');
@@ -5678,6 +5693,8 @@
             timerTotalLoops = 40;  // 30s × 40 = 20 minutes
             timerLoopsRemaining = timerTotalLoops;
             timerButtonRef = buttonElement;
+            timerAdvanceEvery = 4;   // advance every 4 loops
+            timerAdvanceSeconds = 30; // advance by 30s
 
             // Get start time from loopStartTime input
             const loopStartTimeInput = document.getElementById('loopStartTime');
@@ -5719,6 +5736,8 @@
             timerTotalLoops = 25;  // 1m × 25 = 25 minutes
             timerLoopsRemaining = timerTotalLoops;
             timerButtonRef = buttonElement;
+            timerAdvanceEvery = 0;
+            timerAdvanceSeconds = 0;
 
             // Get start time from loopStartTime input
             const loopStartTimeInput = document.getElementById('loopStartTime');
@@ -5760,6 +5779,8 @@
             timerTotalLoops = 8;  // 3m × 8 = 24 minutes
             timerLoopsRemaining = timerTotalLoops;
             timerButtonRef = buttonElement;
+            timerAdvanceEvery = 0;
+            timerAdvanceSeconds = 0;
 
             // Get start time from loopStartTime input
             const loopStartTimeInput = document.getElementById('loopStartTime');
@@ -5804,6 +5825,8 @@
             timerTotalLoops = getRepeatCount();
             timerLoopsRemaining = timerTotalLoops;
             timerButtonRef = selectElement;
+            timerAdvanceEvery = 0;
+            timerAdvanceSeconds = 0;
 
             // Get start time from loopStartTime input
             const loopStartTimeInput = document.getElementById('loopStartTime');
