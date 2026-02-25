@@ -12,18 +12,28 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+            background: #1a1a1a;
             min-height: 100vh;
             padding: 20px;
+            transition: background 0.3s ease;
+        }
+
+        body.light-mode {
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
         }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.98);
+            background: #2a2a2a;
             border-radius: 25px;
             padding: 35px;
             box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+            transition: background 0.3s ease;
+        }
+
+        body.light-mode .container {
+            background: rgba(255, 255, 255, 0.98);
         }
 
         h1 {
@@ -1453,6 +1463,7 @@
             <a id="textProcessorLink" href="https://cdpn.io/pen/debug/KwVxmKR" class="jump-btn" style="background: linear-gradient(45deg, #E91E63, #C2185B); font-size: 13px; padding: 10px 19px; text-decoration: none; color: white;">📖 Bible Audio</a>
             <button id="cloudNotesToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #607D8B, #455A64); font-size: 13px; padding: 10px 19px;">☁️ Cloud Notes</button>
             <button id="recordBtn" class="record-btn" title="Start Recording">🎙️</button>
+            <button id="darkModeToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #333, #555); font-size: 13px; padding: 10px 14px;" title="Toggle Dark/Light Mode">🌙</button>
             <span id="recordingIndicator" class="recording-indicator" style="display:none;">REC</span>
             <span id="processingIndicator" class="processing-indicator" style="display:none;">Saving...</span>
         </div>
@@ -6700,6 +6711,23 @@
             }
             processClipboardText(text);
         });
+
+        // Dark/Light mode toggle
+        document.getElementById('darkModeToggleBtn').addEventListener('click', function() {
+            document.body.classList.toggle('light-mode');
+            const isLight = document.body.classList.contains('light-mode');
+            this.textContent = isLight ? '☀️' : '🌙';
+            localStorage.setItem('darkMode', isLight ? 'light' : 'dark');
+        });
+
+        // Restore dark/light preference (default: dark)
+        (function() {
+            const pref = localStorage.getItem('darkMode');
+            if (pref === 'light') {
+                document.body.classList.add('light-mode');
+                document.getElementById('darkModeToggleBtn').textContent = '☀️';
+            }
+        })();
     </script>
     <div style="max-width: 900px; margin: 40px auto 20px; padding: 0 15px;">
         <textarea id="pasteMediaTextarea" placeholder="Paste media content appears here..." style="width: 100%; min-height: 80px; padding: 12px; font-size: 14px; border: 2px solid #333; border-radius: 6px; background: #2a2a2a; color: #fff; resize: vertical; outline: none; font-family: inherit; line-height: 1.5; box-sizing: border-box;"></textarea>
