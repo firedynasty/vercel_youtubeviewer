@@ -2422,13 +2422,23 @@
                     const parsed = parseInlineTimes(line, '');
                     parsed.rawUrl = line;
                     entries.push(parsed);
-                } else if (i + 1 < lines.length) {
-                    const nextLine = lines[i + 1];
-                    if (nextLine.startsWith('http://') || nextLine.startsWith('https://')) {
-                        const parsed = parseInlineTimes(nextLine, line);
-                        parsed.rawUrl = nextLine;
+                } else {
+                    // Check for single-line format: Title, "https://..."
+                    const commaUrlMatch = line.match(/^(.+?),\s*"?(https?:\/\/[^"]+)"?$/);
+                    if (commaUrlMatch) {
+                        const title = commaUrlMatch[1].trim();
+                        const url = commaUrlMatch[2];
+                        const parsed = parseInlineTimes(url, title);
+                        parsed.rawUrl = url;
                         entries.push(parsed);
-                        i++;
+                    } else if (i + 1 < lines.length) {
+                        const nextLine = lines[i + 1];
+                        if (nextLine.startsWith('http://') || nextLine.startsWith('https://')) {
+                            const parsed = parseInlineTimes(nextLine, line);
+                            parsed.rawUrl = nextLine;
+                            entries.push(parsed);
+                            i++;
+                        }
                     }
                 }
             }
@@ -2439,7 +2449,7 @@
         function rebuildCloudContent(entries) {
             return entries.map(e => {
                 const url = e.rawUrl || e.url;
-                return e.name ? `${e.name}\n${url}` : url;
+                return e.name ? `${e.name}, "${url}"` : url;
             }).join('\n');
         }
 
@@ -2709,7 +2719,7 @@
             if (!window.getDropboxAccessToken || !window.getDropboxAccessToken()) return; // Only append if signed into Dropbox
 
             // Append to cloud content
-            const newEntry = title + '\n' + url;
+            const newEntry = title + ', "' + url + '"';
             if (cloudLinksContent.trim()) {
                 cloudLinksContent = cloudLinksContent.trim() + '\n' + newEntry;
             } else {
