@@ -1419,11 +1419,6 @@
         <!-- File browsing (shown when authenticated) -->
         <div id="dbxSearchSection" style="display: none; flex-direction: column; flex: 1; overflow: hidden;">
             <div class="dbx-status" id="dbxStatus" style="padding: 5px 10px 0;"></div>
-            <div style="padding: 5px 10px 0;">
-                <select id="dbxFolderPresets" style="width: 100%; padding: 6px 8px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #eee; font-size: 13px; cursor: pointer;">
-                    <option value="">-- Select folder --</option>
-                </select>
-            </div>
             <div class="dbx-search-row" style="padding: 5px 10px 10px;">
                 <input type="text" id="dbxSearchInput" placeholder="Search files...">
                 <button id="dbxSearchBtn">Go</button>
@@ -6649,11 +6644,6 @@
         let currentDropboxFileName = '';
         let dbxRootFilesLoaded = false;
 
-        const DBX_FOLDER_PRESETS = {
-            'Chess Reports': '/chess/reports',
-            'Literature': '/literature/papers',
-        };
-
         const dbxIsLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
         // PKCE helpers
@@ -7156,21 +7146,6 @@
                 if (link) loadDropboxFolder(link.dataset.path);
             });
             document.getElementById('dbxSaveBtn').addEventListener('click', saveToDropbox);
-
-            // Populate folder presets dropdown and wire up change handler
-            const presetsSelect = document.getElementById('dbxFolderPresets');
-            Object.keys(DBX_FOLDER_PRESETS).forEach(label => {
-                const opt = document.createElement('option');
-                opt.value = DBX_FOLDER_PRESETS[label];
-                opt.textContent = label;
-                presetsSelect.appendChild(opt);
-            });
-            presetsSelect.addEventListener('change', function() {
-                const path = this.value;
-                if (!path) return;
-                document.getElementById('dbxSearchInput').value = path;
-                setTimeout(() => loadDropboxFolder(path), 500);
-            });
 
             // Expose Dropbox helpers for cloud-section and Cloud Notes
             window.getDropboxAccessToken = function() { return dropboxAccessToken; };
