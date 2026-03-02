@@ -3524,10 +3524,10 @@
 
             // Process time entries into savedTimesData
             timeEntries.forEach((timeEntry) => {
-                const timeStr = timeEntry.trim();
-                const seconds = parseTimeToSeconds(timeStr);
+                const parsed = parseInlineTimeEntry(timeEntry);
+                const seconds = parseTimeToSeconds(parsed.time);
                 if (seconds !== null) {
-                    savedTimesData.push({ time: timeStr, name: '' });
+                    savedTimesData.push(parsed);
                 }
             });
 
@@ -4777,7 +4777,14 @@
             if (key && allSavedTimes[key]) {
                 const data = allSavedTimes[key];
                 // Handle both array format and object with times property
-                savedTimesData = Array.isArray(data) ? data : (data || []);
+                const raw = Array.isArray(data) ? data : (data || []);
+                // Ensure parenthesized comments are parsed into name field
+                savedTimesData = raw.map(item => {
+                    if (typeof item === 'string') return parseInlineTimeEntry(item);
+                    if (item.time && item.time.includes('(') && !item.name) return parseInlineTimeEntry(item.time);
+                    return item;
+                });
+                if (key) allSavedTimes[key] = savedTimesData;
             } else {
                 savedTimesData = [];
             }
@@ -4932,7 +4939,7 @@
             // Convert to {time, name} format if needed
             savedTimesData = times.map(item => {
                 if (typeof item === 'string') {
-                    return { time: item, name: '' };
+                    return parseInlineTimeEntry(item);
                 }
                 return item;
             });
