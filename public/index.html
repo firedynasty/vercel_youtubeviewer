@@ -1361,6 +1361,30 @@
             background: #0052d4;
         }
 
+        .dbx-content-toolbar .dbx-toggle-view-btn.view-mode {
+            background: #4CAF50;
+        }
+
+        .dbx-content-toolbar .dbx-toggle-view-btn.view-mode:hover {
+            background: #43A047;
+        }
+
+        .dbx-content-toolbar .dbx-links-btn {
+            background: #FF9800;
+        }
+
+        .dbx-content-toolbar .dbx-links-btn:hover {
+            background: #F57C00;
+        }
+
+        .dbx-content-toolbar .dbx-links-btn.active {
+            background: #4CAF50;
+        }
+
+        .dbx-content-toolbar .dbx-links-btn.active:hover {
+            background: #43A047;
+        }
+
         #dbxContentView {
             display: none;
             max-height: 20lh;
@@ -1584,7 +1608,8 @@
                     <span id="dbxFileLabel" style="color: #0061FF; font-size: 13px; font-weight: 600;"></span>
                     <button id="dbxSaveBtn" class="dbx-save-btn" style="display: none;">Save &#8593; DB</button>
                     <div class="dbx-content-toolbar">
-                        <button class="dbx-toggle-view-btn" id="dbxToggleViewBtn">View</button>
+                        <button class="dbx-toggle-view-btn" id="dbxToggleViewBtn">Edit Mode</button>
+                        <button class="dbx-links-btn" id="dbxLinksViewBtn" title="View with clickable links">{ }</button>
                         <button id="dbxFontPlus">A+</button>
                         <button id="dbxFontMinus">A-</button>
                     </div>
@@ -6943,6 +6968,7 @@
             const textarea = document.getElementById('dbxContentTextarea');
             const view = document.getElementById('dbxContentView');
             const btn = document.getElementById('dbxToggleViewBtn');
+            const linksBtn = document.getElementById('dbxLinksViewBtn');
 
             if (dbxContentViewMode) {
                 const text = textarea.value;
@@ -6952,12 +6978,106 @@
                     : `<p>${text.replace(/\n/g, '<br>')}</p>`;
                 textarea.style.display = 'none';
                 view.style.display = 'block';
-                btn.textContent = 'Edit';
+                btn.textContent = 'View Mode';
+                btn.classList.add('view-mode');
             } else {
                 textarea.style.display = '';
                 view.style.display = 'none';
-                btn.textContent = 'View';
+                btn.textContent = 'Edit Mode';
+                btn.classList.remove('view-mode');
+                linksBtn.classList.remove('active');
             }
+        }
+
+        function showDbxLinksView() {
+            const textarea = document.getElementById('dbxContentTextarea');
+            const view = document.getElementById('dbxContentView');
+            const btn = document.getElementById('dbxToggleViewBtn');
+            const linksBtn = document.getElementById('dbxLinksViewBtn');
+            const text = textarea.value;
+
+            view.innerHTML = '';
+            const lines = text.split('\n');
+
+            lines.forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed) {
+                    view.appendChild(document.createElement('br'));
+                    return;
+                }
+
+                // Check for URL patterns: "Label, URL" or "Title, "URL"" or bare URL
+                let url = null;
+                let label = trimmed;
+
+                // Pattern: Title, "URL"
+                const quotedMatch = trimmed.match(/^(.+?),\s*"(https?:\/\/[^"]+)"$/);
+                // Pattern: Label, URL
+                const commaMatch = trimmed.match(/^(.+?),\s*(https?:\/\/\S+)$/);
+                // Pattern: bare URL
+                const bareMatch = trimmed.match(/^(https?:\/\/\S+)$/);
+
+                if (quotedMatch) {
+                    label = quotedMatch[1].trim();
+                    url = quotedMatch[2];
+                } else if (commaMatch) {
+                    label = commaMatch[1].trim();
+                    url = commaMatch[2];
+                } else if (bareMatch) {
+                    label = bareMatch[1];
+                    url = bareMatch[1];
+                }
+
+                if (url) {
+                    const span = document.createElement('span');
+                    span.textContent = label;
+                    span.style.cssText = 'cursor: pointer; color: #2196F3; text-decoration: underline; transition: all 0.2s ease;';
+                    span.dataset.url = url;
+                    span.dataset.label = label;
+
+                    span.addEventListener('mouseenter', function() {
+                        this.style.color = '#FF6B35';
+                        this.style.background = 'rgba(255, 107, 53, 0.1)';
+                    });
+                    span.addEventListener('mouseleave', function() {
+                        this.style.color = '#2196F3';
+                        this.style.background = 'transparent';
+                    });
+
+                    span.addEventListener('click', function() {
+                        const clickUrl = this.dataset.url;
+                        const clickLabel = this.dataset.label || clickUrl;
+
+                        saveToUrlHistory(clickUrl, clickLabel);
+
+                        const originalText = this.textContent;
+                        const originalColor = this.style.color;
+                        this.textContent = '✅ Loading...';
+                        this.style.color = '#4CAF50';
+                        setTimeout(() => {
+                            this.textContent = originalText;
+                            this.style.color = originalColor;
+                        }, 1500);
+
+                        activatePaginationFromText(clickUrl);
+                    });
+
+                    view.appendChild(span);
+                } else {
+                    const textNode = document.createElement('span');
+                    textNode.textContent = trimmed;
+                    view.appendChild(textNode);
+                }
+
+                view.appendChild(document.createElement('br'));
+            });
+
+            textarea.style.display = 'none';
+            view.style.display = 'block';
+            dbxContentViewMode = true;
+            btn.textContent = 'View Mode';
+            btn.classList.add('view-mode');
+            linksBtn.classList.add('active');
         }
 
         function changeDbxContentFont(delta) {
@@ -7199,6 +7319,7 @@
 
             // Content viewer controls
             document.getElementById('dbxToggleViewBtn').addEventListener('click', toggleDbxContentView);
+            document.getElementById('dbxLinksViewBtn').addEventListener('click', showDbxLinksView);
             document.getElementById('dbxFontPlus').addEventListener('click', () => changeDbxContentFont(1));
             document.getElementById('dbxFontMinus').addEventListener('click', () => changeDbxContentFont(-1));
         });
