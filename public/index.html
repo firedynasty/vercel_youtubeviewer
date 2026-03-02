@@ -1948,6 +1948,70 @@
             loadCurrentPaginationLink();
         }
 
+        // Parse links from Dropbox content textarea
+        function parseDbxLinks() {
+            const text = document.getElementById('dbxContentTextarea').value;
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+            const entries = [];
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                if (line.startsWith('http://') || line.startsWith('https://')) {
+                    const parsed = parseInlineTimes(line, '');
+                    parsed.rawUrl = line;
+                    entries.push(parsed);
+                } else {
+                    // Check for single-line format: Title, "https://..." or Title, https://...
+                    const commaUrlMatch = line.match(/^(.+?),\s*"?(https?:\/\/[^"]+)"?$/);
+                    if (commaUrlMatch) {
+                        const title = commaUrlMatch[1].trim();
+                        const url = commaUrlMatch[2];
+                        const parsed = parseInlineTimes(url, title);
+                        parsed.rawUrl = url;
+                        entries.push(parsed);
+                    } else if (i + 1 < lines.length) {
+                        const nextLine = lines[i + 1];
+                        if (nextLine.startsWith('http://') || nextLine.startsWith('https://')) {
+                            const parsed = parseInlineTimes(nextLine, line);
+                            parsed.rawUrl = nextLine;
+                            entries.push(parsed);
+                            i++;
+                        }
+                    }
+                }
+            }
+            return entries;
+        }
+
+        // Activate pagination from Dropbox content
+        function activatePaginationFromDbx(clickedUrl) {
+            allPaginationLinks = parseDbxLinks();
+            paginationSource = 'dropbox';
+            // Store inline times into allSavedTimes for links that have them
+            for (const link of allPaginationLinks) {
+                if (link.inlineTimes && link.inlineTimes.length > 0) {
+                    let key = null;
+                    if (isYouTubeURL(link.url)) {
+                        key = extractVideoId(link.url);
+                    } else {
+                        key = btoa(link.url).replace(/[/+=]/g, '_');
+                    }
+                    if (key) {
+                        const timesData = link.inlineTimes.map(t => ({ time: t.trim(), name: '' }));
+                        allSavedTimes[key] = timesData;
+                    }
+                }
+            }
+            // Match by clean URL or raw URL
+            let index = allPaginationLinks.findIndex(l => l.url === clickedUrl);
+            if (index < 0) {
+                index = allPaginationLinks.findIndex(l => clickedUrl.startsWith(l.url));
+            }
+            currentPaginationIndex = index >= 0 ? index : 0;
+            showPagination();
+            loadCurrentPaginationLink();
+        }
+
         // Show the pagination navbar
         function showPagination() {
             const navbar = document.getElementById('linkPaginationNavbar');
@@ -7059,7 +7123,7 @@
                             this.style.color = originalColor;
                         }, 1500);
 
-                        activatePaginationFromText(clickUrl);
+                        activatePaginationFromDbx(clickUrl);
                     });
 
                     view.appendChild(span);
