@@ -744,6 +744,7 @@
                 <button id="timer30sBtn" class="jump-btn" style="background: linear-gradient(45deg, #00BCD4, #0097A7); margin-left: 15px; padding: 6px 12px; font-size: 12px;">⏱️ 30s</button>
                 <button id="timer60sBtn" class="jump-btn" style="background: linear-gradient(45deg, #8BC34A, #689F38); margin-left: 10px; padding: 6px 12px; font-size: 12px;">⏱️ 1m</button>
                 <button id="timer3minBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); margin-left: 10px; padding: 6px 12px; font-size: 12px;">⏱️ 3m</button>
+                <button id="speedToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #7E57C2, #5E35B1); margin-left: 10px; padding: 6px 12px; font-size: 12px;">1x</button>
                 <select id="timerCustomSelect" style="margin-left: 10px; padding: 5px 8px; font-size: 12px; border-radius: 6px; border: 2px solid #9C27B0; background: linear-gradient(45deg, #E1BEE7, #CE93D8); cursor: pointer; font-weight: 600;">
                     <option value="">⏱️ Custom</option>
                     <option value="35">35s</option>
@@ -2154,6 +2155,22 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                 play3minThenRewind(this);
             });
 
+            // Speed toggle button - toggles between 1x and 2x playback
+            document.getElementById('speedToggleBtn').addEventListener('click', function() {
+                const btn = this;
+                const current = btn.textContent.trim();
+                const newSpeed = current === '1x' ? 2 : 1;
+                btn.textContent = newSpeed + 'x';
+                btn.style.background = newSpeed === 2
+                    ? 'linear-gradient(45deg, #e53935, #c62828)'
+                    : 'linear-gradient(45deg, #7E57C2, #5E35B1)';
+                if (playerType === 'youtube' && player && playerReady && typeof player.setPlaybackRate === 'function') {
+                    player.setPlaybackRate(newSpeed);
+                } else if ((playerType === 'video' || playerType === 'audio') && player) {
+                    player.playbackRate = newSpeed;
+                }
+            });
+
             // Custom timer dropdown - plays selected duration, pauses, rewinds
             document.getElementById('timerCustomSelect').addEventListener('change', function() {
                 if (this.value) {
@@ -2178,6 +2195,68 @@ https://www.youtube.com/watch?v=l49N8U3d0Bw&list=PLl6Kpug5S7PM0fQMBuVZ7GTiHMqdIj
                             timerStartTime = newTime;
                         }
                     }
+                }
+            });
+
+            // Enter key in loopStartTime input - handle +N/-N to adjust from current playback time
+            document.getElementById('loopStartTime').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const timeStr = this.value.trim();
+
+                    // Check for +/- notation (e.g., "+5" or "-10")
+                    const deltaMatch = timeStr.match(/^([+-])(\d+)$/);
+                    if (deltaMatch) {
+                        const operator = deltaMatch[1];
+                        const deltaSeconds = parseInt(deltaMatch[2]);
+                        const adjustment = operator === '+' ? deltaSeconds : -deltaSeconds;
+
+                        // Get current playback time as the base
+                        const currentTimeStr = document.getElementById('currentTimeValue').textContent.trim();
+                        let currentSeconds = parseTimeToSeconds(currentTimeStr);
+                        if (currentSeconds === null) currentSeconds = 0;
+
+                        const newSeconds = Math.max(0, currentSeconds + adjustment);
+
+                        // Format back to time string
+                        const hours = Math.floor(newSeconds / 3600);
+                        const minutes = Math.floor((newSeconds % 3600) / 60);
+                        const seconds = Math.floor(newSeconds % 60);
+                        let resultTime;
+                        if (hours > 0) {
+                            resultTime = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                        } else {
+                            resultTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                        }
+
+                        this.value = resultTime;
+
+                        // Update timers if running
+                        if (loopTimerActive) loopBaseTime = newSeconds;
+                        if (timerTimeout) timerStartTime = newSeconds;
+
+                        jumpToYouTubeTime(newSeconds);
+                        showStatus(`${currentTimeStr} ${operator}${deltaSeconds}s = ${resultTime}`, 'success');
+                        this.select();
+                        return;
+                    }
+
+                    // Otherwise, treat as a time to jump to
+                    const seconds = parseTimeToSeconds(timeStr);
+                    if (seconds !== null) {
+                        if (loopTimerActive) loopBaseTime = seconds;
+                        if (timerTimeout) {
+                            timerStartTime = seconds;
+                            clearTimeout(timerTimeout);
+                            startTimerLoop();
+                        }
+                        jumpToYouTubeTime(seconds);
+                        showStatus('Jumped to ' + timeStr, 'success');
+                    }
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    this.focus();
+                    this.select();
                 }
             });
 

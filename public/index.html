@@ -1553,6 +1553,7 @@
                     <button id="timer15sBtn" class="jump-btn" style="background: linear-gradient(45deg, #7E57C2, #5E35B1); padding: 6px 12px; font-size: 12px;">⏱️ 15s</button>
                     <button id="timer30sBtn" class="jump-btn" style="background: linear-gradient(45deg, #00BCD4, #0097A7); padding: 6px 12px; font-size: 12px;">⏱️ 30s</button>
                     <button id="timer3minBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); padding: 6px 12px; font-size: 12px;">⏱️ 3m</button>
+                    <button id="speedToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #7E57C2, #5E35B1); padding: 6px 12px; font-size: 12px;">1x</button>
                     <select id="timerCustomSelect" style="display: none; padding: 5px 8px; font-size: 12px; border-radius: 6px; border: 2px solid #9C27B0; background: linear-gradient(45deg, #E1BEE7, #CE93D8); cursor: pointer; font-weight: 600;">
                         <option value="">⏱️ Custom</option>
                         <option value="35">35s</option>
@@ -3532,6 +3533,22 @@
             // 3-minute play button - plays 3min, pauses, rewinds 3min
             document.getElementById('timer3minBtn').addEventListener('click', function() {
                 play3minThenRewind(this);
+            });
+
+            // Speed toggle button - toggles between 1x and 2x playback
+            document.getElementById('speedToggleBtn').addEventListener('click', function() {
+                const btn = this;
+                const current = btn.textContent.trim();
+                const newSpeed = current === '1x' ? 2 : 1;
+                btn.textContent = newSpeed + 'x';
+                btn.style.background = newSpeed === 2
+                    ? 'linear-gradient(45deg, #e53935, #c62828)'
+                    : 'linear-gradient(45deg, #7E57C2, #5E35B1)';
+                if (playerType === 'youtube' && player && playerReady && typeof player.setPlaybackRate === 'function') {
+                    player.setPlaybackRate(newSpeed);
+                } else if ((playerType === 'video' || playerType === 'audio') && player) {
+                    player.playbackRate = newSpeed;
+                }
             });
 
             // Custom timer dropdown - plays selected duration, pauses, rewinds
