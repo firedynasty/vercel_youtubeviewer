@@ -1798,6 +1798,15 @@
             return { name: name, url: rawUrl, inlineTimes: [] };
         }
 
+        // Parse a single inline time entry like "1:00(cool_retro)" into { time: "1:00", name: "cool_retro" }
+        function parseInlineTimeEntry(entry) {
+            const match = entry.trim().match(/^([^(]+)\(([^)]*)\)$/);
+            if (match) {
+                return { time: match[1].trim(), name: match[2].trim() };
+            }
+            return { time: entry.trim(), name: '' };
+        }
+
         // Parse links from clipboard text (multi-line: markdown, YouTube with ?times, plain URLs, local paths)
         function parseClipboardLinks(text) {
             const lines = text.split('\n').map(l => l.trim()).filter(l => l);
@@ -1903,7 +1912,7 @@
                         key = btoa(link.url).replace(/[/+=]/g, '_');
                     }
                     if (key) {
-                        const timesData = link.inlineTimes.map(t => ({ time: t.trim(), name: '' }));
+                        const timesData = link.inlineTimes.map(t => parseInlineTimeEntry(t));
                         allSavedTimes[key] = timesData;
                     }
                 }
@@ -1933,7 +1942,7 @@
                         key = btoa(link.url).replace(/[/+=]/g, '_');
                     }
                     if (key) {
-                        const timesData = link.inlineTimes.map(t => ({ time: t.trim(), name: '' }));
+                        const timesData = link.inlineTimes.map(t => parseInlineTimeEntry(t));
                         allSavedTimes[key] = timesData;
                     }
                 }
@@ -1997,7 +2006,7 @@
                         key = btoa(link.url).replace(/[/+=]/g, '_');
                     }
                     if (key) {
-                        const timesData = link.inlineTimes.map(t => ({ time: t.trim(), name: '' }));
+                        const timesData = link.inlineTimes.map(t => parseInlineTimeEntry(t));
                         allSavedTimes[key] = timesData;
                     }
                 }
@@ -4438,7 +4447,7 @@
                             key = btoa(link.url).replace(/[/+=]/g, '_');
                         }
                         if (key) {
-                            const timesData = link.inlineTimes.map(t => ({ time: t.trim(), name: '' }));
+                            const timesData = link.inlineTimes.map(t => parseInlineTimeEntry(t));
                             allSavedTimes[key] = timesData;
                         }
                     }
