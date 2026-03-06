@@ -1579,6 +1579,7 @@
                     <button id="timer3minBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); padding: 6px 12px; font-size: 12px;">⏱️ 3m</button>
                     <button id="speedToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #7E57C2, #5E35B1); padding: 6px 12px; font-size: 12px;">1x</button>
                     <button id="speedSlowToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #7E57C2, #5E35B1); padding: 6px 12px; font-size: 12px;">1x</button>
+                    <button id="soakingBtn" class="jump-btn" style="background: linear-gradient(45deg, #26A69A, #00897B); padding: 6px 12px; font-size: 12px;">Soak</button>
                     <select id="timerCustomSelect" style="display: none; padding: 5px 8px; font-size: 12px; border-radius: 6px; border: 2px solid #9C27B0; background: linear-gradient(45deg, #E1BEE7, #CE93D8); cursor: pointer; font-weight: 600;">
                         <option value="">⏱️ Custom</option>
                         <option value="35">35s</option>
@@ -3666,6 +3667,11 @@
                 }
             });
 
+            // Soaking mode - play 10s, fade out, pause 7s, fade in, resume, loop until video ends
+            document.getElementById('soakingBtn').addEventListener('click', function() {
+                toggleSoakingMode(this);
+            });
+
             // Custom timer dropdown - plays selected duration, pauses, rewinds
             document.getElementById('timerCustomSelect').addEventListener('change', function() {
                 if (this.value) {
@@ -4545,10 +4551,10 @@
                 currentTimeIndex = -1;
 
                 timeEntries.forEach((timeEntry) => {
-                    const timeStr = timeEntry.trim();
-                    const seconds = parseTimeToSeconds(timeStr);
+                    const parsed = parseInlineTimeEntry(timeEntry);
+                    const seconds = parseTimeToSeconds(parsed.time);
                     if (seconds !== null) {
-                        savedTimesData.push({ time: timeStr, name: '' });
+                        savedTimesData.push(parsed);
                     }
                 });
 
@@ -5539,6 +5545,132 @@
                     }
                 });
             }, fadeStartDelay);
+        }
+
+        // ============================================
+        // SOAKING MODE - play 10s, pause 7s, loop until video ends
+        // ============================================
+        let soakingActive = false;
+        let soakingTimeout = null;
+        let soakingCountdownInterval = null;
+        const SOAK_PLAY_SECONDS = 10;
+        const SOAK_PAUSE_SECONDS = 7;
+
+        function toggleSoakingMode(btn) {
+            if (soakingActive) {
+                stopSoaking(btn);
+            } else {
+                startSoaking(btn);
+            }
+        }
+
+        function startSoaking(btn) {
+            soakingActive = true;
+            btn.textContent = 'Soak 10';
+            btn.style.background = 'linear-gradient(45deg, #FF5722, #E64A19)';
+
+            // Ensure playing
+            if (playerType === 'youtube' && player && playerReady && typeof player.playVideo === 'function') {
+                player.playVideo();
+            } else if (html5Player) {
+                html5Player.play();
+            } else if (audioPlayer) {
+                audioPlayer.play();
+            }
+
+            soakPlayPhase(btn, SOAK_PLAY_SECONDS);
+        }
+
+        function stopSoaking(btn) {
+            soakingActive = false;
+            if (soakingTimeout) { clearTimeout(soakingTimeout); soakingTimeout = null; }
+            if (soakingCountdownInterval) { clearInterval(soakingCountdownInterval); soakingCountdownInterval = null; }
+            cancelFades();
+            btn.textContent = 'Soak';
+            btn.style.background = 'linear-gradient(45deg, #26A69A, #00897B)';
+            showStatus('Soaking stopped', 'info');
+        }
+
+        function soakPlayPhase(btn, secondsLeft) {
+            if (!soakingActive) return;
+
+            btn.textContent = 'Soak ' + secondsLeft;
+            btn.style.background = 'linear-gradient(45deg, #FF5722, #E64A19)';
+
+            // Countdown every second during play
+            soakingCountdownInterval = setInterval(() => {
+                secondsLeft--;
+                if (secondsLeft <= 0) {
+                    clearInterval(soakingCountdownInterval);
+                    soakingCountdownInterval = null;
+                    return;
+                }
+                if (soakingActive) {
+                    btn.textContent = 'Soak ' + secondsLeft;
+                }
+            }, 1000);
+
+            // Start fade out before the play phase ends
+            const fadeStartDelay = Math.max(0, (SOAK_PLAY_SECONDS * 1000) - FADE_OUT_DURATION_MS);
+            soakingTimeout = setTimeout(() => {
+                if (!soakingActive) return;
+                fadeOut().then(() => {
+                    if (!soakingActive) return;
+
+                    // Check if video ended
+                    if (playerType === 'youtube' && player && typeof player.getPlayerState === 'function' && player.getPlayerState() === 0) {
+                        stopSoaking(btn);
+                        showStatus('Video ended — soaking complete', 'success');
+                        return;
+                    }
+
+                    // Pause
+                    if (playerType === 'youtube' && player && typeof player.pauseVideo === 'function') {
+                        player.pauseVideo();
+                    } else if (html5Player) {
+                        html5Player.pause();
+                    } else if (audioPlayer) {
+                        audioPlayer.pause();
+                    }
+
+                    soakPausePhase(btn, SOAK_PAUSE_SECONDS);
+                });
+            }, fadeStartDelay);
+        }
+
+        function soakPausePhase(btn, secondsLeft) {
+            if (!soakingActive) return;
+
+            btn.textContent = 'Pause ' + secondsLeft;
+            btn.style.background = 'linear-gradient(45deg, #607D8B, #455A64)';
+
+            soakingCountdownInterval = setInterval(() => {
+                secondsLeft--;
+                if (secondsLeft <= 0) {
+                    clearInterval(soakingCountdownInterval);
+                    soakingCountdownInterval = null;
+                    return;
+                }
+                if (soakingActive) {
+                    btn.textContent = 'Pause ' + secondsLeft;
+                }
+            }, 1000);
+
+            soakingTimeout = setTimeout(() => {
+                if (!soakingActive) return;
+
+                // Resume playing
+                if (playerType === 'youtube' && player && typeof player.playVideo === 'function') {
+                    player.playVideo();
+                } else if (html5Player) {
+                    html5Player.play();
+                } else if (audioPlayer) {
+                    audioPlayer.play();
+                }
+
+                fadeIn();
+                soakPlayPhase(btn, SOAK_PLAY_SECONDS);
+            }, SOAK_PAUSE_SECONDS * 1000);
         }
 
         // 15-second play then rewind function
