@@ -1581,6 +1581,8 @@
                     <button id="speedSlowToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #7E57C2, #5E35B1); padding: 6px 12px; font-size: 12px;">1x</button>
                     <button id="soakingBtn" class="jump-btn" style="background: linear-gradient(45deg, #26A69A, #00897B); padding: 6px 12px; font-size: 12px;">Soak 10/7</button>
                     <button id="soaking4Btn" class="jump-btn" style="background: linear-gradient(45deg, #26A69A, #00897B); padding: 6px 12px; font-size: 12px;">Soak 10/4</button>
+                    <button id="soaking2Btn" class="jump-btn" style="background: linear-gradient(45deg, rgb(255, 87, 34), rgb(230, 74, 25)); padding: 6px 12px; font-size: 12px;">Soak 10/2</button>
+                    <button id="soaking1_5Btn" class="jump-btn" style="background: linear-gradient(45deg, rgb(255, 87, 34), rgb(230, 74, 25)); padding: 6px 12px; font-size: 12px;">Soak 10/1.5</button>
                     <select id="timerCustomSelect" style="display: none; padding: 5px 8px; font-size: 12px; border-radius: 6px; border: 2px solid #9C27B0; background: linear-gradient(45deg, #E1BEE7, #CE93D8); cursor: pointer; font-weight: 600;">
                         <option value="">⏱️ Custom</option>
                         <option value="35">35s</option>
@@ -3676,6 +3678,16 @@
             // Soaking 10/4 mode - play 10s, fade out, pause 4s, fade in, resume, loop
             document.getElementById('soaking4Btn').addEventListener('click', function() {
                 toggleSoaking4Mode(this);
+            });
+
+            // Soaking 10/2 mode - play 10s, fade out, pause 2s, fade in, resume, loop
+            document.getElementById('soaking2Btn').addEventListener('click', function() {
+                toggleSoaking2Mode(this);
+            });
+
+            // Soaking 10/1.5 mode - play 10s, fade out, pause 1.5s, fade in, resume, loop
+            document.getElementById('soaking1_5Btn').addEventListener('click', function() {
+                toggleSoaking1_5Mode(this);
             });
 
             // Custom timer dropdown - plays selected duration, pauses, rewinds
@@ -5803,6 +5815,246 @@
                 fadeIn();
                 soak4PlayPhase(btn, SOAK4_PLAY_SECONDS);
             }, SOAK4_PAUSE_SECONDS * 1000);
+        }
+
+        // ============================================
+        // SOAKING 10/2 MODE - play 10s, pause 2s, loop until video ends
+        // ============================================
+        let soaking2Active = false;
+        let soaking2Timeout = null;
+        let soaking2CountdownInterval = null;
+        const SOAK2_PLAY_SECONDS = 10;
+        const SOAK2_PAUSE_SECONDS = 2;
+
+        function toggleSoaking2Mode(btn) {
+            if (soaking2Active) {
+                stopSoaking2(btn);
+            } else {
+                startSoaking2(btn);
+            }
+        }
+
+        function startSoaking2(btn) {
+            soaking2Active = true;
+            btn.textContent = 'Soak 10';
+            btn.style.background = 'linear-gradient(45deg, #FF5722, #E64A19)';
+
+            // Ensure playing
+            if (playerType === 'youtube' && player && playerReady && typeof player.playVideo === 'function') {
+                player.playVideo();
+            } else if (html5Player) {
+                html5Player.play();
+            } else if (audioPlayer) {
+                audioPlayer.play();
+            }
+
+            soak2PlayPhase(btn, SOAK2_PLAY_SECONDS);
+        }
+
+        function stopSoaking2(btn) {
+            soaking2Active = false;
+            if (soaking2Timeout) { clearTimeout(soaking2Timeout); soaking2Timeout = null; }
+            if (soaking2CountdownInterval) { clearInterval(soaking2CountdownInterval); soaking2CountdownInterval = null; }
+            cancelFades();
+            btn.textContent = 'Soak 10/2';
+            btn.style.background = 'linear-gradient(45deg, rgb(255, 87, 34), rgb(230, 74, 25))';
+            showStatus('Soaking 10/2 stopped', 'info');
+        }
+
+        function soak2PlayPhase(btn, secondsLeft) {
+            if (!soaking2Active) return;
+
+            btn.textContent = 'Soak ' + secondsLeft;
+            btn.style.background = 'linear-gradient(45deg, #FF5722, #E64A19)';
+
+            // Countdown every second during play
+            soaking2CountdownInterval = setInterval(() => {
+                secondsLeft--;
+                if (secondsLeft <= 0) {
+                    clearInterval(soaking2CountdownInterval);
+                    soaking2CountdownInterval = null;
+                    return;
+                }
+                if (soaking2Active) {
+                    btn.textContent = 'Soak ' + secondsLeft;
+                }
+            }, 1000);
+
+            // Start fade out before the play phase ends
+            const fadeStartDelay = Math.max(0, (SOAK2_PLAY_SECONDS * 1000) - FADE_OUT_DURATION_MS);
+            soaking2Timeout = setTimeout(() => {
+                if (!soaking2Active) return;
+                fadeOut().then(() => {
+                    if (!soaking2Active) return;
+
+                    // Check if video ended
+                    if (playerType === 'youtube' && player && typeof player.getPlayerState === 'function' && player.getPlayerState() === 0) {
+                        stopSoaking2(btn);
+                        showStatus('Video ended — soaking complete', 'success');
+                        return;
+                    }
+
+                    // Pause
+                    if (playerType === 'youtube' && player && typeof player.pauseVideo === 'function') {
+                        player.pauseVideo();
+                    } else if (html5Player) {
+                        html5Player.pause();
+                    } else if (audioPlayer) {
+                        audioPlayer.pause();
+                    }
+
+                    soak2PausePhase(btn, SOAK2_PAUSE_SECONDS);
+                });
+            }, fadeStartDelay);
+        }
+
+        function soak2PausePhase(btn, secondsLeft) {
+            if (!soaking2Active) return;
+
+            btn.textContent = 'Pause ' + secondsLeft;
+            btn.style.background = 'linear-gradient(45deg, #607D8B, #455A64)';
+
+            soaking2CountdownInterval = setInterval(() => {
+                secondsLeft--;
+                if (secondsLeft <= 0) {
+                    clearInterval(soaking2CountdownInterval);
+                    soaking2CountdownInterval = null;
+                    return;
+                }
+                if (soaking2Active) {
+                    btn.textContent = 'Pause ' + secondsLeft;
+                }
+            }, 1000);
+
+            soaking2Timeout = setTimeout(() => {
+                if (!soaking2Active) return;
+
+                // Resume playing
+                if (playerType === 'youtube' && player && typeof player.playVideo === 'function') {
+                    player.playVideo();
+                } else if (html5Player) {
+                    html5Player.play();
+                } else if (audioPlayer) {
+                    audioPlayer.play();
+                }
+
+                fadeIn();
+                soak2PlayPhase(btn, SOAK2_PLAY_SECONDS);
+            }, SOAK2_PAUSE_SECONDS * 1000);
+        }
+
+        // ============================================
+        // SOAKING 10/1.5 MODE - play 10s, pause 1.5s, loop until video ends
+        // ============================================
+        let soaking1_5Active = false;
+        let soaking1_5Timeout = null;
+        let soaking1_5CountdownInterval = null;
+        const SOAK1_5_PLAY_SECONDS = 10;
+        const SOAK1_5_PAUSE_SECONDS = 1.5;
+
+        function toggleSoaking1_5Mode(btn) {
+            if (soaking1_5Active) {
+                stopSoaking1_5(btn);
+            } else {
+                startSoaking1_5(btn);
+            }
+        }
+
+        function startSoaking1_5(btn) {
+            soaking1_5Active = true;
+            btn.textContent = 'Soak 10';
+            btn.style.background = 'linear-gradient(45deg, #FF5722, #E64A19)';
+
+            // Ensure playing
+            if (playerType === 'youtube' && player && playerReady && typeof player.playVideo === 'function') {
+                player.playVideo();
+            } else if (html5Player) {
+                html5Player.play();
+            } else if (audioPlayer) {
+                audioPlayer.play();
+            }
+
+            soak1_5PlayPhase(btn, SOAK1_5_PLAY_SECONDS);
+        }
+
+        function stopSoaking1_5(btn) {
+            soaking1_5Active = false;
+            if (soaking1_5Timeout) { clearTimeout(soaking1_5Timeout); soaking1_5Timeout = null; }
+            if (soaking1_5CountdownInterval) { clearInterval(soaking1_5CountdownInterval); soaking1_5CountdownInterval = null; }
+            cancelFades();
+            btn.textContent = 'Soak 10/1.5';
+            btn.style.background = 'linear-gradient(45deg, rgb(255, 87, 34), rgb(230, 74, 25))';
+            showStatus('Soaking 10/1.5 stopped', 'info');
+        }
+
+        function soak1_5PlayPhase(btn, secondsLeft) {
+            if (!soaking1_5Active) return;
+
+            btn.textContent = 'Soak ' + secondsLeft;
+            btn.style.background = 'linear-gradient(45deg, #FF5722, #E64A19)';
+
+            // Countdown every second during play
+            soaking1_5CountdownInterval = setInterval(() => {
+                secondsLeft--;
+                if (secondsLeft <= 0) {
+                    clearInterval(soaking1_5CountdownInterval);
+                    soaking1_5CountdownInterval = null;
+                    return;
+                }
+                if (soaking1_5Active) {
+                    btn.textContent = 'Soak ' + secondsLeft;
+                }
+            }, 1000);
+
+            // Start fade out before the play phase ends
+            const fadeStartDelay = Math.max(0, (SOAK1_5_PLAY_SECONDS * 1000) - FADE_OUT_DURATION_MS);
+            soaking1_5Timeout = setTimeout(() => {
+                if (!soaking1_5Active) return;
+                fadeOut().then(() => {
+                    if (!soaking1_5Active) return;
+
+                    // Check if video ended
+                    if (playerType === 'youtube' && player && typeof player.getPlayerState === 'function' && player.getPlayerState() === 0) {
+                        stopSoaking1_5(btn);
+                        showStatus('Video ended — soaking complete', 'success');
+                        return;
+                    }
+
+                    // Pause
+                    if (playerType === 'youtube' && player && typeof player.pauseVideo === 'function') {
+                        player.pauseVideo();
+                    } else if (html5Player) {
+                        html5Player.pause();
+                    } else if (audioPlayer) {
+                        audioPlayer.pause();
+                    }
+
+                    soak1_5PausePhase(btn, SOAK1_5_PAUSE_SECONDS);
+                });
+            }, fadeStartDelay);
+        }
+
+        function soak1_5PausePhase(btn, secondsLeft) {
+            if (!soaking1_5Active) return;
+
+            btn.textContent = 'Pause ' + Math.ceil(secondsLeft);
+            btn.style.background = 'linear-gradient(45deg, #607D8B, #455A64)';
+
+            soaking1_5Timeout = setTimeout(() => {
+                if (!soaking1_5Active) return;
+
+                // Resume playing
+                if (playerType === 'youtube' && player && typeof player.playVideo === 'function') {
+                    player.playVideo();
+                } else if (html5Player) {
+                    html5Player.play();
+                } else if (audioPlayer) {
+                    audioPlayer.play();
+                }
+
+                fadeIn();
+                soak1_5PlayPhase(btn, SOAK1_5_PLAY_SECONDS);
+            }, SOAK1_5_PAUSE_SECONDS * 1000);
         }
 
         // 15-second play then rewind function
