@@ -7938,6 +7938,39 @@
         });
     })();
     </script>
+
+    <script>
+        // --- Pause on tab switch, resume on hover over video ---
+        (function() {
+            let wasPlayingBeforeHidden = false;
+
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    if (typeof player !== 'undefined' && player &&
+                        typeof player.getPlayerState === 'function' &&
+                        typeof YT !== 'undefined' &&
+                        player.getPlayerState() === YT.PlayerState.PLAYING) {
+                        wasPlayingBeforeHidden = true;
+                        player.pauseVideo();
+                    } else {
+                        wasPlayingBeforeHidden = false;
+                    }
+                }
+            });
+
+            var ytContainer = document.getElementById('youtubeContainer');
+            if (ytContainer) {
+                ytContainer.addEventListener('mouseenter', function() {
+                    if (!document.hidden && wasPlayingBeforeHidden &&
+                        typeof player !== 'undefined' && player &&
+                        typeof player.playVideo === 'function') {
+                        player.playVideo();
+                        wasPlayingBeforeHidden = false;
+                    }
+                });
+            }
+        })();
+    </script>
 </body>
 </html>
 
