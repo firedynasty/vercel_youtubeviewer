@@ -8030,11 +8030,28 @@
         // --- Exit Off: pause on tab switch, resume on hover (controlled by toggle) ---
         (function() {
             let wasPlayingBeforeHidden = false;
+            let activeSoakBtnId = null; // remember which soak was running
 
             document.addEventListener('visibilitychange', function() {
                 var toggle = document.getElementById('tabPauseToggle');
                 if (!toggle || !toggle.checked) return;
                 if (document.hidden) {
+                    // Remember and stop any active soak mode
+                    activeSoakBtnId = null;
+                    if (typeof soakingActive !== 'undefined' && soakingActive) {
+                        activeSoakBtnId = 'soakingBtn';
+                        document.getElementById('soakingBtn').click();
+                    } else if (typeof soaking4Active !== 'undefined' && soaking4Active) {
+                        activeSoakBtnId = 'soaking4Btn';
+                        document.getElementById('soaking4Btn').click();
+                    } else if (typeof soaking2Active !== 'undefined' && soaking2Active) {
+                        activeSoakBtnId = 'soaking2Btn';
+                        document.getElementById('soaking2Btn').click();
+                    } else if (typeof soaking1_5Active !== 'undefined' && soaking1_5Active) {
+                        activeSoakBtnId = 'soaking1_5Btn';
+                        document.getElementById('soaking1_5Btn').click();
+                    }
+
                     if (typeof player !== 'undefined' && player &&
                         typeof player.getPlayerState === 'function' &&
                         typeof YT !== 'undefined' &&
@@ -8055,6 +8072,12 @@
                         typeof player.playVideo === 'function') {
                         player.playVideo();
                         wasPlayingBeforeHidden = false;
+                        // Restart the soak mode that was running
+                        if (activeSoakBtnId) {
+                            var btn = document.getElementById(activeSoakBtnId);
+                            if (btn) btn.click();
+                            activeSoakBtnId = null;
+                        }
                     }
                 });
             }
