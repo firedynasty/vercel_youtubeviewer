@@ -1571,6 +1571,9 @@
                 <span class="time-label" style="margin-left: 15px;">playback</span>
                 <span class="time-value" id="playbackTimeValue" style="color: #FFC107; font-weight: 700;">0:01</span>
                 <button id="dropboxBtn" onclick="toggleDropboxSidebar()" style="margin-left: 15px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #0061FF, #0052d4); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">DB</button>
+                <select id="dbxLinksDropdown" style="margin-left: 8px; padding: 4px 8px; font-size: 11px; background: #1a1a1a; color: white; border: 1px solid #0061FF; border-radius: 6px; max-width: 160px;" disabled>
+                    <option value="" disabled selected>DB Links</option>
+                </select>
                 <button id="clipboardTimeBtn" onclick="jumpToClipboardTime()" style="margin-left: 8px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #E91E63, #C2185B); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">📋Time</button>
                 <button id="clipboardPasteMediaBtn" onclick="pasteMediaOrTimes()" style="margin-left: 8px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #FF9800, #F57C00); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">📋c Link</button>
                 <div style="width: 100%; display: flex; align-items: center; gap: 6px; margin-top: 6px;">
@@ -1723,8 +1726,8 @@
             </div>
         </div>
 
-        <!-- Cloud Links Section -->
-        <div class="section" style="margin-top: 30px;">
+        <!-- Cloud Links Section (disabled - replaced by DB Links dropdown) -->
+        <div class="section" style="margin-top: 30px; display: none;">
             <h3 class="section-title">Cloud Links</h3>
             <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 15px; align-items: center;">
                 <button id="loadCloudBtn" class="paste-btn" onclick="loadLinksFromCloud()" style="background: linear-gradient(45deg, #2196F3, #1976D2);">☁️ Load Cloud</button>
@@ -1961,6 +1964,64 @@
             showPagination();
             loadCurrentPaginationLink();
         }
+
+        // --- DB Links Dropdown: load file and open in pagination ---
+        document.getElementById('dbxLinksDropdown').addEventListener('change', async function() {
+            const filePath = this.value;
+            if (!filePath || !window.dropboxDownloadFile) return;
+            try {
+                const content = await window.dropboxDownloadFile(filePath);
+                if (!content) return;
+                // Parse the downloaded text the same way cloud links are parsed
+                const lines = content.split('\n').map(l => l.trim()).filter(l => l);
+                const entries = [];
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    if (line.startsWith('http://') || line.startsWith('https://')) {
+                        const parsed = parseInlineTimes(line, '');
+                        parsed.rawUrl = line;
+                        entries.push(parsed);
+                    } else {
+                        const commaUrlMatch = line.match(/^(.+?),\s*"?(https?:\/\/[^"]+)"?$/);
+                        if (commaUrlMatch) {
+                            const parsed = parseInlineTimes(commaUrlMatch[2], commaUrlMatch[1].trim());
+                            parsed.rawUrl = commaUrlMatch[2];
+                            entries.push(parsed);
+                        } else if (i + 1 < lines.length) {
+                            const nextLine = lines[i + 1];
+                            if (nextLine.startsWith('http://') || nextLine.startsWith('https://')) {
+                                const parsed = parseInlineTimes(nextLine, line);
+                                parsed.rawUrl = nextLine;
+                                entries.push(parsed);
+                                i++;
+                            }
+                        }
+                    }
+                }
+                if (entries.length === 0) return;
+                // Store inline times
+                for (const link of entries) {
+                    if (link.inlineTimes && link.inlineTimes.length > 0) {
+                        let key = null;
+                        if (isYouTubeURL(link.url)) {
+                            key = extractVideoId(link.url);
+                        } else {
+                            key = btoa(link.url).replace(/[/+=]/g, '_');
+                        }
+                        if (key) {
+                            allSavedTimes[key] = link.inlineTimes.map(t => parseInlineTimeEntry(t));
+                        }
+                    }
+                }
+                allPaginationLinks = entries;
+                paginationSource = 'cloud';
+                currentPaginationIndex = 0;
+                showPagination();
+                loadCurrentPaginationLink();
+            } catch (err) {
+                console.error('DB Links load error:', err);
+            }
+        });
 
         // Parse links from Dropbox content textarea
         function parseDbxLinks() {
@@ -3403,25 +3464,7 @@
             startTimeUpdates();
             document.getElementById('currentTimeDisplay').style.display = 'flex';
 
-            // Auto-append to cloud if signed into Dropbox
-            if (window.getDropboxAccessToken && window.getDropboxAccessToken()) {
-                setTimeout(async () => {
-                    try {
-                        const videoData = player.getVideoData();
-                        const title = videoData.title || 'Untitled';
-                        const videoId = videoData.video_id;
-                        const url = `https://www.youtube.com/watch?v=${videoId}`;
-
-                        // Check if this URL already exists in cloud content
-                        if (!cloudLinksContent.includes(url)) {
-                            await appendToCloudAndSave(title, url);
-                            showStatus(`Auto-saved: ${title}`, 'success');
-                        }
-                    } catch (err) {
-                        console.error('Auto-append failed:', err);
-                    }
-                }, 1500); // Wait for video data to be available
-            }
+            // Auto-append to cloud disabled (replaced by DB Links dropdown)
         }
 
         // YouTube player state change callback
@@ -7429,6 +7472,8 @@
                     sessionStorage.removeItem('dropbox_code_verifier');
                     window.history.replaceState({}, document.title, window.location.pathname);
                     toggleDropboxSidebar();
+                    // Load DB Links dropdown
+                    if (window._loadDbxLinksDropdown) window._loadDbxLinksDropdown();
                 } else {
                     console.error('Dropbox auth failed:', data);
                 }
@@ -7935,6 +7980,47 @@
             document.getElementById('dbxLinksViewBtn').addEventListener('click', showDbxLinksView);
             document.getElementById('dbxFontPlus').addEventListener('click', () => changeDbxContentFont(1));
             document.getElementById('dbxFontMinus').addEventListener('click', () => changeDbxContentFont(-1));
+
+            // --- DB Links Dropdown: expose loader so main script can trigger it ---
+            window._loadDbxLinksDropdown = async function() {
+                if (!dropboxAccessToken) return;
+                const dd = document.getElementById('dbxLinksDropdown');
+                try {
+                    const res = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+                        method: 'POST',
+                        headers: {
+                            Authorization: 'Bearer ' + dropboxAccessToken,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ path: '/blob_vercel_replacement/youtubeviewerlinks' }),
+                    });
+                    const data = await res.json();
+                    if (!data.entries) return;
+                    const files = data.entries
+                        .filter(e => e['.tag'] === 'file' && e.name.toLowerCase().endsWith('.txt'))
+                        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+                    dd.innerHTML = '<option value="" disabled selected>DB Links</option>';
+                    files.forEach(f => {
+                        const opt = document.createElement('option');
+                        opt.value = f.path_lower || f.path_display;
+                        opt.textContent = f.name.replace(/\.txt$/i, '');
+                        dd.appendChild(opt);
+                    });
+                    dd.disabled = false;
+                } catch (err) {
+                    console.error('DB Links folder error:', err);
+                }
+            };
+
+            // Auto-load dropdown after sign-in
+            const _origToggle = window.toggleDropboxSidebar;
+            window.toggleDropboxSidebar = async function() {
+                await _origToggle();
+                if (dropboxAccessToken && document.getElementById('dbxLinksDropdown').options.length <= 1) {
+                    window._loadDbxLinksDropdown();
+                }
+            };
+            if (dropboxAccessToken) window._loadDbxLinksDropdown();
         });
     })();
     </script>
