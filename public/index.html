@@ -1463,14 +1463,13 @@
         <button class="link-go-btn" onclick="goAutoplayPending = true; loadCurrentPaginationLink()">Go</button>
         <button id="navbarLoopBtn" class="link-go-btn" style="background:linear-gradient(45deg,#9C27B0,#7B1FA2);margin-left:5px;padding:8px 14px;" onclick="toggleNavbarLoop(this)">🔁 3</button>
         <button class="link-go-btn" style="background:linear-gradient(45deg,#1565C0,#0D47A1);margin-left:5px;padding:8px 14px;" onclick="window.open('https://cdpn.io/pen/debug/KwVxmKR','_blank')">🔗 reader</button>
-        <!-- Auto-play toggle -->
+        <!-- Exit Off toggle (ON = pause on tab exit, OFF = keep playing) -->
         <div class="pagination-auto-group">
-            <span class="pagination-auto-label">Auto</span>
+            <span class="pagination-auto-label">Exit Off</span>
             <label class="switch">
-                <input type="checkbox" id="paginationAutoPlay">
+                <input type="checkbox" id="tabPauseToggle" checked>
                 <span class="slider-toggle"></span>
             </label>
-            <span id="paginationTimer" class="pagination-timer"></span>
         </div>
         <button class="link-close-btn" onclick="closePagination()">✕</button>
     </div>
@@ -7476,8 +7475,8 @@
                     dropboxAccessToken = data.access_token;
                     sessionStorage.removeItem('dropbox_code_verifier');
                     window.history.replaceState({}, document.title, window.location.pathname);
-                    toggleDropboxSidebar();
-                    // Load DB Links dropdown
+                    // Close sidebar after sign-in and load DB Links dropdown
+                    closeDropboxSidebar();
                     if (window._loadDbxLinksDropdown) window._loadDbxLinksDropdown();
                 } else {
                     console.error('Dropbox auth failed:', data);
@@ -8031,11 +8030,13 @@
     </script>
 
     <script>
-        // --- Pause on tab switch, resume on hover over video ---
+        // --- Exit Off: pause on tab switch, resume on hover (controlled by toggle) ---
         (function() {
             let wasPlayingBeforeHidden = false;
 
             document.addEventListener('visibilitychange', function() {
+                var toggle = document.getElementById('tabPauseToggle');
+                if (!toggle || !toggle.checked) return;
                 if (document.hidden) {
                     if (typeof player !== 'undefined' && player &&
                         typeof player.getPlayerState === 'function' &&
