@@ -1487,6 +1487,9 @@
             <button id="cloudNotesToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #607D8B, #455A64); font-size: 13px; padding: 10px 19px;">☁️ Cloud Notes</button>
             <button id="recordBtn" class="record-btn" title="Start Recording">🎙️</button>
             <button id="darkModeToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #333, #555); font-size: 13px; padding: 10px 14px;" title="Toggle Dark/Light Mode">🌙</button>
+            <select id="dbxLinksDropdown" style="padding: 8px 10px; font-size: 13px; background: #1a1a1a; color: white; border: 2px solid #0061FF; border-radius: 6px; max-width: 180px;" disabled>
+                <option value="" disabled selected>DB Links</option>
+            </select>
             <span id="recordingIndicator" class="recording-indicator" style="display:none;">REC</span>
             <span id="processingIndicator" class="processing-indicator" style="display:none;">Saving...</span>
         </div>
@@ -1571,9 +1574,6 @@
                 <span class="time-label" style="margin-left: 15px;">playback</span>
                 <span class="time-value" id="playbackTimeValue" style="color: #FFC107; font-weight: 700;">0:01</span>
                 <button id="dropboxBtn" onclick="toggleDropboxSidebar()" style="margin-left: 15px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #0061FF, #0052d4); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">DB</button>
-                <select id="dbxLinksDropdown" style="margin-left: 8px; padding: 4px 8px; font-size: 11px; background: #1a1a1a; color: white; border: 1px solid #0061FF; border-radius: 6px; max-width: 160px;" disabled>
-                    <option value="" disabled selected>DB Links</option>
-                </select>
                 <button id="clipboardTimeBtn" onclick="jumpToClipboardTime()" style="margin-left: 8px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #E91E63, #C2185B); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">📋Time</button>
                 <button id="clipboardPasteMediaBtn" onclick="pasteMediaOrTimes()" style="margin-left: 8px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #FF9800, #F57C00); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">📋c Link</button>
                 <div style="width: 100%; display: flex; align-items: center; gap: 6px; margin-top: 6px;">
@@ -1726,14 +1726,14 @@
             </div>
         </div>
 
-        <!-- Cloud Links Section (disabled - replaced by DB Links dropdown) -->
-        <div class="section" style="margin-top: 30px; display: none;">
+        <!-- Cloud Links Section (populated by DB Links dropdown) -->
+        <div class="section" style="margin-top: 30px;">
             <h3 class="section-title">Cloud Links</h3>
-            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 15px; align-items: center;">
-                <button id="loadCloudBtn" class="paste-btn" onclick="loadLinksFromCloud()" style="background: linear-gradient(45deg, #2196F3, #1976D2);">☁️ Load Cloud</button>
-                <button id="saveCloudBtn" class="paste-btn" onclick="saveLinksToCloud()" style="background: linear-gradient(45deg, #4CAF50, #45a049);">💾 Save to Cloud</button>
-                <button id="sortCloudBtn" class="paste-btn" onclick="sortCloudLinks()" style="background: linear-gradient(45deg, #FF9800, #F57C00);">🔤 Sort A-Z</button>
-                <button id="getYTTitleBtn" class="paste-btn" onclick="getAndAppendYouTubeTitle()" style="display: none; background: linear-gradient(45deg, #E91E63, #C2185B);">🎬 Get YT Title</button>
+            <div style="display: none;">
+                <button id="loadCloudBtn" class="paste-btn">☁️ Load Cloud</button>
+                <button id="saveCloudBtn" class="paste-btn">💾 Save to Cloud</button>
+                <button id="sortCloudBtn" class="paste-btn">🔤 Sort A-Z</button>
+                <button id="getYTTitleBtn" class="paste-btn">🎬 Get YT Title</button>
             </div>
             <div id="cloud-section" style="background: #2a2a2a; color: #fff; padding: 15px; border-radius: 8px; font-size: 1em; line-height: 1.6; white-space: pre-wrap; min-height: 100px;"></div>
 
@@ -1972,6 +1972,9 @@
             try {
                 const content = await window.dropboxDownloadFile(filePath);
                 if (!content) return;
+                // Populate the cloud-section with clickable links
+                cloudLinksContent = content;
+                populateCloudLinks();
                 // Parse the downloaded text the same way cloud links are parsed
                 const lines = content.split('\n').map(l => l.trim()).filter(l => l);
                 const entries = [];
