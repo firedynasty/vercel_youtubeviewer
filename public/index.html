@@ -5655,8 +5655,16 @@
             }
         }
 
+        function syncTabPauseToSoak() {
+            const toggle = document.getElementById('tabPauseToggle');
+            if (!toggle) return;
+            const anySoakActive = soakingActive || soaking4Active || soaking2Active || soaking1_5Active;
+            toggle.checked = anySoakActive;
+        }
+
         function startSoaking(btn) {
             soakingActive = true;
+            syncTabPauseToSoak();
             btn.textContent = 'Soak 10';
             btn.style.background = 'linear-gradient(45deg, #FF5722, #E64A19)';
 
@@ -5674,6 +5682,7 @@
 
         function stopSoaking(btn) {
             soakingActive = false;
+            syncTabPauseToSoak();
             if (soakingTimeout) { clearTimeout(soakingTimeout); soakingTimeout = null; }
             if (soakingCountdownInterval) { clearInterval(soakingCountdownInterval); soakingCountdownInterval = null; }
             cancelFades();
@@ -5783,6 +5792,7 @@
 
         function startSoaking4(btn) {
             soaking4Active = true;
+            syncTabPauseToSoak();
             btn.textContent = 'Soak 10';
             btn.style.background = 'linear-gradient(45deg, #FF5722, #E64A19)';
 
@@ -5800,6 +5810,7 @@
 
         function stopSoaking4(btn) {
             soaking4Active = false;
+            syncTabPauseToSoak();
             if (soaking4Timeout) { clearTimeout(soaking4Timeout); soaking4Timeout = null; }
             if (soaking4CountdownInterval) { clearInterval(soaking4CountdownInterval); soaking4CountdownInterval = null; }
             cancelFades();
@@ -5909,6 +5920,7 @@
 
         function startSoaking2(btn) {
             soaking2Active = true;
+            syncTabPauseToSoak();
             btn.textContent = 'Soak 10';
             btn.style.background = 'linear-gradient(45deg, #FF5722, #E64A19)';
 
@@ -5926,6 +5938,7 @@
 
         function stopSoaking2(btn) {
             soaking2Active = false;
+            syncTabPauseToSoak();
             if (soaking2Timeout) { clearTimeout(soaking2Timeout); soaking2Timeout = null; }
             if (soaking2CountdownInterval) { clearInterval(soaking2CountdownInterval); soaking2CountdownInterval = null; }
             cancelFades();
@@ -6035,6 +6048,7 @@
 
         function startSoaking1_5(btn) {
             soaking1_5Active = true;
+            syncTabPauseToSoak();
             btn.textContent = 'Soak 10';
             btn.style.background = 'linear-gradient(45deg, #FF5722, #E64A19)';
 
@@ -6052,6 +6066,7 @@
 
         function stopSoaking1_5(btn) {
             soaking1_5Active = false;
+            syncTabPauseToSoak();
             if (soaking1_5Timeout) { clearTimeout(soaking1_5Timeout); soaking1_5Timeout = null; }
             if (soaking1_5CountdownInterval) { clearInterval(soaking1_5CountdownInterval); soaking1_5CountdownInterval = null; }
             cancelFades();
