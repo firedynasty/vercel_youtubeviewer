@@ -1712,6 +1712,34 @@
             </div>
         </div>
 
+        <!-- Google Sheets YouTube Links -->
+        <div class="section" style="margin-top: 30px;">
+            <h3 class="section-title">Google Sheets Links</h3>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <select id="gdrive-sheet-select" style="padding: 5px 10px; background: #0f3460; color: #eee; border: 1px solid #1a1a2e; border-radius: 4px; font-size: 12px;" disabled>
+                    <option value="">Sign in to load sheets</option>
+                </select>
+                <button id="gdrive-auth-btn" onclick="gdriveSignIn()" style="padding: 6px 14px; background: #333; color: #eee; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; margin-left: auto;">Sign In</button>
+            </div>
+            <div id="gdrive-status" style="margin-top: 6px; color: #888; font-size: 12px;"></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                <div>
+                    <label style="color: #888; font-size: 11px;">Notes</label>
+                    <input type="text" id="gdrive-col1-input" style="width: 100%; padding: 6px 8px; background: #0f3460; color: #eee; border: 1px solid #1a1a2e; border-radius: 4px; font-size: 12px;" placeholder="Notes / description...">
+                </div>
+                <div>
+                    <label style="color: #888; font-size: 11px;">YouTube Link (empty = use current video)</label>
+                    <input type="text" id="gdrive-col2-input" style="width: 100%; padding: 6px 8px; background: #0f3460; color: #eee; border: 1px solid #1a1a2e; border-radius: 4px; font-size: 12px;" placeholder="YouTube URL (auto-fills from player if empty)...">
+                </div>
+            </div>
+            <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button onclick="gdriveSaveRow()" style="padding: 8px 18px; background: #27ae60; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;">Save Row</button>
+                <button onclick="gdriveReplaceRow()" style="padding: 8px 18px; background: #e67e22; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;">Replace Row</button>
+                <button onclick="gdriveClearInputs()" style="padding: 8px 18px; background: #dc3545; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;">Clear Inputs</button>
+            </div>
+            <div id="gdrive-table-area" style="margin-top: 10px;"></div>
+        </div>
+
         <!-- Quick Links -->
         <div id="quickLinksSection" class="section" style="margin-top: 30px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -1760,34 +1788,6 @@
                     <div id="formatted-links-content"></div>
                 </div>
             </div>
-        </div>
-
-        <!-- Google Sheets YouTube Links -->
-        <div class="section" style="margin-top: 30px;">
-            <h3 class="section-title">Google Sheets Links</h3>
-            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                <select id="gdrive-sheet-select" style="padding: 5px 10px; background: #0f3460; color: #eee; border: 1px solid #1a1a2e; border-radius: 4px; font-size: 12px;" disabled>
-                    <option value="">Sign in to load sheets</option>
-                </select>
-                <button id="gdrive-auth-btn" onclick="gdriveSignIn()" style="padding: 6px 14px; background: #333; color: #eee; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; margin-left: auto;">Sign In</button>
-            </div>
-            <div id="gdrive-status" style="margin-top: 6px; color: #888; font-size: 12px;"></div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
-                <div>
-                    <label style="color: #888; font-size: 11px;">Notes</label>
-                    <input type="text" id="gdrive-col1-input" style="width: 100%; padding: 6px 8px; background: #0f3460; color: #eee; border: 1px solid #1a1a2e; border-radius: 4px; font-size: 12px;" placeholder="Notes / description...">
-                </div>
-                <div>
-                    <label style="color: #888; font-size: 11px;">YouTube Link</label>
-                    <input type="text" id="gdrive-col2-input" style="width: 100%; padding: 6px 8px; background: #0f3460; color: #eee; border: 1px solid #1a1a2e; border-radius: 4px; font-size: 12px;" placeholder="YouTube URL...">
-                </div>
-            </div>
-            <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button onclick="gdriveSaveRow()" style="padding: 8px 18px; background: #27ae60; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;">Save Row</button>
-                <button onclick="gdriveReplaceRow()" style="padding: 8px 18px; background: #e67e22; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;">Replace Row</button>
-                <button onclick="gdriveClearInputs()" style="padding: 8px 18px; background: #dc3545; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;">Clear Inputs</button>
-            </div>
-            <div id="gdrive-table-area" style="margin-top: 10px;"></div>
         </div>
     </div>
 
@@ -8173,7 +8173,7 @@
     (function() {
         const GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
         const GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets';
-        const GDRIVE_FILE_SEARCH = 'chessable';
+        const GDRIVE_FILE_SEARCH = 'youtubelinks';
 
         let gdriveAccessToken = null;
         let gdriveTokenClient = null;
@@ -8398,6 +8398,14 @@
 
             var col1 = document.getElementById('gdrive-col1-input').value;
             var col2 = document.getElementById('gdrive-col2-input').value.trim();
+            // Auto-fill col2 from currently playing video if empty
+            if (!col2) {
+                if (currentVideoId) {
+                    col2 = 'https://www.youtube.com/watch?v=' + currentVideoId;
+                } else if (currentMediaUrl) {
+                    col2 = currentMediaUrl;
+                }
+            }
             if (!col1 && !col2) { gdriveSetStatus('Error: nothing to save'); return; }
 
             gdriveSetStatus('Saving row...');
@@ -8438,6 +8446,14 @@
 
             var col1 = document.getElementById('gdrive-col1-input').value;
             var col2 = document.getElementById('gdrive-col2-input').value.trim();
+            // Auto-fill col2 from currently playing video if empty
+            if (!col2) {
+                if (currentVideoId) {
+                    col2 = 'https://www.youtube.com/watch?v=' + currentVideoId;
+                } else if (currentMediaUrl) {
+                    col2 = currentMediaUrl;
+                }
+            }
             if (!col1 && !col2) { gdriveSetStatus('Error: nothing to save'); return; }
 
             var sheetRowNum = gdriveSelectedRow + 2;
