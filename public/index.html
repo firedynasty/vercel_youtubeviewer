@@ -1411,6 +1411,25 @@
         .gdrive-csv-table tbody tr { cursor: pointer; background: #16213e; }
         .gdrive-csv-table tbody tr:hover { background: #1a3a5c; }
         .gdrive-csv-table tbody tr.gdrive-selected-row { background: #1a4a6c; outline: 1px solid #00d4ff; }
+
+        /* Audio Player Styles */
+        #gdrive-audio-section { margin-top: 15px; }
+        #gdrive-audio-section .audio-player-wrap { background: #131313; border-radius: 6px; overflow: hidden; }
+        #gdrive-audio-section .audio-nowplay { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #1a1a2e; color: #ccc; font-size: 13px; }
+        #gdrive-audio-section .audio-nowplay .np-action { color: #888; }
+        #gdrive-audio-section .audio-nowplay .np-title { color: #00d4ff; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
+        #gdrive-audio-section .audio-controls { display: flex; align-items: center; background: #0d1b2e; }
+        #gdrive-audio-section .audio-controls button { background: #0d1b2e; color: #ccc; border: none; cursor: pointer; font-size: 28px; padding: 6px 16px; }
+        #gdrive-audio-section .audio-controls button:hover { background: #1a3a5c; }
+        #gdrive-audio-section .audio-controls audio { flex: 1; width: 100%; }
+        #gdrive-audio-section .audio-playlist { max-height: 250px; overflow-y: auto; }
+        #gdrive-audio-section .audio-playlist ul { list-style: none; margin: 0; padding: 0; }
+        #gdrive-audio-section .audio-playlist li { display: flex; align-items: center; padding: 8px 14px; cursor: pointer; background: #16213e; border-top: 1px solid #1a1a2e; color: #ccc; font-size: 13px; }
+        #gdrive-audio-section .audio-playlist li:hover { background: #1a3a5c; }
+        #gdrive-audio-section .audio-playlist li.ap-sel { background: #1a4a6c; color: #00d4ff; cursor: default; }
+        #gdrive-audio-section .audio-playlist .ap-num { min-width: 30px; color: #888; }
+        #gdrive-audio-section .audio-playlist .ap-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #gdrive-audio-section .ap-keycode { font-size: 11px; color: #666; text-align: center; padding: 6px; background: #0d1b2e; }
     </style>
 </head>
 <body>
@@ -1738,6 +1757,29 @@
                 <button onclick="gdriveClearInputs()" style="padding: 8px 18px; background: #dc3545; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;">Clear Inputs</button>
             </div>
             <div id="gdrive-table-area" style="margin-top: 10px;"></div>
+
+            <!-- Audio Player (populated from Google Sheets audio links) -->
+            <div id="gdrive-audio-section" style="display: none; margin-top: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span style="color: #888; font-size: 12px;" id="ap-track-count"></span>
+                    <button onclick="apClearPlayer()" style="padding: 4px 12px; background: #dc3545; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;">Clear Player</button>
+                </div>
+                <div id="mainwrap" class="audio-player-wrap">
+                    <div class="audio-nowplay">
+                        <span class="np-action" id="ap-npAction">Paused... - Tilde to Toggle</span>
+                        <span class="np-title" id="ap-npTitle"></span>
+                    </div>
+                    <div class="audio-controls">
+                        <button id="ap-btnPrev">&laquo;</button>
+                        <audio preload id="ap-audio" controls="controls">Your browser does not support HTML5 Audio!</audio>
+                        <button id="ap-btnNext">&raquo;</button>
+                    </div>
+                    <div class="ap-keycode" id="ap-keyCodeDisplay">Press 0-9 to play track, arrows to navigate, ~ toggle play/pause</div>
+                    <div class="audio-playlist">
+                        <ul id="ap-plList"></ul>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Quick Links -->
@@ -8381,12 +8423,18 @@
             });
 
             gdriveSetStatus('Loaded sheet "' + sheetName + '" — ' + (rows.length - 1) + ' rows');
+
+            // Scan for audio URLs and populate audio player
+            if (typeof apScanSheetForAudio === 'function') apScanSheetForAudio(sheetName);
         }
 
         // Dropdown change
         document.getElementById('gdrive-sheet-select').addEventListener('change', function() {
             if (this.value) gdriveRenderSheet(this.value);
-            else document.getElementById('gdrive-table-area').innerHTML = '';
+            else {
+                document.getElementById('gdrive-table-area').innerHTML = '';
+                if (typeof apClearPlayer === 'function') apClearPlayer();
+            }
         });
 
         // Save row — append [col1, col2] to current sheet
@@ -8483,6 +8531,199 @@
                 gdriveSetStatus('Error replacing: ' + err.message);
             }
         };
+        // --- Audio Player for Google Sheets audio links ---
+        var apTracks = [];
+        var apIndex = 0;
+        var apPlaying = false;
+        var apTrackNumberInput = '';
+        var apTrackInputTimeout = null;
+        var apAudio = document.getElementById('ap-audio');
+        var apNpAction = document.getElementById('ap-npAction');
+        var apNpTitle = document.getElementById('ap-npTitle');
+
+        var AUDIO_EXTENSIONS = /\.(mp3|m4a|wav|ogg|flac|aac|wma|opus|webm)([?#]|$)/i;
+
+        function apIsAudioUrl(url) {
+            return AUDIO_EXTENSIONS.test(url);
+        }
+
+        function apExtractName(url) {
+            try {
+                var path = decodeURIComponent(new URL(url).pathname);
+                var filename = path.split('/').pop();
+                // Remove extension
+                filename = filename.replace(/\.[^/.]+$/, '');
+                // Clean up common URL artifacts
+                filename = filename.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+                return filename || 'Unknown Track';
+            } catch (e) {
+                return 'Unknown Track';
+            }
+        }
+
+        function apLoadTracks(audioUrls) {
+            apTracks = [];
+            var plList = document.getElementById('ap-plList');
+            plList.innerHTML = '';
+
+            audioUrls.forEach(function(item, i) {
+                var name = item.name || apExtractName(item.url);
+                apTracks.push({ name: name, url: item.url });
+                var li = document.createElement('li');
+                li.innerHTML = '<span class="ap-num">' + (i + 1) + '.</span><span class="ap-title">' + name + '</span>';
+                li.addEventListener('click', function() {
+                    if (i !== apIndex) apPlayTrack(i);
+                });
+                plList.appendChild(li);
+            });
+
+            var section = document.getElementById('gdrive-audio-section');
+            var countEl = document.getElementById('ap-track-count');
+            if (apTracks.length > 0) {
+                section.style.display = 'block';
+                countEl.textContent = apTracks.length + ' audio track' + (apTracks.length !== 1 ? 's' : '');
+                apIndex = 0;
+                apLoadTrack(0);
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        function apLoadTrack(id) {
+            var items = document.querySelectorAll('#ap-plList li');
+            items.forEach(function(li) { li.classList.remove('ap-sel'); });
+            if (items[id]) items[id].classList.add('ap-sel');
+            apNpTitle.textContent = apTracks[id].name;
+            apIndex = id;
+            apAudio.src = apTracks[id].url;
+        }
+
+        function apPlayTrack(id) {
+            apLoadTrack(id);
+            apAudio.play();
+        }
+
+        // Audio events
+        apAudio.addEventListener('play', function() {
+            apPlaying = true;
+            apNpAction.textContent = 'Now Playing...';
+        });
+        apAudio.addEventListener('pause', function() {
+            apPlaying = false;
+            apNpAction.textContent = 'Paused...';
+        });
+        apAudio.addEventListener('ended', function() {
+            if (apIndex + 1 < apTracks.length) {
+                apIndex++;
+                apPlayTrack(apIndex);
+            } else {
+                apAudio.pause();
+                apIndex = 0;
+                apLoadTrack(0);
+            }
+        });
+
+        // Prev / Next buttons
+        document.getElementById('ap-btnPrev').addEventListener('click', function() {
+            if (apIndex - 1 >= 0) {
+                apIndex--;
+                apLoadTrack(apIndex);
+                if (apPlaying) apAudio.play();
+            } else {
+                apAudio.pause();
+                apIndex = 0;
+                apLoadTrack(0);
+            }
+        });
+        document.getElementById('ap-btnNext').addEventListener('click', function() {
+            if (apIndex + 1 < apTracks.length) {
+                apIndex++;
+                apLoadTrack(apIndex);
+                if (apPlaying) apAudio.play();
+            } else {
+                apAudio.pause();
+                apIndex = 0;
+                apLoadTrack(0);
+            }
+        });
+
+        // Clear player
+        window.apClearPlayer = function() {
+            apAudio.pause();
+            apAudio.src = '';
+            apTracks = [];
+            apIndex = 0;
+            apPlaying = false;
+            document.getElementById('ap-plList').innerHTML = '';
+            apNpTitle.textContent = '';
+            apNpAction.textContent = 'Paused...';
+            document.getElementById('gdrive-audio-section').style.display = 'none';
+        };
+
+        // Keyboard controls for audio player (only when audio section is visible)
+        document.addEventListener('keydown', function(e) {
+            if (document.getElementById('gdrive-audio-section').style.display === 'none') return;
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+            if (apTracks.length === 0) return;
+
+            var keyDisplay = document.getElementById('ap-keyCodeDisplay');
+
+            if (e.key === '`' || e.key === '~') {
+                e.preventDefault();
+                if (apPlaying) apAudio.pause(); else apAudio.play();
+            } else if (e.key === 'ArrowLeft') {
+                document.getElementById('ap-btnPrev').click();
+            } else if (e.key === 'ArrowRight') {
+                document.getElementById('ap-btnNext').click();
+            } else if (e.key >= '0' && e.key <= '9') {
+                e.preventDefault();
+                if (apTrackInputTimeout) clearTimeout(apTrackInputTimeout);
+                apTrackNumberInput += e.key;
+                if (keyDisplay) keyDisplay.textContent = 'Entering track: ' + apTrackNumberInput + ' (plays in 1.5s)';
+                apTrackInputTimeout = setTimeout(function() {
+                    var num = parseInt(apTrackNumberInput);
+                    if (num > 0 && num <= apTracks.length) {
+                        apPlayTrack(num - 1);
+                        if (keyDisplay) keyDisplay.textContent = 'Playing track ' + num + ': ' + apTracks[num - 1].name;
+                    } else {
+                        if (keyDisplay) keyDisplay.textContent = 'Invalid track: ' + num + '. Range: 1-' + apTracks.length;
+                    }
+                    apTrackNumberInput = '';
+                    setTimeout(function() {
+                        if (keyDisplay) keyDisplay.textContent = 'Press 0-9 to play track, arrows to navigate, ~ toggle play/pause';
+                    }, 3000);
+                }, 1500);
+            }
+        });
+
+        // Scan sheet for audio URLs — called after gdriveRenderSheet
+        function apScanSheetForAudio(sheetName) {
+            if (!gdriveWorkbook) return;
+            var sheet = gdriveWorkbook.Sheets[sheetName];
+            var csv = XLSX.utils.sheet_to_csv(sheet);
+            var rows = gdriveParseCsv(csv);
+            if (rows.length <= 1) { apLoadTracks([]); return; }
+
+            var audioItems = [];
+            rows.slice(1).forEach(function(row) {
+                // Check all columns for audio URLs
+                var url = null;
+                var name = null;
+                for (var c = 0; c < row.length; c++) {
+                    var cell = (row[c] || '').trim();
+                    if (apIsAudioUrl(cell)) {
+                        url = cell;
+                    } else if (cell && !name) {
+                        name = cell;
+                    }
+                }
+                if (url) {
+                    audioItems.push({ url: url, name: name || apExtractName(url) });
+                }
+            });
+
+            apLoadTracks(audioItems);
+        }
     })();
     </script>
 </body>
