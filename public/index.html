@@ -3421,6 +3421,12 @@
 
             if (!queryString || queryString.length <= 1) return null;
 
+            // Skip Dropbox OAuth redirect params (handled separately in handleDropboxOAuthRedirect)
+            const oauthParams = new URLSearchParams(queryString);
+            if (oauthParams.has('code') || oauthParams.has('state') || oauthParams.has('error')) {
+                return null;
+            }
+
             // Remove the leading '?' and decode the URL
             const param = decodeURIComponent(queryString.substring(1));
 
