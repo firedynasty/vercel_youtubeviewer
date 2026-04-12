@@ -2825,8 +2825,10 @@
             });
         }
 
-        // Navbar DB button: first click signs in, subsequent clicks download
-        // CLOUD_LINKS_PATH and activate pagination with inline times.
+        // Navbar DB button: first click signs in, subsequent clicks download the
+        // clipboard_manager Dropbox file and pipe it through the same paste-media
+        // handler as the 📋 Paste Media + Times button.
+        const DROPBOX_CLIPBOARD_PATH = '/blob_vercel_replacement/blob_clipboard_content.txt';
         async function handleNavDropboxLoad() {
             const btn = document.getElementById('dbxNavLoadBtn');
             if (!window.getDropboxAccessToken || !window.getDropboxAccessToken()) {
@@ -2836,64 +2838,25 @@
             btn.disabled = true;
             btn.textContent = 'Loading...';
             try {
-                const content = await window.dropboxDownloadFile(CLOUD_LINKS_PATH);
-                if (!content) {
-                    btn.textContent = 'No file';
+                const content = await window.dropboxDownloadFile(DROPBOX_CLIPBOARD_PATH);
+                if (!content || !content.trim()) {
+                    btn.textContent = 'Empty';
                     setTimeout(() => { btn.textContent = 'DB: Load Links'; btn.disabled = false; }, 2000);
                     return;
                 }
-                cloudLinksContent = content;
-                populateCloudLinks();
-                const lines = content.split('\n').map(l => l.trim()).filter(l => l);
-                const entries = [];
-                for (let i = 0; i < lines.length; i++) {
-                    const line = lines[i];
-                    if (line.startsWith('http://') || line.startsWith('https://')) {
-                        const parsed = parseInlineTimes(line, '');
-                        parsed.rawUrl = line;
-                        entries.push(parsed);
-                    } else {
-                        const commaUrlMatch = line.match(/^(.+?),\s*"?(https?:\/\/[^"]+)"?$/);
-                        if (commaUrlMatch) {
-                            const parsed = parseInlineTimes(commaUrlMatch[2], commaUrlMatch[1].trim());
-                            parsed.rawUrl = commaUrlMatch[2];
-                            entries.push(parsed);
-                        } else if (i + 1 < lines.length) {
-                            const nextLine = lines[i + 1];
-                            if (nextLine.startsWith('http://') || nextLine.startsWith('https://')) {
-                                const parsed = parseInlineTimes(nextLine, line);
-                                parsed.rawUrl = nextLine;
-                                entries.push(parsed);
-                                i++;
-                            }
-                        }
+                const pasteTextarea = document.getElementById('pasteMediaTextarea');
+                if (pasteTextarea) pasteTextarea.value = content;
+                // Give the player a beat to settle before feeding it new media
+                setTimeout(() => {
+                    try {
+                        processClipboardText(content);
+                        btn.textContent = 'Loaded';
+                    } catch (err) {
+                        console.error('DB nav processClipboardText error:', err);
+                        btn.textContent = 'Error';
                     }
-                }
-                if (entries.length === 0) {
-                    btn.textContent = 'No links';
-                    setTimeout(() => { btn.textContent = 'DB: Load Links'; btn.disabled = false; }, 2000);
-                    return;
-                }
-                for (const link of entries) {
-                    if (link.inlineTimes && link.inlineTimes.length > 0) {
-                        let key = null;
-                        if (isYouTubeURL(link.url)) {
-                            key = extractVideoId(link.url);
-                        } else {
-                            key = btoa(link.url).replace(/[/+=]/g, '_');
-                        }
-                        if (key) {
-                            allSavedTimes[key] = link.inlineTimes.map(t => parseInlineTimeEntry(t));
-                        }
-                    }
-                }
-                allPaginationLinks = entries;
-                paginationSource = 'cloud';
-                currentPaginationIndex = 0;
-                showPagination();
-                loadCurrentPaginationLink();
-                btn.textContent = 'Loaded';
-                setTimeout(() => { btn.textContent = 'DB: Load Links'; btn.disabled = false; }, 1500);
+                    setTimeout(() => { btn.textContent = 'DB: Load Links'; btn.disabled = false; }, 1500);
+                }, 400);
             } catch (err) {
                 console.error('DB nav load error:', err);
                 btn.textContent = 'Error';
