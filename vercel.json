@@ -3,6 +3,7 @@
     { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/classical_player.html", "destination": "/classical_player.html" },
     { "source": "/musicindex.html", "destination": "/musicindex.html" },
+    { "source": "/video_viewer.html", "destination": "/video_viewer.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

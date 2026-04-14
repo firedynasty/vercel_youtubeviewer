@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Gallery - Google Sheets</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #1a1a1a;
+    min-height: 100vh;
+    color: white;
+    margin: 0;
+    padding: 0;
+}
+
+.gallery-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Sheets panel */
+.sheets-panel {
+    background: rgba(255,255,255,0.05);
+    padding: 10px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.sheets-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.sheets-panel-header h4 {
+    font-size: 0.95rem;
+    color: #ccc;
+}
+
+.sheets-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+}
+
+.sheets-btn {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #ddd;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.sheets-btn:hover { background: rgba(255,255,255,0.2); }
+
+.sheets-btn.primary {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    border-color: transparent;
+    color: white;
+}
+
+.sheets-btn.primary:hover {
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+}
+
+.sheets-input {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #ddd;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    flex: 1;
+    min-width: 120px;
+}
+
+.sheets-input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.sheets-status {
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 4px;
+}
+
+/* Main gallery */
+.main-gallery {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0 20px 10px 20px;
+    min-height: 0;
+}
+
+.video-display {
+    position: relative;
+    width: 100%;
+    flex: 1;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+}
+
+.main-video {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.6);
+    border: none;
+    color: white;
+    font-size: 2rem;
+    padding: 15px 20px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.nav-btn:hover {
+    background: rgba(0,0,0,0.8);
+    transform: translateY(-50%) scale(1.05);
+}
+
+.prev-btn { left: 20px; }
+.next-btn { right: 20px; }
+
+.video-counter {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.7);
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-size: 1rem;
+    z-index: 10;
+}
+
+.video-title {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(0,0,0,0.7);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 1rem;
+    z-index: 10;
+    max-width: calc(100% - 40px);
+}
+
+.video-controls {
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    z-index: 10;
+}
+
+.control-btn {
+    background: rgba(0,0,0,0.7);
+    border: none;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.control-btn:hover {
+    background: rgba(0,0,0,0.9);
+}
+
+.control-btn.active-loop {
+    background: rgba(255,255,255,0.25);
+    border: 1px solid rgba(255,255,255,0.5);
+}
+
+/* Thumbnail strip */
+.thumbnail-strip {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 8px 20px;
+    scroll-behavior: smooth;
+    background: rgba(255,255,255,0.05);
+    border-radius: 6px;
+    margin: 0 -20px;
+}
+
+.thumbnail-strip::-webkit-scrollbar { height: 6px; }
+.thumbnail-strip::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+}
+.thumbnail-strip::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.3);
+    border-radius: 3px;
+}
+
+.thumb-btn {
+    min-width: 80px;
+    height: 40px;
+    background: rgba(255,255,255,0.1);
+    border: 2px solid transparent;
+    color: #ccc;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 4px 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.thumb-btn:hover {
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    border-color: rgba(255,255,255,0.4);
+}
+
+.thumb-btn.active {
+    border-color: #fff;
+    color: #fff;
+    background: rgba(255,255,255,0.2);
+}
+
+.instructions {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 0.8rem;
+    opacity: 0.6;
+}
+
+/* Loading state */
+.loading-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+.loading-overlay.visible {
+    opacity: 1;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255,255,255,0.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    color: #666;
+    padding: 60px 20px;
+}
+
+.empty-state h2 {
+    font-size: 1.5rem;
+    color: #888;
+    margin-bottom: 10px;
+}
+
+.empty-state p {
+    font-size: 0.95rem;
+}
+
+@media (max-width: 768px) {
+    .main-gallery { padding: 0 10px 10px 10px; }
+    .nav-btn { font-size: 1.5rem; padding: 12px 15px; }
+    .prev-btn { left: 10px; }
+    .next-btn { right: 10px; }
+    .thumb-btn { min-width: 60px; height: 35px; font-size: 0.65rem; }
+    .sheets-panel { padding: 8px 10px; }
+}
+    </style>
+</head>
+<body>
+
+<div class="gallery-container">
+    <!-- Google Sheets Panel -->
+    <div class="sheets-panel">
+        <div class="sheets-panel-header">
+            <h4>Load Videos from Google Sheets</h4>
+            <button class="sheets-btn" id="toggleSheetsBtn">Hide</button>
+        </div>
+        <div id="sheetsPanelBody">
+            <div class="sheets-row">
+                <button class="sheets-btn primary" id="authBtn" onclick="gdriveSignIn()">Sign In</button>
+                <input type="text" id="searchInput" class="sheets-input" placeholder="Spreadsheet name..." value="videolists" />
+                <button class="sheets-btn" id="searchBtn" onclick="gdriveSearch()" disabled>Search</button>
+            </div>
+            <div class="sheets-row">
+                <select id="sheetSelect" class="sheets-input" disabled onchange="onSheetSelect()" style="cursor:pointer;">
+                    <option value="">Sign in first</option>
+                </select>
+            </div>
+            <!-- Local CSV fallback -->
+            <div style="text-align:center; margin:4px 0;">
+                <button class="sheets-btn" id="toggleLocalCsvBtn" style="font-size:0.75rem; padding:4px 12px;">or load local CSV file</button>
+            </div>
+            <div id="localCsvRow" style="display:none;">
+                <div class="sheets-row">
+                    <input type="file" id="csvFileInput" accept=".csv,.txt" style="display:none" />
+                    <button class="sheets-btn" onclick="document.getElementById('csvFileInput').click()">Choose file</button>
+                    <span id="csvFileName" style="font-size:0.8rem;color:#888;font-family:monospace;">No file selected</span>
+                    <button class="sheets-btn primary" id="loadLocalCsvBtn">Load</button>
+                </div>
+            </div>
+            <div class="sheets-status" id="sheetsStatus">Sign in to load video list from Google Sheets</div>
+        </div>
+    </div>
+
+    <!-- Main Gallery -->
+    <div class="main-gallery">
+        <div class="video-display" id="videoDisplay">
+            <div class="empty-state" id="emptyState">
+                <h2>No Videos Loaded</h2>
+                <p>Sign in above to load a video playlist from Google Sheets, or load a CSV file.</p>
+                <p style="margin-top:10px; font-size:0.8rem; color:#555;">
+                    Sheet format: Column A = title (or URL), Column B = URL (or title).<br>
+                    URLs should be direct video links (Dropbox raw links, etc.)
+                </p>
+            </div>
+            <video id="mainVideo" class="main-video" controls preload="auto" style="display:none;">
+                Your browser does not support the video tag.
+            </video>
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="spinner"></div>
+            </div>
+            <button class="nav-btn prev-btn" id="prevBtn" style="display:none;">&#8249;</button>
+            <button class="nav-btn next-btn" id="nextBtn" style="display:none;">&#8250;</button>
+            <div class="video-counter" id="videoCounter" style="display:none;">1 / 5</div>
+            <div class="video-title" id="videoTitle" style="display:none;">Loading...</div>
+            <div class="video-controls" id="videoControls" style="display:none;">
+                <button class="control-btn" id="playPauseBtn">Play/Pause</button>
+                <button class="control-btn" id="muteBtn">Mute</button>
+                <button class="control-btn" id="loopBtn">Repeat</button>
+                <button class="control-btn" id="fullscreenBtn">Fullscreen</button>
+            </div>
+        </div>
+        <div class="thumbnail-strip" id="thumbnailStrip"></div>
+        <div class="instructions">
+            Arrow keys or [ ] to navigate &bull; Space for play/pause &bull; M to mute &bull; R to repeat &bull; F for fullscreen
+        </div>
+    </div>
+</div>
+
+<script>
+
+// ============ VIDEO GALLERY ============
+
+let videos = [];
+let currentIndex = 0;
+let looping = false;
+
+const mainVideo = document.getElementById('mainVideo');
+const videoCounter = document.getElementById('videoCounter');
+const videoTitle = document.getElementById('videoTitle');
+const thumbnailStrip = document.getElementById('thumbnailStrip');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const playPauseBtn = document.getElementById('playPauseBtn');
+const muteBtn = document.getElementById('muteBtn');
+const loopBtn = document.getElementById('loopBtn');
+const fullscreenBtn = document.getElementById('fullscreenBtn');
+const emptyState = document.getElementById('emptyState');
+const videoControls = document.getElementById('videoControls');
+
+function showPlayer(show) {
+    const els = [mainVideo, prevBtn, nextBtn, videoCounter, videoTitle, videoControls];
+    els.forEach(el => el.style.display = show ? '' : 'none');
+    emptyState.style.display = show ? 'none' : '';
+}
+
+function loadVideo(index) {
+    if (!videos.length) return;
+    const video = videos[index];
+
+    loadingOverlay.classList.add('visible');
+
+    mainVideo.pause();
+    mainVideo.removeAttribute('src');
+    mainVideo.load();
+
+    mainVideo.src = video.src;
+    mainVideo.loop = looping;
+    mainVideo.load();
+
+    videoTitle.textContent = video.title;
+    videoCounter.textContent = (index + 1) + ' / ' + videos.length + ' - ' + video.title;
+
+    document.querySelectorAll('.thumb-btn').forEach(function(btn, i) {
+        btn.classList.toggle('active', i === index);
+    });
+
+    var activeBtn = thumbnailStrip.children[index];
+    if (activeBtn) {
+        activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+}
+
+mainVideo.addEventListener('canplay', function() {
+    loadingOverlay.classList.remove('visible');
+});
+
+mainVideo.addEventListener('error', function() {
+    loadingOverlay.classList.remove('visible');
+    if (videos[currentIndex]) {
+        videoTitle.textContent = videos[currentIndex].title + ' (failed to load)';
+    }
+});
+
+function buildThumbnails() {
+    thumbnailStrip.innerHTML = '';
+    videos.forEach(function(video, index) {
+        var btn = document.createElement('button');
+        btn.className = 'thumb-btn';
+        btn.textContent = video.title;
+        btn.addEventListener('click', function() { goToVideo(index); });
+        thumbnailStrip.appendChild(btn);
+    });
+}
+
+function nextVideo() {
+    if (!videos.length) return;
+    currentIndex = (currentIndex + 1) % videos.length;
+    loadVideo(currentIndex);
+}
+
+function prevVideo() {
+    if (!videos.length) return;
+    currentIndex = (currentIndex - 1 + videos.length) % videos.length;
+    loadVideo(currentIndex);
+}
+
+function goToVideo(index) {
+    currentIndex = index;
+    loadVideo(currentIndex);
+}
+
+function togglePlayPause() {
+    if (mainVideo.paused) {
+        mainVideo.play();
+    } else {
+        mainVideo.pause();
+    }
+}
+
+function toggleMute() {
+    mainVideo.muted = !mainVideo.muted;
+    muteBtn.textContent = mainVideo.muted ? 'Unmute' : 'Mute';
+}
+
+function toggleLoop() {
+    looping = !looping;
+    mainVideo.loop = looping;
+    loopBtn.classList.toggle('active-loop', looping);
+    loopBtn.textContent = looping ? 'Repeat ON' : 'Repeat';
+}
+
+function toggleFullscreen() {
+    if (document.fullscreenElement) {
+        document.exitFullscreen();
+    } else {
+        mainVideo.requestFullscreen();
+    }
+}
+
+prevBtn.addEventListener('click', prevVideo);
+nextBtn.addEventListener('click', nextVideo);
+playPauseBtn.addEventListener('click', togglePlayPause);
+muteBtn.addEventListener('click', toggleMute);
+loopBtn.addEventListener('click', toggleLoop);
+fullscreenBtn.addEventListener('click', toggleFullscreen);
+mainVideo.addEventListener('click', togglePlayPause);
+
+document.addEventListener('keydown', function(e) {
+    // Don't capture keys when typing in input fields
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    switch(e.key) {
+        case 'ArrowLeft': case '[': prevVideo(); break;
+        case 'ArrowRight': case ']': nextVideo(); break;
+        case ' ': e.preventDefault(); togglePlayPause(); break;
+        case 'Escape':
+            if (document.fullscreenElement) document.exitFullscreen();
+            break;
+        case 'm': case 'M': toggleMute(); break;
+        case 'f': case 'F': toggleFullscreen(); break;
+        case 'r': case 'R': toggleLoop(); break;
+    }
+});
+
+// Apply a loaded video list
+function applyVideoList(videoList, source) {
+    videos = videoList;
+    currentIndex = 0;
+    buildThumbnails();
+    if (videos.length) {
+        showPlayer(true);
+        loadVideo(0);
+        setSheetsStatus('Loaded ' + videos.length + ' video(s) from ' + source);
+    } else {
+        showPlayer(false);
+        setSheetsStatus('No videos found in ' + source);
+    }
+}
+
+// ============ GOOGLE SHEETS AUTH ============
+
+const GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
+const GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
+
+let gdriveAccessToken = null;
+let gdriveTokenClient = null;
+let gdriveWorkbook = null;
+
+function setSheetsStatus(msg) {
+    var el = document.getElementById('sheetsStatus');
+    if (el) el.textContent = msg;
+}
+
+function gdriveInitClient() {
+    if (window.google && window.google.accounts) {
+        gdriveTokenClient = window.google.accounts.oauth2.initTokenClient({
+            client_id: GDRIVE_CLIENT_ID,
+            scope: GDRIVE_SCOPES,
+            callback: function(response) {
+                if (response.access_token) {
+                    gdriveAccessToken = response.access_token;
+                    document.getElementById('authBtn').textContent = 'Sign Out';
+                    document.getElementById('searchBtn').disabled = false;
+                    setSheetsStatus('Signed in. Search for your spreadsheet.');
+                }
+            }
+        });
+    }
+}
+
+var checkGoogle = setInterval(function() {
+    if (window.google && window.google.accounts) {
+        clearInterval(checkGoogle);
+        gdriveInitClient();
+    }
+}, 200);
+
+function gdriveSignIn() {
+    if (gdriveAccessToken) {
+        gdriveAccessToken = null;
+        gdriveWorkbook = null;
+        document.getElementById('authBtn').textContent = 'Sign In';
+        document.getElementById('searchBtn').disabled = true;
+        document.getElementById('sheetSelect').innerHTML = '<option value="">Sign in first</option>';
+        document.getElementById('sheetSelect').disabled = true;
+        setSheetsStatus('Signed out.');
+        return;
+    }
+    if (gdriveTokenClient) {
+        gdriveTokenClient.requestAccessToken();
+    } else {
+        setSheetsStatus('Google API not loaded yet. Try again.');
+    }
+}
+
+async function gdriveSearch() {
+    var searchTerm = document.getElementById('searchInput').value.trim();
+    if (!searchTerm) { setSheetsStatus('Enter a spreadsheet name.'); return; }
+    try {
+        setSheetsStatus('Searching for "' + searchTerm + '"...');
+        var query = encodeURIComponent("name contains '" + searchTerm + "' and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'");
+        var resp = await fetch('https://www.googleapis.com/drive/v3/files?q=' + query + '&fields=files(id,name)&orderBy=name', {
+            headers: { Authorization: 'Bearer ' + gdriveAccessToken }
+        });
+        if (!resp.ok) throw new Error('Search failed: ' + resp.status);
+        var data = await resp.json();
+        if (!data.files || data.files.length === 0) {
+            setSheetsStatus('No spreadsheet matching "' + searchTerm + '" found.');
+            return;
+        }
+        var file = data.files[0];
+        setSheetsStatus('Loading "' + file.name + '"...');
+        await loadSpreadsheet(file.id, file.name);
+    } catch (err) {
+        setSheetsStatus('Error: ' + err.message);
+    }
+}
+
+async function loadSpreadsheet(fileId, fileName) {
+    try {
+        var exportMime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        var resp = await fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '/export?mimeType=' + encodeURIComponent(exportMime), {
+            headers: { Authorization: 'Bearer ' + gdriveAccessToken }
+        });
+        if (!resp.ok) throw new Error('Export failed: ' + resp.status);
+        var arrayBuffer = await resp.arrayBuffer();
+        gdriveWorkbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+
+        var sel = document.getElementById('sheetSelect');
+        sel.innerHTML = '<option value="">-- select a sheet tab --</option>';
+        gdriveWorkbook.SheetNames.forEach(function(name) {
+            var opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            sel.appendChild(opt);
+        });
+        sel.disabled = false;
+        if (gdriveWorkbook.SheetNames.length === 1) {
+            sel.value = gdriveWorkbook.SheetNames[0];
+            onSheetSelect();
+        }
+        setSheetsStatus('Loaded "' + fileName + '" - ' + gdriveWorkbook.SheetNames.length + ' sheet(s). Select a tab.');
+    } catch (err) {
+        setSheetsStatus('Error: ' + err.message);
+    }
+}
+
+function onSheetSelect() {
+    var sheetName = document.getElementById('sheetSelect').value;
+    if (!sheetName || !gdriveWorkbook) return;
+
+    var sheet = gdriveWorkbook.Sheets[sheetName];
+    var rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+    var videoList = parseRowsAsVideoList(rows, sheetName);
+    applyVideoList(videoList, 'Google Sheets: ' + sheetName);
+}
+
+// Parse 2D array rows into video list [{title, src}, ...]
+function parseRowsAsVideoList(rows, sheetName) {
+    var result = [];
+
+    for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var first = String(row[0] || '').trim();
+        var second = String(row[1] || '').trim();
+
+        if (!first) continue;
+
+        // Skip header rows
+        if (/^(name|title|video|clip|url|link|src)$/i.test(first)) continue;
+
+        var firstIsUrl = first.startsWith('http');
+        var url = firstIsUrl ? first : second;
+        var rawName = firstIsUrl ? second : first;
+        var name = rawName || (url ? nameFromUrl(url) : 'Clip ' + (result.length + 1));
+
+        if (url) {
+            result.push({ title: name, src: url });
+        }
+    }
+    return result;
+}
+
+// Extract a readable name from a URL
+function nameFromUrl(url) {
+    try {
+        var pathname = new URL(url).pathname;
+        var filename = decodeURIComponent(pathname.split('/').pop());
+        return filename
+            .replace(/\.[^/.]+$/, '')
+            .replace(/[_-]+/g, ' ')
+            .replace(/\[.*?\]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    } catch (e) {
+        return url;
+    }
+}
+
+// ============ LOCAL CSV LOADER ============
+
+function parseCSVText(text) {
+    var lines = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l; });
+    var rows = lines.map(function(line) {
+        var fields = [];
+        var cur = '', inQuote = false;
+        for (var ci = 0; ci < line.length; ci++) {
+            var ch = line[ci];
+            if (inQuote) {
+                if (ch === '"' && line[ci + 1] === '"') { cur += '"'; ci++; }
+                else if (ch === '"') { inQuote = false; }
+                else { cur += ch; }
+            } else {
+                if (ch === '"') { inQuote = true; }
+                else if (ch === ',') { fields.push(cur); cur = ''; }
+                else { cur += ch; }
+            }
+        }
+        fields.push(cur);
+        return fields;
+    });
+    return parseRowsAsVideoList(rows, 'CSV');
+}
+
+// CSV file input
+var csvFileInput = document.getElementById('csvFileInput');
+var csvFileName = document.getElementById('csvFileName');
+var loadLocalCsvBtn = document.getElementById('loadLocalCsvBtn');
+
+csvFileInput.addEventListener('change', function() {
+    csvFileName.textContent = csvFileInput.files.length ? csvFileInput.files[0].name : 'No file selected';
+});
+
+loadLocalCsvBtn.addEventListener('click', function() {
+    if (!csvFileInput.files.length) { setSheetsStatus('Select a CSV file first.'); return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var videoList = parseCSVText(e.target.result);
+        applyVideoList(videoList, 'CSV: ' + csvFileInput.files[0].name);
+    };
+    reader.readAsText(csvFileInput.files[0]);
+});
+
+// Toggle local CSV row
+document.getElementById('toggleLocalCsvBtn').addEventListener('click', function() {
+    var row = document.getElementById('localCsvRow');
+    row.style.display = row.style.display === 'none' ? '' : 'none';
+});
+
+// Toggle sheets panel
+document.getElementById('toggleSheetsBtn').addEventListener('click', function() {
+    var body = document.getElementById('sheetsPanelBody');
+    var btn = document.getElementById('toggleSheetsBtn');
+    if (body.style.display === 'none') {
+        body.style.display = '';
+        btn.textContent = 'Hide';
+    } else {
+        body.style.display = 'none';
+        btn.textContent = 'Show';
+    }
+});
+
+// Init: show empty state
+showPlayer(false);
+
+</script>
+</body>
+</html>
