@@ -1,6 +1,8 @@
 {
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/classical_player.html", "destination": "/classical_player.html" },
+    { "source": "/musicindex.html", "destination": "/musicindex.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
