@@ -1425,6 +1425,19 @@
         .gdrive-csv-table tbody tr:hover { background: #1a3a5c; }
         .gdrive-csv-table tbody tr.gdrive-selected-row { background: #1a4a6c; outline: 1px solid #00d4ff; }
 
+        /* Config Panel (Google Sheets) */
+        .config-panel { background: linear-gradient(135deg, rgba(38, 50, 56, 0.8), rgba(55, 71, 79, 0.8)); border: 1px solid rgba(144, 164, 174, 0.3); border-radius: 12px; padding: 16px 20px; margin: 1rem 0; }
+        .config-panel h4 { color: #90A4AE; font-size: 1rem; font-weight: 600; margin: 0 0 12px; text-align: center; letter-spacing: 0.5px; }
+        .config-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+        .config-row:last-child { margin-bottom: 0; }
+        .config-input { flex: 1; background: rgba(255,255,255,0.08); border: 1px solid rgba(144,164,174,0.4); border-radius: 8px; padding: 8px 12px; color: #E0E0E0; font-size: 0.9rem; font-family: monospace; min-width: 0; }
+        .config-input:focus { outline: none; border-color: #667eea; }
+        .config-btn { background: linear-gradient(45deg, #455A64, #37474F); color: #E0E0E0; border: 1px solid rgba(144,164,174,0.4); border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 0.85rem; white-space: nowrap; transition: all 0.2s; }
+        .config-btn:hover { background: linear-gradient(45deg, #546E7A, #455A64); border-color: #667eea; }
+        .config-btn.primary { background: linear-gradient(45deg, #667eea, #764ba2); border-color: transparent; color: white; }
+        .config-btn.primary:hover { box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }
+        .config-status { width: 100%; font-family: monospace; font-size: 0.8rem; color: #888; margin-top: 8px; text-align: center; }
+
         /* Audio Player Styles */
         #gdrive-audio-section { margin-top: 15px; }
         #gdrive-audio-section .audio-player-wrap { background: #131313; border-radius: 6px; overflow: hidden; }
@@ -1750,29 +1763,36 @@
         </div>
 
         <!-- Google Sheets YouTube Links -->
-        <div class="section" style="margin-top: 30px;">
-            <h3 class="section-title">Google Sheets Links</h3>
-            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                <select id="gdrive-sheet-select" style="padding: 5px 10px; background: #0f3460; color: #eee; border: 1px solid #1a1a2e; border-radius: 4px; font-size: 12px;" disabled>
-                    <option value="">Sign in to load sheets</option>
-                </select>
-                <button id="gdrive-auth-btn" onclick="gdriveSignIn()" style="padding: 6px 14px; background: #333; color: #eee; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; margin-left: auto;">Sign In</button>
+        <div class="config-panel" style="margin-top: 30px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                <h4 style="margin:0;">Google Sheets Links</h4>
+                <button class="config-btn" id="toggleGdriveConfigBtn" style="padding:4px 10px; font-size:0.8rem;">▲ Hide</button>
             </div>
-            <div id="gdrive-status" style="margin-top: 6px; color: #888; font-size: 12px;"></div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
-                <div>
-                    <label style="color: #888; font-size: 11px;">Notes</label>
-                    <input type="text" id="gdrive-col1-input" style="width: 100%; padding: 6px 8px; background: #0f3460; color: #eee; border: 1px solid #1a1a2e; border-radius: 4px; font-size: 12px;" placeholder="Notes / description...">
+            <div id="gdriveConfigBody">
+                <!-- Auth + Search -->
+                <div class="config-row">
+                    <button class="config-btn primary" id="gdrive-auth-btn" onclick="gdriveSignIn()">Sign In</button>
+                    <input type="text" id="gdrive-search-input" class="config-input" placeholder="Spreadsheet name..." value="youtubelinks" />
+                    <button class="config-btn" id="gdrive-search-btn" onclick="gdriveSearch()" disabled>Search</button>
                 </div>
-                <div>
-                    <label style="color: #888; font-size: 11px;">YouTube Link (empty = use current video)</label>
-                    <input type="text" id="gdrive-col2-input" style="width: 100%; padding: 6px 8px; background: #0f3460; color: #eee; border: 1px solid #1a1a2e; border-radius: 4px; font-size: 12px;" placeholder="YouTube URL (auto-fills from player if empty)...">
+                <!-- Sheet tab selector -->
+                <div class="config-row">
+                    <select id="gdrive-sheet-select" class="config-input" disabled style="cursor:pointer;">
+                        <option value="">Sign in first</option>
+                    </select>
                 </div>
-            </div>
-            <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button onclick="gdriveSaveRow()" style="padding: 8px 18px; background: #27ae60; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;">Save Row</button>
-                <button onclick="gdriveReplaceRow()" style="padding: 8px 18px; background: #e67e22; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;">Replace Row</button>
-                <button onclick="gdriveClearInputs()" style="padding: 8px 18px; background: #dc3545; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px;">Clear Inputs</button>
+                <!-- Notes + Link inputs -->
+                <div class="config-row">
+                    <input type="text" id="gdrive-col1-input" class="config-input" placeholder="Notes / description..." />
+                    <input type="text" id="gdrive-col2-input" class="config-input" placeholder="YouTube URL (auto-fills if empty)..." />
+                </div>
+                <!-- Action buttons -->
+                <div class="config-row">
+                    <button class="config-btn primary" onclick="gdriveSaveRow()">Save Row</button>
+                    <button class="config-btn" onclick="gdriveReplaceRow()" style="background: linear-gradient(45deg, #e67e22, #d35400); border-color: transparent; color: white;">Replace Row</button>
+                    <button class="config-btn" onclick="gdriveClearInputs()" style="background: linear-gradient(45deg, #dc3545, #c0392b); border-color: transparent; color: white;">Clear Inputs</button>
+                </div>
+                <div class="config-status" id="gdrive-status">Sign in to load Google Sheets</div>
             </div>
             <div id="gdrive-table-area" style="margin-top: 10px;"></div>
 
@@ -8320,7 +8340,6 @@
     (function() {
         const GDRIVE_CLIENT_ID = '1095683227908-7ro25k16mprkf408i3lf583gti8v759b.apps.googleusercontent.com';
         const GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets';
-        const GDRIVE_FILE_SEARCH = 'youtubelinks';
 
         let gdriveAccessToken = null;
         let gdriveTokenClient = null;
@@ -8335,6 +8354,14 @@
         function gdriveEscapeHtml(str) {
             return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
+
+        // Toggle config panel
+        document.getElementById('toggleGdriveConfigBtn').addEventListener('click', function() {
+            var body = document.getElementById('gdriveConfigBody');
+            var hidden = body.style.display === 'none';
+            body.style.display = hidden ? '' : 'none';
+            this.textContent = hidden ? '▲ Hide' : '▼ Show';
+        });
 
         // Clear all inputs
         window.gdriveClearInputs = function() {
@@ -8354,8 +8381,8 @@
                         if (response.access_token) {
                             gdriveAccessToken = response.access_token;
                             document.getElementById('gdrive-auth-btn').textContent = 'Sign Out';
-                            gdriveSetStatus('Signed in. Loading ' + GDRIVE_FILE_SEARCH + '...');
-                            gdriveLoadChessable();
+                            document.getElementById('gdrive-search-btn').disabled = false;
+                            gdriveSetStatus('Signed in. Search for your spreadsheet.');
                         }
                     },
                 });
@@ -8375,12 +8402,13 @@
                 gdriveWorkbook = null;
                 gdriveFileId = null;
                 document.getElementById('gdrive-auth-btn').textContent = 'Sign In';
+                document.getElementById('gdrive-search-btn').disabled = true;
                 var sel = document.getElementById('gdrive-sheet-select');
-                sel.innerHTML = '<option value="">Sign in to load sheets</option>';
+                sel.innerHTML = '<option value="">Sign in first</option>';
                 sel.disabled = true;
                 document.getElementById('gdrive-table-area').innerHTML = '';
                 gdriveClearInputs();
-                gdriveSetStatus('Signed out');
+                gdriveSetStatus('Signed out.');
                 return;
             }
             if (gdriveTokenClient) {
@@ -8390,16 +8418,19 @@
             }
         };
 
-        async function gdriveLoadChessable() {
+        window.gdriveSearch = async function() {
+            var searchTerm = document.getElementById('gdrive-search-input').value.trim();
+            if (!searchTerm) { gdriveSetStatus('Enter a spreadsheet name.'); return; }
             try {
-                var query = encodeURIComponent("name contains '" + GDRIVE_FILE_SEARCH + "' and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'");
+                gdriveSetStatus('Searching for "' + searchTerm + '"...');
+                var query = encodeURIComponent("name contains '" + searchTerm + "' and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'");
                 var resp = await fetch('https://www.googleapis.com/drive/v3/files?q=' + query + '&fields=files(id,name,mimeType)&orderBy=name', {
                     headers: { Authorization: 'Bearer ' + gdriveAccessToken }
                 });
-                if (!resp.ok) throw new Error('Search failed');
+                if (!resp.ok) throw new Error('Search failed: ' + resp.status);
                 var data = await resp.json();
                 if (!data.files || data.files.length === 0) {
-                    gdriveSetStatus('No "' + GDRIVE_FILE_SEARCH + '" spreadsheet found');
+                    gdriveSetStatus('No spreadsheet matching "' + searchTerm + '" found.');
                     return;
                 }
                 var file = data.files[0];
@@ -8408,7 +8439,7 @@
             } catch (err) {
                 gdriveSetStatus('Error: ' + err.message);
             }
-        }
+        };
 
         async function gdriveLoadSpreadsheet(fileId, fileName) {
             try {
