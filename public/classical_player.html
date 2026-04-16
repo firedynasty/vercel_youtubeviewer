@@ -294,6 +294,169 @@ h1 {
   accent-color: #FFC107;
 }
 
+/* Compact Metronome */
+.metronome-section {
+  background: #2f2f2f;
+  border-radius: 8px;
+  padding: 10px 15px;
+  margin: 1rem 0;
+}
+
+.metronome-section .counter {
+  text-align: center;
+  padding: 8px 0;
+  background: #404040;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.metronome-section .counter .dot {
+  width: 12px;
+  height: 12px;
+  display: inline-block;
+  margin: 0 6px;
+  background: #FFF;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.metronome-section .counter .dot.active {
+  background: #5ec2ff;
+}
+
+.metronome-section .controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  color: #FFF;
+  font-size: 12px;
+}
+
+.metronome-section .controls label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.metronome-section .controls input[type="text"] {
+  width: 40px;
+  border: 0;
+  text-align: center;
+  padding: 4px;
+  background: #FFF;
+  color: #222;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.metronome-section .controls .bpm-minus,
+.metronome-section .controls .bpm-plus {
+  cursor: pointer;
+  padding: 0 5px;
+  color: #222;
+}
+
+.metronome-section .controls .bpm-minus:hover,
+.metronome-section .controls .bpm-plus:hover {
+  color: #FA6900;
+}
+
+.metronome-section .controls .bpm-wrapper {
+  background: #FFF;
+  padding: 2px 5px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+}
+
+.metronome-section .play-btn,
+.metronome-section .tap-btn {
+  padding: 6px 15px;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: auto;
+  flex: none;
+}
+
+.metronome-section .play-btn {
+  background: #D6E26D;
+  color: #3d430d;
+}
+
+.metronome-section .play-btn:hover {
+  background: #e8efad;
+}
+
+.metronome-section .tap-btn {
+  background: #888;
+  color: #fbfbfb;
+}
+
+.metronome-section .volume-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.metronome-section .volume-label input[type="range"] {
+  width: 60px;
+  height: 4px;
+  cursor: pointer;
+  accent-color: #5ec2ff;
+}
+
+.metronome-section .tap-btn:hover {
+  background: #959595;
+}
+
+.metronome-section .timer-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.metronome-section .timer-group input[type="checkbox"] {
+  display: none;
+}
+
+.metronome-section .timer-group input[type="checkbox"] + label {
+  display: inline-block;
+  height: 12px;
+  width: 12px;
+  background: #FFF;
+  cursor: pointer;
+  position: relative;
+}
+
+.metronome-section .timer-group input[type="checkbox"]:checked + label:before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 6px;
+  background: #F38630;
+  position: absolute;
+  top: 0;
+  left: 2px;
+  transform: skewX(30deg);
+}
+
+.metronome-section .timer-group input[type="checkbox"]:checked + label:after {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 10px;
+  background: #F38630;
+  position: absolute;
+  top: 0;
+  left: 6px;
+  transform: skewX(-30deg);
+}
+
 /* Config Panel */
 .config-panel {
   background: linear-gradient(135deg, rgba(38, 50, 56, 0.8), rgba(55, 71, 79, 0.8));
@@ -663,6 +826,34 @@ body {
     </div>
   </div>
 
+  <!-- Compact Metronome -->
+  <div class="metronome-section">
+    <div class="counter" id="metronomeCounter">
+      <div class="dot active"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+    <div class="controls">
+      <label>BPM:
+        <span class="bpm-wrapper">
+          <span class="bpm-minus">−</span>
+          <input type="text" value="60" class="bpm-input" id="metronomeBpm">
+          <span class="bpm-plus">+</span>
+        </span>
+      </label>
+      <label>Beat: <input type="text" value="4" class="ts-top" id="metronomeBeat"></label>
+      <div class="timer-group">
+        <input type="checkbox" id="metronome-timer-check">
+        <label for="metronome-timer-check"></label>
+        Timer: <input type="text" value="60" class="timer" id="metronomeTimer">
+      </div>
+      <label class="volume-label">Vol: <input type="range" id="metronomeVolume" min="0" max="1" step="0.01" value="0.5"></label>
+      <button class="tap-btn" id="metronomeTap">Tap</button>
+      <button class="play-btn" id="metronomePlay">Play</button>
+    </div>
+  </div>
+
   <!-- Config Panel -->
   <div class="config-panel">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
@@ -683,11 +874,14 @@ body {
         </select>
         <button class="config-btn" id="resetBtn">Reset to Default</button>
       </div>
-      <!-- Local CSV fallback -->
-      <div style="text-align:center; margin: 4px 0;">
-        <button class="config-btn" id="toggleCsvBtn" style="font-size:0.75rem; padding:4px 12px;">▼ or load local CSV file</button>
+      <!-- Playlist selector (shown when consolidated CSV is loaded) -->
+      <div class="config-row" id="playlistRow" style="display:none;">
+        <select id="playlistSelect" class="config-input" onchange="onPlaylistSelect()" style="cursor:pointer;">
+          <option value="">-- select a playlist --</option>
+        </select>
       </div>
-      <div id="csvRow" style="display:none;">
+      <!-- Local CSV loader -->
+      <div id="csvRow">
         <div class="config-row">
           <input type="file" id="csvFileInput" accept=".csv,.tsv,.txt" style="display:none" />
           <button class="config-btn" onclick="document.getElementById('csvFileInput').click()">Choose file</button>
@@ -795,42 +989,84 @@ body {
     return parseInt(ts) || 0;
   }
 
-  // Parse raw CSV text — returns { audioUrl, tracks }
-  // Optional first row: audio_url,https://...
+  // Parse one CSV line into fields (handles quoted fields)
+  function parseCSVRow(line) {
+    const fields = [];
+    let cur = '', inQuote = false;
+    for (let ci = 0; ci < line.length; ci++) {
+      const ch = line[ci];
+      if (ch === '"') { inQuote = !inQuote; }
+      else if (ch === ',' && !inQuote) { fields.push(cur.trim()); cur = ''; }
+      else cur += ch;
+    }
+    fields.push(cur.trim());
+    return fields;
+  }
+
+  // Parse raw CSV text — returns { audioUrl, tracks, playlists }
+  // Supports two formats:
+  //  A) Old single-playlist:   audio_url,<URL>  then  timestamp,title,artist rows
+  //  B) Consolidated:          name,<URL>  and  name,"timestamp,title\n..." per playlist (header row "url,")
   function parseCSV(text) {
     const lines = text.split('\n').map(l => l.trim()).filter(l => l);
     let audioUrl = null;
     const tracks = [];
+    const playlistMap = new Map();
+    let hasConsolidated = false;
 
     for (const line of lines) {
-      // Basic CSV parse — handles quoted fields
-      const fields = [];
-      let cur = '', inQuote = false;
-      for (let ci = 0; ci < line.length; ci++) {
-        const ch = line[ci];
-        if (ch === '"') { inQuote = !inQuote; }
-        else if (ch === ',' && !inQuote) { fields.push(cur.trim()); cur = ''; }
-        else cur += ch;
-      }
-      fields.push(cur.trim());
-
+      const fields = parseCSVRow(line);
       const first = fields[0] || '';
+      const second = fields[1] || '';
 
-      // Detect audio_url row
-      if (first.toLowerCase() === 'audio_url') {
-        audioUrl = fields[1] || null;
+      // Old format: audio_url row
+      if (first.toLowerCase() === 'audio_url' || first.toLowerCase() === 'audio url') {
+        audioUrl = second || null;
         continue;
       }
 
-      // Skip header rows (first col not a timestamp digit)
-      if (!/^\d/.test(first)) continue;
+      // Old format: timestamp track row
+      if (/^\d{1,2}:\d{2}/.test(first)) {
+        const seconds = parseTimestamp(first);
+        const title = second;
+        const artist = fields.slice(2).filter(f => f).join(', ');
+        if (title) tracks.push([first, seconds, title, artist]);
+        continue;
+      }
 
-      const seconds = parseTimestamp(first);
-      const title = fields[1] || '';
-      const artist = fields.slice(2).filter(f => f).join(', ');
-      if (title) tracks.push([first, seconds, title, artist]);
+      // Header-ish row with no data — skip
+      if (!second) continue;
+      if (/^(url|name|playlist)$/i.test(first)) continue;
+
+      // Consolidated format: name,(URL or tracklist-string)
+      hasConsolidated = true;
+      if (!playlistMap.has(first)) {
+        playlistMap.set(first, { name: first, url: '', tracks: [] });
+      }
+      const p = playlistMap.get(first);
+
+      const isUrl = /^https?:\/\//i.test(second) && !second.includes('\\n');
+      if (isUrl) {
+        p.url = second;
+      } else {
+        // Tracklist cell — split on literal "\n" (backslash-n)
+        const trackLines = second.split('\\n');
+        for (const tl of trackLines) {
+          const tsMatch = tl.match(/^\s*(\d{1,2}:\d{2}(?::\d{2})?)\s*,\s*(.+?)\s*$/);
+          if (tsMatch) {
+            const ts = tsMatch[1];
+            const secs = parseTimestamp(ts);
+            const title = tsMatch[2].trim();
+            p.tracks.push([ts, secs, title, '']);
+          }
+        }
+      }
     }
-    return { audioUrl, tracks };
+
+    if (hasConsolidated && playlistMap.size > 0) {
+      return { audioUrl: null, tracks: [], playlists: Array.from(playlistMap.values()) };
+    }
+    return { audioUrl, tracks, playlists: [] };
   }
 
   // Build tracklist DOM from data array
@@ -916,35 +1152,78 @@ body {
     this.textContent = hidden ? '▲ Hide' : '▼ Show';
   });
 
-  // Toggle local CSV row
-  document.getElementById('toggleCsvBtn').addEventListener('click', function() {
-    const row = document.getElementById('csvRow');
-    const hidden = row.style.display === 'none';
-    row.style.display = hidden ? '' : 'none';
-    this.textContent = hidden ? '▲ hide local CSV' : '▼ or load local CSV file';
-  });
-
   csvFileInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) document.getElementById('csvFileName').textContent = file.name;
   });
 
+  // State: loaded playlists from a consolidated CSV
+  let loadedPlaylists = [];
+
   // Shared: process parsed CSV result
-  function applyParsedCSV(csvAudioUrl, tracks, sourceName) {
-    const resolvedUrl = csvAudioUrl || document.getElementById('audioUrlInput') && document.getElementById('audioUrlInput').value.trim();
-    if (resolvedUrl) {
-      audio.src = resolvedUrl;
+  function applyParsedCSV(parsed, sourceName) {
+    const playlistRow = document.getElementById('playlistRow');
+    const playlistSelect = document.getElementById('playlistSelect');
+
+    // Consolidated format: show playlist dropdown
+    if (parsed.playlists && parsed.playlists.length > 0) {
+      loadedPlaylists = parsed.playlists;
+      playlistSelect.innerHTML = '<option value="">-- select a playlist --</option>';
+      parsed.playlists.forEach((p, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `${p.name} (${p.tracks.length} tracks)`;
+        playlistSelect.appendChild(opt);
+      });
+      playlistRow.style.display = '';
+      configStatus.textContent = `Loaded ${parsed.playlists.length} playlists from ${sourceName}. Select one below.`;
+      configStatus.style.color = '#8BC34A';
+      return;
+    }
+
+    // Old single-playlist format
+    loadedPlaylists = [];
+    playlistRow.style.display = 'none';
+
+    if (parsed.audioUrl) {
+      audio.src = parsed.audioUrl;
       audioStatus.textContent = 'Loading audio...';
       audioStatus.style.color = '#888';
     }
-    if (tracks.length === 0) {
-      configStatus.textContent = `No valid tracks found in ${sourceName}. Format: audio_url,URL on first row, then Timestamp,Title,Artist`;
+    if (parsed.tracks.length === 0) {
+      configStatus.textContent = `No valid tracks found in ${sourceName}.`;
       configStatus.style.color = '#f44336';
       return;
     }
-    buildTracklist(tracks);
-    const audioNote = csvAudioUrl ? ' + audio URL' : '';
-    configStatus.textContent = `Loaded ${tracks.length} tracks${audioNote} from ${sourceName}`;
+    buildTracklist(parsed.tracks);
+    const audioNote = parsed.audioUrl ? ' + audio URL' : '';
+    configStatus.textContent = `Loaded ${parsed.tracks.length} tracks${audioNote} from ${sourceName}`;
+    configStatus.style.color = '#8BC34A';
+  }
+
+  // User picked a playlist from the consolidated dropdown
+  function onPlaylistSelect() {
+    const idx = parseInt(document.getElementById('playlistSelect').value);
+    if (isNaN(idx) || !loadedPlaylists[idx]) return;
+    const p = loadedPlaylists[idx];
+
+    if (p.url) {
+      const isYouTube = /(?:youtube\.com\/watch|youtu\.be\/)/i.test(p.url);
+      if (isYouTube) {
+        audioStatus.textContent = 'YouTube URL — needs an mp3 to play. Link: ' + p.url;
+        audioStatus.style.color = '#FFC107';
+      } else {
+        audio.src = p.url;
+        audioStatus.textContent = 'Loading audio...';
+        audioStatus.style.color = '#888';
+      }
+    }
+
+    if (p.tracks.length > 0) {
+      buildTracklist(p.tracks);
+    }
+
+    configStatus.textContent = `Loaded "${p.name}" — ${p.tracks.length} tracks`;
     configStatus.style.color = '#8BC34A';
   }
 
@@ -1052,8 +1331,7 @@ body {
     if (!sheetName || !gdriveWorkbook) return;
     const sheet = gdriveWorkbook.Sheets[sheetName];
     const csv = XLSX.utils.sheet_to_csv(sheet);
-    const { audioUrl: csvAudioUrl, tracks } = parseCSV(csv);
-    applyParsedCSV(csvAudioUrl, tracks, 'Google Sheets: ' + sheetName);
+    applyParsedCSV(parseCSV(csv), 'Google Sheets: ' + sheetName);
   }
 
   document.getElementById('loadCsvBtn').addEventListener('click', () => {
@@ -1065,17 +1343,17 @@ body {
     }
     const reader = new FileReader();
     reader.onload = (e) => {
-      const { audioUrl: csvAudioUrl, tracks } = parseCSV(e.target.result);
-      applyParsedCSV(csvAudioUrl, tracks, file.name);
+      applyParsedCSV(parseCSV(e.target.result), file.name);
     };
     reader.readAsText(file);
   });
 
   document.getElementById('resetBtn').addEventListener('click', () => {
     buildTracklist(tracklist);
-    document.getElementById('audioUrlInput').value = '';
     document.getElementById('csvFileName').textContent = 'No file selected';
     csvFileInput.value = '';
+    document.getElementById('playlistRow').style.display = 'none';
+    loadedPlaylists = [];
     configStatus.textContent = 'Reset to default tracklist.';
     configStatus.style.color = '#90A4AE';
   });
@@ -1084,8 +1362,8 @@ body {
   function getCurrentTrackIndex() {
     const t = audio.currentTime;
     let idx = 0;
-    for (let i = tracklist.length - 1; i >= 0; i--) {
-      if (t >= tracklist[i][1]) {
+    for (let i = currentTracklist.length - 1; i >= 0; i--) {
+      if (t >= currentTracklist[i][1]) {
         idx = i;
         break;
       }
@@ -1354,6 +1632,180 @@ body {
       else audio.pause();
     }
   });
+</script>
+
+<script>
+// ========== METRONOME FUNCTIONALITY ==========
+(function() {
+  window.AudioContext = window.AudioContext || window.webkitAudioContext;
+  let metronomeContext = null;
+  let metronomeGain = null;
+  let metronomeTimer = null;
+  let metronomeCountInterval = null;
+  let metronomeTimerOriginal = 60;
+  let metronomeNoteCount = 0;
+  let metronomeAccentPitch = 380;
+  let metronomeOffBeatPitch = 200;
+  let metronomeCurTime = 0.0;
+  let metronomeDelta = 0;
+
+  function initMetronomeContext() {
+    if (!metronomeContext) {
+      metronomeContext = new AudioContext();
+      metronomeGain = metronomeContext.createGain();
+      const v = parseFloat(document.getElementById('metronomeVolume').value);
+      metronomeGain.gain.value = v * v;
+      metronomeGain.connect(metronomeContext.destination);
+    }
+  }
+
+  function metronomeSchedule() {
+    while (metronomeCurTime < metronomeContext.currentTime + 0.1) {
+      metronomePlayNote(metronomeCurTime);
+      metronomeUpdateTime();
+    }
+    metronomeTimer = window.setTimeout(metronomeSchedule, 100);
+  }
+
+  function metronomeUpdateTime() {
+    const bpm = parseInt(document.getElementById('metronomeBpm').value, 10) || 60;
+    metronomeCurTime += 60.0 / bpm;
+    metronomeNoteCount++;
+  }
+
+  function metronomePlayNote(t) {
+    const note = metronomeContext.createOscillator();
+    const beat = parseInt(document.getElementById('metronomeBeat').value, 10) || 4;
+
+    if (metronomeNoteCount >= beat) metronomeNoteCount = 0;
+
+    const dots = document.querySelectorAll('#metronomeCounter .dot');
+    const currentDot = dots[metronomeNoteCount];
+
+    if (currentDot && currentDot.classList.contains('active')) {
+      note.frequency.value = metronomeAccentPitch;
+    } else {
+      note.frequency.value = metronomeOffBeatPitch;
+    }
+
+    note.connect(metronomeGain);
+    note.start(t);
+    note.stop(t + 0.05);
+
+    dots.forEach(dot => {
+      dot.style.transform = '';
+      dot.style.background = dot.classList.contains('active') ? '#5ec2ff' : '#FFF';
+    });
+
+    if (currentDot) {
+      currentDot.style.transform = 'translateY(-8px)';
+      currentDot.style.background = '#F75454';
+    }
+  }
+
+  function startMetronomeCountdown() {
+    const timerInput = document.getElementById('metronomeTimer');
+    metronomeTimerOriginal = parseInt(timerInput.value, 10) || 60;
+    if (metronomeCountInterval) clearInterval(metronomeCountInterval);
+    metronomeCountInterval = setInterval(function() {
+      const currentVal = parseInt(timerInput.value, 10);
+      if (currentVal > 0) {
+        timerInput.value = currentVal - 1;
+      } else {
+        stopMetronomeCountdown();
+        const playBtn = document.getElementById('metronomePlay');
+        if (playBtn.dataset.playing === 'true') playBtn.click();
+      }
+    }, 1000);
+  }
+
+  function stopMetronomeCountdown() {
+    if (metronomeCountInterval) {
+      clearInterval(metronomeCountInterval);
+      metronomeCountInterval = null;
+    }
+    document.getElementById('metronomeTimer').value = metronomeTimerOriginal;
+  }
+
+  function updateMetronomeDots() {
+    const counter = document.getElementById('metronomeCounter');
+    const beat = parseInt(document.getElementById('metronomeBeat').value, 10) || 4;
+    counter.innerHTML = '';
+
+    for (let i = 0; i < beat; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'dot' + (i === 0 ? ' active' : '');
+      dot.addEventListener('click', function() {
+        this.classList.toggle('active');
+      });
+      counter.appendChild(dot);
+    }
+  }
+
+  document.getElementById('metronomeVolume').addEventListener('input', function() {
+    if (metronomeGain) {
+      const v = parseFloat(this.value);
+      metronomeGain.gain.value = v * v;
+    }
+  });
+
+  document.getElementById('metronomeBeat').addEventListener('change', updateMetronomeDots);
+
+  document.querySelector('.metronome-section .bpm-minus').addEventListener('click', function() {
+    const input = document.getElementById('metronomeBpm');
+    input.value = Math.max(1, parseInt(input.value, 10) - 1);
+  });
+
+  document.querySelector('.metronome-section .bpm-plus').addEventListener('click', function() {
+    const input = document.getElementById('metronomeBpm');
+    input.value = parseInt(input.value, 10) + 1;
+  });
+
+  document.getElementById('metronomeTap').addEventListener('click', function() {
+    const d = new Date();
+    const temp = d.getTime();
+    const bpm = Math.ceil(60000 / (temp - metronomeDelta));
+    if (bpm > 0 && bpm < 300) {
+      document.getElementById('metronomeBpm').value = bpm;
+    }
+    metronomeDelta = temp;
+  });
+
+  document.getElementById('metronomePlay').addEventListener('click', function() {
+    initMetronomeContext();
+
+    if (this.dataset.playing === 'true') {
+      window.clearTimeout(metronomeTimer);
+      stopMetronomeCountdown();
+      document.querySelectorAll('#metronomeCounter .dot').forEach(dot => {
+        dot.style.transform = '';
+        dot.style.background = dot.classList.contains('active') ? '#5ec2ff' : '#FFF';
+      });
+      this.dataset.playing = 'false';
+      this.textContent = 'Play';
+      this.style.background = '#D6E26D';
+      this.style.color = '#3d430d';
+    } else {
+      if (document.getElementById('metronome-timer-check').checked) {
+        startMetronomeCountdown();
+      }
+      metronomeCurTime = metronomeContext.currentTime;
+      metronomeNoteCount = parseInt(document.getElementById('metronomeBeat').value, 10) || 4;
+      metronomeSchedule();
+
+      this.dataset.playing = 'true';
+      this.textContent = 'Stop';
+      this.style.background = '#F75454';
+      this.style.color = '#FFF';
+    }
+  });
+
+  document.querySelectorAll('#metronomeCounter .dot').forEach(dot => {
+    dot.addEventListener('click', function() {
+      this.classList.toggle('active');
+    });
+  });
+})();
 </script>
 
 <script>

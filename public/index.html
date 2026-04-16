@@ -642,6 +642,19 @@
             color: #fbfbfb;
         }
 
+        .metronome-section .volume-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .metronome-section .volume-label input[type="range"] {
+            width: 60px;
+            height: 4px;
+            cursor: pointer;
+            accent-color: #5ec2ff;
+        }
+
         .metronome-section .tap-btn:hover {
             background: #959595;
         }
@@ -1730,6 +1743,7 @@
                     <label for="metronome-timer-check"></label>
                     Timer: <input type="text" value="60" class="timer" id="metronomeTimer">
                 </div>
+                <label class="volume-label">Vol: <input type="range" id="metronomeVolume" min="0" max="1" step="0.01" value="0.5"></label>
                 <button class="tap-btn" id="metronomeTap">Tap</button>
                 <button class="play-btn" id="metronomePlay">Play</button>
             </div>
@@ -7115,7 +7129,10 @@
         // ========== METRONOME FUNCTIONALITY ==========
         window.AudioContext = window.AudioContext || window.webkitAudioContext;
         let metronomeContext = null;
+        let metronomeGain = null;
         let metronomeTimer = null;
+        let metronomeCountInterval = null;
+        let metronomeTimerOriginal = 60;
         let metronomeNoteCount = 0;
         let metronomeCounting = false;
         let metronomeAccentPitch = 380;
@@ -7127,6 +7144,10 @@
         function initMetronomeContext() {
             if (!metronomeContext) {
                 metronomeContext = new AudioContext();
+                metronomeGain = metronomeContext.createGain();
+                const v = parseFloat(document.getElementById('metronomeVolume').value);
+                metronomeGain.gain.value = v * v;
+                metronomeGain.connect(metronomeContext.destination);
             }
         }
 
@@ -7161,7 +7182,7 @@
                 note.frequency.value = metronomeOffBeatPitch;
             }
 
-            note.connect(metronomeContext.destination);
+            note.connect(metronomeGain);
             note.start(t);
             note.stop(t + 0.05);
 
@@ -7177,17 +7198,28 @@
             }
         }
 
-        function metronomeCountDown() {
+        function startMetronomeCountdown() {
             const timerInput = document.getElementById('metronomeTimer');
-            const currentVal = parseInt(timerInput.value, 10);
+            metronomeTimerOriginal = parseInt(timerInput.value, 10) || 60;
+            if (metronomeCountInterval) clearInterval(metronomeCountInterval);
+            metronomeCountInterval = setInterval(function() {
+                const currentVal = parseInt(timerInput.value, 10);
+                if (currentVal > 0) {
+                    timerInput.value = currentVal - 1;
+                } else {
+                    stopMetronomeCountdown();
+                    const playBtn = document.getElementById('metronomePlay');
+                    if (playBtn.dataset.playing === 'true') playBtn.click();
+                }
+            }, 1000);
+        }
 
-            if (currentVal > 0 && metronomeCounting) {
-                timerInput.value = currentVal - 1;
-                window.setTimeout(metronomeCountDown, 1000);
-            } else {
-                document.getElementById('metronomePlay').click();
-                timerInput.value = 60;
+        function stopMetronomeCountdown() {
+            if (metronomeCountInterval) {
+                clearInterval(metronomeCountInterval);
+                metronomeCountInterval = null;
             }
+            document.getElementById('metronomeTimer').value = metronomeTimerOriginal;
         }
 
         // Update dots when beat changes
@@ -7207,6 +7239,13 @@
         }
 
         // Metronome Event listeners
+        document.getElementById('metronomeVolume').addEventListener('input', function() {
+            if (metronomeGain) {
+                const v = parseFloat(this.value);
+                metronomeGain.gain.value = v * v;
+            }
+        });
+
         document.getElementById('metronomeBeat').addEventListener('change', updateMetronomeDots);
 
         document.querySelector('.bpm-minus').addEventListener('click', function() {
@@ -7236,6 +7275,7 @@
                 // Stop
                 metronomeCounting = false;
                 window.clearTimeout(metronomeTimer);
+                stopMetronomeCountdown();
                 document.querySelectorAll('#metronomeCounter .dot').forEach(dot => {
                     dot.style.transform = '';
                     dot.style.background = dot.classList.contains('active') ? '#5ec2ff' : '#FFF';
@@ -7248,7 +7288,7 @@
                 // Play
                 if (document.getElementById('metronome-timer-check').checked) {
                     metronomeCounting = true;
-                    metronomeCountDown();
+                    startMetronomeCountdown();
                 }
 
                 metronomeCurTime = metronomeContext.currentTime;
