@@ -5273,7 +5273,7 @@
                     button.className = 'saved-time-btn time-btn';
                     button.dataset.time = item.time;
                     button.dataset.index = index;
-                    button.textContent = item.time;
+                    button.textContent = (index + 1) + ' ' + item.time;
                     button.style.background = colors[index % colors.length];
                     btnContainer.appendChild(button);
                 }
