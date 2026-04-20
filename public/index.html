@@ -1621,6 +1621,7 @@
 
             <!-- Current Time Display (below video players) -->
             <div class="current-time-display" id="currentTimeDisplay" style="display: none; flex-wrap: wrap;">
+                <button id="loopTimeMinus5" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-right: 4px;">−5s</button>
                 <button id="loopTimeMinus15" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-right: 4px;">−15s</button>
                 <input type="text" id="loopStartTime" class="time-input" placeholder="0:01" value="0:01" style="width: 65px; text-align: center; font-size: 12px; padding: 4px 6px; display: none;">
                 <button id="jumpToZeroBtn" class="jump-btn" style="background: linear-gradient(45deg, #607D8B, #455A64); padding: 4px 8px; font-size: 11px;">0</button>
@@ -1631,6 +1632,7 @@
                 <button id="dropboxBtn" onclick="toggleDropboxSidebar()" style="margin-left: 15px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #0061FF, #0052d4); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">DB</button>
                 <button id="clipboardTimeBtn" onclick="jumpToClipboardTime()" style="margin-left: 8px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #E91E63, #C2185B); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">📋Time</button>
                 <button id="clipboardPasteMediaBtn" onclick="pasteMediaOrTimes()" style="margin-left: 8px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #FF9800, #F57C00); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">📋c Link</button>
+                <button id="halfSpeedBtn" onclick="toggleHalfSpeed(this)" style="margin-left: 8px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #7E57C2, #5E35B1); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">1x</button>
                 <div style="width: 100%; display: flex; align-items: center; gap: 6px; margin-top: 6px;">
                     <button id="timer15sBtn" class="jump-btn" style="background: linear-gradient(45deg, #7E57C2, #5E35B1); padding: 6px 12px; font-size: 12px;">⏱️ 15s</button>
                     <button id="timer30sBtn" class="jump-btn" style="background: linear-gradient(45deg, #00BCD4, #0097A7); padding: 6px 12px; font-size: 12px;">⏱️ 30s</button>
@@ -3490,6 +3492,7 @@
         function updateUrlHistNavbar() {
             const label = document.getElementById('urlHistLabel');
             const counter = document.getElementById('urlHistCounter');
+            if (!label || !counter) return;
             if (urlHistoryArr.length === 0) {
                 label.textContent = 'No history';
                 counter.textContent = '0/0';
@@ -4010,6 +4013,10 @@
             });
 
             // Playback jump buttons (-15s and +15s) - only jump video, don't change loop start time
+            document.getElementById('loopTimeMinus5').addEventListener('click', function() {
+                jumpPlayback(-5);
+                document.getElementById('timer15sBtn').focus();
+            });
             document.getElementById('loopTimeMinus15').addEventListener('click', function() {
                 jumpPlayback(-15);
                 document.getElementById('timer15sBtn').focus();
@@ -4404,6 +4411,21 @@
             }
         }
 
+        function toggleHalfSpeed(btn) {
+            const current = btn.textContent.trim();
+            const newSpeed = current === '1x' ? 0.5 : 1;
+            btn.textContent = newSpeed === 0.5 ? '0.5x' : '1x';
+            btn.style.background = newSpeed === 0.5
+                ? 'linear-gradient(45deg, #00BCD4, #0097A7)'
+                : 'linear-gradient(45deg, #7E57C2, #5E35B1)';
+            if (playerType === 'youtube' && player && playerReady && typeof player.setPlaybackRate === 'function') {
+                player.setPlaybackRate(newSpeed);
+            } else if ((playerType === 'video' || playerType === 'audio') && playerReady) {
+                const activeP = document.getElementById(playerType === 'audio' ? 'audio-player' : 'html5-player');
+                if (activeP) activeP.playbackRate = newSpeed;
+            }
+        }
+
         // Paste media URL + times or just times from clipboard
         async function pasteMediaOrTimes() {
             try {
@@ -4775,6 +4797,9 @@
                     const seconds = parseTimeToSeconds(parsed.time);
                     if (seconds !== null) {
                         savedTimesData.push(parsed);
+                    } else {
+                        // No valid time — treat as a note/comment
+                        savedTimesData.push({ time: '', name: timeEntry.trim(), isNote: true });
                     }
                 });
 
@@ -5228,23 +5253,30 @@
                 // Table row
                 const tr = document.createElement('tr');
                 tr.dataset.index = index;
-                tr.addEventListener('click', () => jumpToSavedTime(index));
+                if (!item.isNote) {
+                    tr.addEventListener('click', () => jumpToSavedTime(index));
+                }
+                const timeCell = item.isNote
+                    ? `<td style="text-align: center; font-weight: 600; color: #999; text-decoration: line-through;">--:--</td>`
+                    : `<td style="text-align: center; font-weight: 600; color: #FFC107;">${escapeHtml(item.time)}</td>`;
                 tr.innerHTML = `
                     <td style="text-align: center; color: #999;">${index + 1}</td>
-                    <td>${escapeHtml(item.name || '')}</td>
-                    <td style="text-align: center; font-weight: 600; color: #FFC107;">${escapeHtml(item.time)}</td>
+                    <td${item.isNote ? ' style="color: #90CAF9; font-style: italic;"' : ''}>${escapeHtml(item.name || '')}</td>
+                    ${timeCell}
                     <td style="text-align: center;"><button class="delete-time-btn" data-index="${index}" title="Delete">&times;</button></td>
                 `;
                 tbody.appendChild(tr);
 
-                // Color button
-                const button = document.createElement('button');
-                button.className = 'saved-time-btn time-btn';
-                button.dataset.time = item.time;
-                button.dataset.index = index;
-                button.textContent = item.time;
-                button.style.background = colors[index % colors.length];
-                btnContainer.appendChild(button);
+                // Color button (skip for notes)
+                if (!item.isNote) {
+                    const button = document.createElement('button');
+                    button.className = 'saved-time-btn time-btn';
+                    button.dataset.time = item.time;
+                    button.dataset.index = index;
+                    button.textContent = item.time;
+                    button.style.background = colors[index % colors.length];
+                    btnContainer.appendChild(button);
+                }
             });
 
             // Wire up delete buttons (stop propagation so row click doesn't fire)

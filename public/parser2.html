@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Link Cleaner</title>
+  <style>
+@import url("https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz:300,400");
+
+html, body {
+  -webkit-font-smoothing: antialiased;
+  background-color: #111;
+  color: #C8C7C8;
+  font: 20px/24px "Yanone Kaffeesatz", HelveticaNeue, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 300;
+  margin: 0;
+  padding: 10px 0;
+}
+
+* { box-sizing: border-box; }
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+h1 {
+  text-align: center;
+  color: #667eea;
+  font-size: 2rem;
+  margin: 20px 0 5px;
+  font-weight: 400;
+}
+
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 1rem;
+  margin-bottom: 20px;
+}
+
+.section {
+  background: linear-gradient(135deg, rgba(38, 50, 56, 0.8), rgba(55, 71, 79, 0.8));
+  border: 1px solid rgba(144, 164, 174, 0.3);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 1rem 0;
+}
+
+.section h3 {
+  color: #667eea;
+  font-weight: 400;
+  font-size: 1.3rem;
+  margin: 0 0 12px;
+}
+
+textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(144,164,174,0.4);
+  border-radius: 8px;
+  padding: 12px;
+  color: #E0E0E0;
+  font-family: monospace;
+  font-size: 0.85rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+}
+
+.btn-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+.btn {
+  background: linear-gradient(45deg, #455A64, #37474F);
+  color: #E0E0E0;
+  border: 1px solid rgba(144,164,174,0.4);
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.btn:hover {
+  background: linear-gradient(45deg, #546E7A, #455A64);
+  border-color: #667eea;
+}
+
+.btn.primary {
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  border-color: transparent;
+  color: white;
+}
+
+.btn.primary:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn.green {
+  background: linear-gradient(45deg, #43A047, #2E7D32);
+  border-color: transparent;
+  color: white;
+}
+
+.btn.green:hover {
+  box-shadow: 0 4px 12px rgba(67, 160, 71, 0.4);
+}
+
+.status {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #8BC34A;
+  margin-top: 8px;
+  min-height: 1.2em;
+}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Link Cleaner</h1>
+    <p class="subtitle">Clean up spaces in timestamps and parentheses for pasting into the player</p>
+
+    <div class="section">
+      <h3>Input</h3>
+      <textarea id="input" rows="8" placeholder="Paste your URL,times string here...
+e.g. https://www.youtube.com/watch?v=FZImMPkDK3Q,0:07, 1:13(turn_around_back_and_forth), 3:02 (snatch), 5:08(dribble to behind the back counter)"></textarea>
+      <div class="btn-row">
+        <button class="btn primary" onclick="clean()">Clean</button>
+        <button class="btn" onclick="document.getElementById('input').value=''; document.getElementById('output').value=''; document.getElementById('status').textContent='';">Clear</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Output</h3>
+      <textarea id="output" rows="8" readonly></textarea>
+      <div class="btn-row">
+        <button class="btn green" onclick="copyOutput()">Copy to Clipboard</button>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+  </div>
+
+  <script>
+    function clean() {
+      const raw = document.getElementById('input').value.trim();
+      if (!raw) return;
+
+      // Split into entries by comma
+      const parts = raw.split(',');
+
+      // First part is the URL — keep as-is
+      const url = parts[0].trim();
+      const cleaned = [url];
+
+      for (let i = 1; i < parts.length; i++) {
+        let entry = parts[i].trim();
+        if (!entry) continue;
+
+        // Check if entry starts with a time (e.g. "1:13", "0:07", "12:30")
+        const isTime = /^\d+:\d+/.test(entry);
+
+        if (isTime) {
+          // Remove space between time and opening paren: "3:02 (snatch)" -> "3:02(snatch)"
+          entry = entry.replace(/\s+\(/, '(');
+
+          // Replace spaces inside parentheses with underscores
+          entry = entry.replace(/\(([^)]*)\)/g, function(match, inner) {
+            return '(' + inner.replace(/\s+/g, '_') + ')';
+          });
+        }
+        // Notes (no time) are kept as-is
+
+        cleaned.push(entry);
+      }
+
+      const result = cleaned.join(',');
+      document.getElementById('output').value = result;
+      document.getElementById('status').textContent = 'Cleaned ' + (cleaned.length - 1) + ' time entries';
+    }
+
+    function copyOutput() {
+      const output = document.getElementById('output').value;
+      if (!output) return;
+      navigator.clipboard.writeText(output).then(() => {
+        document.getElementById('status').textContent = 'Copied to clipboard!';
+      });
+    }
+
+    // Auto-clean on paste
+    document.getElementById('input').addEventListener('paste', function() {
+      setTimeout(clean, 50);
+    });
+  </script>
+</body>
+</html>
