@@ -1621,6 +1621,7 @@
 
             <!-- Current Time Display (below video players) -->
             <div class="current-time-display" id="currentTimeDisplay" style="display: none; flex-wrap: wrap;">
+                <button id="loopTimeMinus2" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-right: 4px;">−2s</button>
                 <button id="loopTimeMinus5" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-right: 4px;">−5s</button>
                 <button id="loopTimeMinus15" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-right: 4px;">−15s</button>
                 <input type="text" id="loopStartTime" class="time-input" placeholder="0:01" value="0:01" style="width: 65px; text-align: center; font-size: 12px; padding: 4px 6px; display: none;">
@@ -4013,6 +4014,10 @@
             });
 
             // Playback jump buttons (-15s and +15s) - only jump video, don't change loop start time
+            document.getElementById('loopTimeMinus2').addEventListener('click', function() {
+                jumpPlayback(-2);
+                document.getElementById('timer15sBtn').focus();
+            });
             document.getElementById('loopTimeMinus5').addEventListener('click', function() {
                 jumpPlayback(-5);
                 document.getElementById('timer15sBtn').focus();
