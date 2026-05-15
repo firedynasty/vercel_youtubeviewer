@@ -720,6 +720,36 @@
             border-bottom: 3px solid #FF6B35;
             box-shadow: 0 2px 15px rgba(0, 0, 0, 0.5);
         }
+        /* Navbar controls dropdown */
+        #navControlsDropdown {
+            position: fixed;
+            top: 53px;
+            right: 60px;
+            background: rgba(10,10,15,0.97);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 9998;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            transform: translateY(-6px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.18s ease, transform 0.18s ease;
+        }
+        #navControlsDropdown.open {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: all;
+        }
+        .nav-ctrl-label {
+            font-size: 10px;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
         .link-nav-btn {
             width: 36px;
             height: 36px;
@@ -1514,10 +1544,6 @@
         <button class="link-go-btn" onclick="goAutoplayPending = true; loadCurrentPaginationLink()">Go</button>
         <button id="ytStatusBtn" class="link-go-btn" style="margin-left:5px;padding:4px 10px;background:linear-gradient(45deg,#888,#666);cursor:pointer;display:flex;align-items:center;gap:4px;" onmouseenter="toggleYtStatus()" onclick="toggleYtStatus()"><svg width="22" height="16" viewBox="0 0 68 48" style="flex-shrink:0"><path d="M66.5 7.7s-.7-4.7-2.7-6.8C61 -1.7 58-1.7 56.6-1.9 47.3-2.6 34-2.6 34-2.6s-13.3 0-22.6.7C10-1.7 7-1.7 4.2.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.8v5.2c0 5.5.7 11.1.7 11.1s.7 4.7 2.7 6.8c2.8 2.6 6.4 2.5 8 2.8 5.8.5 24.8.7 24.8.7s13.3 0 22.6-.7c1.4-.2 4.4-.2 7.2-2.8 2-2.1 2.7-6.8 2.7-6.8s.7-5.5.7-11.1v-5.2c0-5.6-.7-11.1-.7-11.1z" fill="red"/><path d="M27 33V13l18.2 10L27 33z" fill="white"/></svg><span id="ytStatusLabel" style="font-size:12px;font-weight:bold;color:white;">OFF</span></button>
         <button class="link-go-btn" style="display:none;background:linear-gradient(45deg,#1565C0,#0D47A1);margin-left:5px;padding:8px 14px;" onclick="window.open('https://cdpn.io/pen/debug/KwVxmKR','_blank')">🔗 reader</button>
-        <button class="link-go-btn" style="background:linear-gradient(45deg,#6A1B9A,#4A148C);margin-left:5px;padding:8px 14px;" onclick="window.open('classical_player.html','_blank')">🎵 Classical</button>
-        <button class="link-go-btn" style="background:linear-gradient(45deg,#1B5E20,#0A3D15);margin-left:5px;padding:8px 14px;" onclick="window.open('musicindex.html','_blank')">🎶 Music Index</button>
-        <button class="link-go-btn" style="background:linear-gradient(45deg,#B71C1C,#880E4F);margin-left:5px;padding:8px 14px;" onclick="window.open('video_viewer.html','_blank')">🎬 Video Viewer</button>
-        <button class="link-go-btn" style="background:linear-gradient(45deg,#E65100,#BF360C);margin-left:5px;padding:8px 14px;" onclick="window.open('parser.html','_blank')">📄 Parser</button>
         <button id="dbxNavLoadBtn" title="Click to sign in to Dropbox. Once signed in, click again to load saved links and times." style="background: #0061fe; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; margin-left: 5px;">DB: Sign In</button>
         <!-- Exit Off toggle (ON = pause on tab exit, OFF = keep playing) -->
         <div class="pagination-auto-group">
@@ -1527,6 +1553,15 @@
                 <span class="slider-toggle"></span>
             </label>
         </div>
+        <span style="display:inline-flex; align-items:center; gap:3px; margin-left:5px;">
+            <span style="font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.05em;">fast</span>
+            <button id="speedToggleBtn" class="link-go-btn" style="background:linear-gradient(45deg,#7E57C2,#5E35B1); padding:4px 10px; font-size:12px;" onmouseenter="this.click()">1x</button>
+        </span>
+        <span style="display:inline-flex; align-items:center; gap:3px; margin-left:5px;">
+            <span style="font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.05em;">slow</span>
+            <button id="speedSlowToggleBtn" class="link-go-btn" style="background:linear-gradient(45deg,#7E57C2,#5E35B1); padding:4px 10px; font-size:12px;" onmouseenter="this.click()">1x</button>
+        </span>
+        <button id="breatheBtn" class="link-go-btn" style="background:linear-gradient(45deg,#2a3040,#3a4050); padding:4px 10px; font-size:12px; letter-spacing:0.1em; margin-left:5px;" title="Breathing exercise timer">breathe</button>
         <button class="link-close-btn" onclick="closePagination()">✕</button>
     </div>
 
@@ -1558,6 +1593,14 @@
                 <span id="cloudNotesStatus" style="font-size: 13px; color: #888;"></span>
             </div>
             <textarea id="cloudNotesTextarea" placeholder="Your cloud notes..." style="width: 100%; min-height: 150px; padding: 12px; font-size: 14px; border: 2px solid #333; border-radius: 6px; background: #2a2a2a; color: #fff; resize: vertical; outline: none; font-family: inherit; line-height: 1.5; box-sizing: border-box;"></textarea>
+        </div>
+
+        <!-- Quick Nav Links -->
+        <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;">
+            <a href="classical_player.html" target="_blank" class="jump-btn" style="background: linear-gradient(45deg, #6A1B9A, #4A148C); font-size: 12px; padding: 7px 14px; text-decoration: none; color: white;">🎵 Classical</a>
+            <a href="musicindex.html" target="_blank" class="jump-btn" style="background: linear-gradient(45deg, #1B5E20, #0A3D15); font-size: 12px; padding: 7px 14px; text-decoration: none; color: white;">🎶 Music Index</a>
+            <a href="video_viewer.html" target="_blank" class="jump-btn" style="background: linear-gradient(45deg, #B71C1C, #880E4F); font-size: 12px; padding: 7px 14px; text-decoration: none; color: white;">🎬 Video Viewer</a>
+            <a href="parser.html" target="_blank" class="jump-btn" style="background: linear-gradient(45deg, #E65100, #BF360C); font-size: 12px; padding: 7px 14px; text-decoration: none; color: white;">📄 Parser</a>
         </div>
 
         <!-- Time Controls -->
@@ -1638,8 +1681,6 @@
                     <button id="timer15sBtn" class="jump-btn" style="background: linear-gradient(45deg, #7E57C2, #5E35B1); padding: 6px 12px; font-size: 12px;">⏱️ 15s</button>
                     <button id="timer30sBtn" class="jump-btn" style="background: linear-gradient(45deg, #00BCD4, #0097A7); padding: 6px 12px; font-size: 12px;">⏱️ 30s</button>
                     <button id="timer3minBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); padding: 6px 12px; font-size: 12px;">⏱️ 3m</button>
-                    <button id="speedToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #7E57C2, #5E35B1); padding: 6px 12px; font-size: 12px;">1x</button>
-                    <button id="speedSlowToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #7E57C2, #5E35B1); padding: 6px 12px; font-size: 12px;">1x</button>
                     <button id="soakingBtn" class="jump-btn" style="background: linear-gradient(45deg, #26A69A, #00897B); padding: 6px 12px; font-size: 12px;">Soak 10/7</button>
                     <button id="soaking4Btn" class="jump-btn" style="background: linear-gradient(45deg, #26A69A, #00897B); padding: 6px 12px; font-size: 12px;">Soak 10/4</button>
                     <button id="soaking2Btn" class="jump-btn" style="background: linear-gradient(45deg, rgb(255, 87, 34), rgb(230, 74, 25)); padding: 6px 12px; font-size: 12px;">Soak 10/2</button>
@@ -8854,6 +8895,173 @@
 
             apLoadTracks(audioItems);
         }
+    })();
+    </script>
+
+    <!-- Breathe Modal -->
+    <div id="breatheModal" style="display:none; position:fixed; top:0; left:0; width:100%; bottom:0; background:#3b5998; z-index:10000; justify-content:center; align-items:center;">
+        <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:40px; position:relative;" onclick="event.stopPropagation()">
+            <!-- Top-right controls -->
+            <div style="position:absolute; top:16px; right:16px; display:flex; align-items:center; gap:10px; z-index:2;">
+                <button id="breatheSoundBtn" onclick="toggleBreatheSound()" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.25); color:rgba(255,255,255,0.7); font-size:0.65rem; letter-spacing:0.12em; text-transform:uppercase; padding:5px 10px; border-radius:3px; cursor:pointer; font-family:'Courier New',monospace;">sound on</button>
+                <button onclick="closeBreathe()" style="background:none; border:none; font-size:28px; color:rgba(255,255,255,0.5); cursor:pointer; line-height:1;">&times;</button>
+            </div>
+            <!-- Circle container -->
+            <div style="position:relative; width:260px; height:260px; display:flex; align-items:center; justify-content:center;">
+                <!-- Outer ring -->
+                <div id="breatheOuterRing" style="position:absolute; width:260px; height:260px; border-radius:50%; background:rgba(255,255,255,0.15);"></div>
+                <!-- Inner circle -->
+                <div id="breatheInnerCircle" style="width:180px; height:180px; border-radius:50%; background:rgba(240,244,250,0.9); transition:width 5s ease-in-out, height 5s ease-in-out; z-index:1;"></div>
+                <!-- Tick mark at top -->
+                <div style="position:absolute; top:-4px; left:50%; transform:translateX(-50%); width:2px; height:20px; background:rgba(0,0,0,0.3); border-radius:1px;"></div>
+            </div>
+            <!-- Breathing label -->
+            <div id="breatheLabel" style="font-size:1.6rem; color:rgba(255,255,255,0.9); font-family:'Georgia',serif; opacity:0; transition:opacity 0.8s ease;">Breathe in</div>
+            <!-- Start button -->
+            <button id="breatheStartBtn" onclick="startBreathe()" style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:rgba(255,255,255,0.8); font-family:'Courier New',monospace; font-size:0.8rem; letter-spacing:0.2em; text-transform:uppercase; padding:14px 36px; border-radius:4px; cursor:pointer; transition:all 0.3s ease;">begin</button>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        var breatheModal = document.getElementById('breatheModal');
+        var breatheBtn = document.getElementById('breatheBtn');
+        window._breatheSoundOn = true;
+
+        window.toggleBreatheSound = function() {
+            window._breatheSoundOn = !window._breatheSoundOn;
+            var btn = document.getElementById('breatheSoundBtn');
+            if (window._breatheSoundOn) {
+                btn.textContent = 'sound on';
+                btn.style.background = 'rgba(255,255,255,0.1)';
+                btn.style.color = 'rgba(255,255,255,0.7)';
+            } else {
+                btn.textContent = 'sound off';
+                btn.style.background = 'rgba(0,0,0,0.2)';
+                btn.style.color = 'rgba(255,255,255,0.35)';
+            }
+        };
+
+        breatheBtn.addEventListener('click', function() {
+            // Position modal below the button row so the header stays visible
+            var btnRow = breatheBtn.closest('div');
+            var offset = btnRow ? (btnRow.getBoundingClientRect().bottom + 8) : 0;
+            breatheModal.style.top = offset + 'px';
+            breatheModal.style.display = 'flex';
+        });
+
+        breatheModal.addEventListener('click', function(e) {
+            if (e.target === breatheModal) closeBreathe();
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && breatheModal.style.display === 'flex') {
+                e.preventDefault();
+                closeBreathe();
+            }
+        });
+
+        window.closeBreathe = function() {
+            if (window._breatheInterval) { clearInterval(window._breatheInterval); window._breatheInterval = null; }
+            if (window._breatheAnimFrame) { cancelAnimationFrame(window._breatheAnimFrame); window._breatheAnimFrame = null; }
+            if (window._breatheAudioCtx) { window._breatheAudioCtx.close().catch(function(){}); window._breatheAudioCtx = null; }
+            breatheModal.style.display = 'none';
+            // Reset sound button
+            window._breatheSoundOn = true;
+            var sndBtn = document.getElementById('breatheSoundBtn');
+            sndBtn.textContent = 'sound on';
+            sndBtn.style.background = 'rgba(255,255,255,0.1)';
+            sndBtn.style.color = 'rgba(255,255,255,0.7)';
+            // Reset
+            var circle = document.getElementById('breatheInnerCircle');
+            circle.style.transition = 'none';
+            circle.style.width = '180px';
+            circle.style.height = '180px';
+            document.getElementById('breatheLabel').style.opacity = '0';
+            document.getElementById('breatheLabel').textContent = 'Breathe in';
+            var btn = document.getElementById('breatheStartBtn');
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.display = '';
+        };
+
+        window.startBreathe = function() {
+            if (window._breatheInterval) { clearInterval(window._breatheInterval); window._breatheInterval = null; }
+
+            var circle = document.getElementById('breatheInnerCircle');
+            var labelEl = document.getElementById('breatheLabel');
+            var startBtn = document.getElementById('breatheStartBtn');
+
+            // Web Audio for thud sound
+            var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            audioCtx.resume();
+            window._breatheAudioCtx = audioCtx;
+
+            var playThud = function() {
+                if (!window._breatheSoundOn) return;
+                try {
+                    var osc = audioCtx.createOscillator();
+                    var gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(1.0, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(audioCtx.currentTime);
+                    osc.stop(audioCtx.currentTime + 0.3);
+                } catch(e) {}
+            };
+
+            startBtn.disabled = true;
+            startBtn.style.opacity = '0';
+            startBtn.style.display = 'none';
+            labelEl.style.opacity = '1';
+
+            var seconds = 0;
+            var breathing = true; // true = in, false = out
+
+            // Start with breathe in (expand)
+            labelEl.textContent = 'Breathe in';
+            circle.style.transition = 'width 5s ease-in-out, height 5s ease-in-out';
+            circle.style.width = '240px';
+            circle.style.height = '240px';
+            playThud();
+
+            window._breatheInterval = setInterval(function() {
+                seconds += 5;
+                breathing = !breathing;
+                playThud();
+
+                if (breathing) {
+                    labelEl.textContent = 'Breathe in';
+                    circle.style.width = '240px';
+                    circle.style.height = '240px';
+                } else {
+                    labelEl.textContent = 'Breathe out';
+                    circle.style.width = '140px';
+                    circle.style.height = '140px';
+                }
+
+                // 5 minutes
+                if (seconds >= 300) {
+                    clearInterval(window._breatheInterval);
+                    window._breatheInterval = null;
+                    setTimeout(function() {
+                        labelEl.style.opacity = '0';
+                        circle.style.transition = 'width 2s ease, height 2s ease';
+                        circle.style.width = '180px';
+                        circle.style.height = '180px';
+                        setTimeout(function() {
+                            startBtn.disabled = false;
+                            startBtn.style.opacity = '1';
+                            startBtn.style.display = '';
+                        }, 2000);
+                    }, 3000);
+                }
+            }, 5000);
+        };
     })();
     </script>
 </body>
