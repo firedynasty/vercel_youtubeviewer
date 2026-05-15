@@ -4831,9 +4831,9 @@
                 initPlayer();
             } else {
                 // Convert Dropbox share URLs to direct/raw URLs for streaming
-                if (isDropboxURL(firstEntry)) firstEntry = convertDropboxUrl(firstEntry);
+                const mediaUrl = isDropboxURL(firstEntry) ? convertDropboxUrl(firstEntry) : firstEntry;
                 switchToPlayer(mediaType);
-                loadHTML5Media(firstEntry, mediaType);
+                loadHTML5Media(mediaUrl, mediaType);
             }
 
             // Check if there are times after the URL
