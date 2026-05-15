@@ -4682,6 +4682,9 @@
                 return;
             }
 
+            // Convert Dropbox share URLs to direct/raw URLs for streaming
+            if (isDropboxURL(url)) url = convertDropboxUrl(url);
+
             const mediaType = detectMediaType(url);
 
             if (!mediaType) {
@@ -4827,6 +4830,8 @@
 
                 initPlayer();
             } else {
+                // Convert Dropbox share URLs to direct/raw URLs for streaming
+                if (isDropboxURL(firstEntry)) firstEntry = convertDropboxUrl(firstEntry);
                 switchToPlayer(mediaType);
                 loadHTML5Media(firstEntry, mediaType);
             }
@@ -4904,9 +4909,19 @@
             return youtubePatterns.some(pattern => pattern.test(url));
         }
 
-        // Helper function to check if URL is a Dropbox direct link
+        // Helper function to check if URL is a Dropbox link (share or direct)
         function isDropboxURL(url) {
-            return url.includes('dropbox.com') && url.includes('raw=1');
+            return url.includes('dropbox.com');
+        }
+
+        // Convert a Dropbox share URL to a direct/raw streaming URL
+        function convertDropboxUrl(url) {
+            if (!url.includes('dropbox.com')) return url;
+            if (url.includes('raw=1')) return url;
+            if (url.includes('dl=0')) return url.replace('dl=0', 'raw=1');
+            if (url.includes('dl=1')) return url.replace('dl=1', 'raw=1');
+            if (url.includes('?')) return url + '&raw=1';
+            return url + '?raw=1';
         }
 
         // Helper function to detect media type from URL
