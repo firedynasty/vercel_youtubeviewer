@@ -1540,26 +1540,23 @@
         <button id="linkNextBtn" class="link-nav-btn" style="display:none" onclick="paginationNext()">▶</button>
         <button id="linkPrevBtn" class="link-nav-btn" style="display:none" onclick="paginationPrev()">◀</button>
         <div id="linkLabelDisplay" class="link-label-display" style="display:none">Link Name</div>
-        <span id="linkCounter" class="link-counter">1/1</span>
-        <button class="link-go-btn" onclick="goAutoplayPending = true; loadCurrentPaginationLink()">Go</button>
         <button id="ytStatusBtn" class="link-go-btn" style="margin-left:5px;padding:4px 10px;background:linear-gradient(45deg,#888,#666);cursor:pointer;display:flex;align-items:center;gap:4px;" onmouseenter="toggleYtStatus()" onclick="toggleYtStatus()"><svg width="22" height="16" viewBox="0 0 68 48" style="flex-shrink:0"><path d="M66.5 7.7s-.7-4.7-2.7-6.8C61 -1.7 58-1.7 56.6-1.9 47.3-2.6 34-2.6 34-2.6s-13.3 0-22.6.7C10-1.7 7-1.7 4.2.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.8v5.2c0 5.5.7 11.1.7 11.1s.7 4.7 2.7 6.8c2.8 2.6 6.4 2.5 8 2.8 5.8.5 24.8.7 24.8.7s13.3 0 22.6-.7c1.4-.2 4.4-.2 7.2-2.8 2-2.1 2.7-6.8 2.7-6.8s.7-5.5.7-11.1v-5.2c0-5.6-.7-11.1-.7-11.1z" fill="red"/><path d="M27 33V13l18.2 10L27 33z" fill="white"/></svg><span id="ytStatusLabel" style="font-size:12px;font-weight:bold;color:white;">OFF</span></button>
         <button class="link-go-btn" style="display:none;background:linear-gradient(45deg,#1565C0,#0D47A1);margin-left:5px;padding:8px 14px;" onclick="window.open('https://cdpn.io/pen/debug/KwVxmKR','_blank')">🔗 reader</button>
-        <button id="dbxNavLoadBtn" title="Click to sign in to Dropbox. Once signed in, click again to load saved links and times." style="background: #0061fe; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; margin-left: 5px;">DB: Sign In</button>
-        <!-- Exit Off toggle (ON = pause on tab exit, OFF = keep playing) -->
-        <div class="pagination-auto-group">
-            <span class="pagination-auto-label">Exit Off</span>
-            <label class="switch">
-                <input type="checkbox" id="tabPauseToggle" checked>
-                <span class="slider-toggle"></span>
-            </label>
-        </div>
-        <span style="display:inline-flex; align-items:center; gap:3px; margin-left:5px;">
-            <span style="font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.05em;">fast</span>
-            <button id="speedToggleBtn" class="link-go-btn" style="background:linear-gradient(45deg,#7E57C2,#5E35B1); padding:4px 10px; font-size:12px;" onmouseenter="this.click()">1x</button>
+        <!-- Music (audio-player) controls -->
+        <span style="display:inline-flex; align-items:center; gap:3px; margin-left:8px;">
+            <button id="beatPlayPauseBtn" class="link-go-btn" style="background:linear-gradient(45deg,#1B5E20,#4CAF50); padding:4px 10px; font-size:13px; display:flex; align-items:center; gap:3px;" title="Play/pause audio player">🎵▶</button>
+            <button id="speedDownBtn" class="link-go-btn" style="background:linear-gradient(45deg,#00BCD4,#0097A7); padding:4px 8px; font-size:12px;">-</button>
+            <span id="fineSpeedDisplay" style="font-size:12px; color:rgba(255,255,255,0.9); font-weight:600; min-width:38px; text-align:center;">1.00x</span>
+            <button id="speedUpBtn" class="link-go-btn" style="background:linear-gradient(45deg,#FF9800,#F57C00); padding:4px 8px; font-size:12px;">+</button>
+            <button id="speedResetBtn" class="link-go-btn" style="background:linear-gradient(45deg,#7E57C2,#5E35B1); padding:4px 8px; font-size:11px; margin-left:2px;">1x</button>
         </span>
-        <span style="display:inline-flex; align-items:center; gap:3px; margin-left:5px;">
-            <span style="font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:0.05em;">slow</span>
-            <button id="speedSlowToggleBtn" class="link-go-btn" style="background:linear-gradient(45deg,#7E57C2,#5E35B1); padding:4px 10px; font-size:12px;" onmouseenter="this.click()">1x</button>
+        <!-- YouTube speed controls -->
+        <span style="display:inline-flex; align-items:center; gap:3px; margin-left:8px;">
+            <button id="quickPauseBtn" class="link-go-btn" style="background:linear-gradient(45deg,#e53935,#c62828); padding:4px 10px; font-size:13px; display:flex; align-items:center; gap:3px;"><svg width="16" height="12" viewBox="0 0 68 48" style="flex-shrink:0"><path d="M66.5 7.7s-.7-4.7-2.7-6.8C61 -1.7 58-1.7 56.6-1.9 47.3-2.6 34-2.6 34-2.6s-13.3 0-22.6.7C10-1.7 7-1.7 4.2.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.8v5.2c0 5.5.7 11.1.7 11.1s.7 4.7 2.7 6.8c2.8 2.6 6.4 2.5 8 2.8 5.8.5 24.8.7 24.8.7s13.3 0 22.6-.7c1.4-.2 4.4-.2 7.2-2.8 2-2.1 2.7-6.8 2.7-6.8s.7-5.5.7-11.1v-5.2c0-5.6-.7-11.1-.7-11.1z" fill="red"/><path d="M27 33V13l18.2 10L27 33z" fill="white"/></svg>⏸</button>
+            <button id="ytSpeedDownBtn" class="link-go-btn" style="background:linear-gradient(45deg,#00BCD4,#0097A7); padding:4px 8px; font-size:12px;">-</button>
+            <span id="ytSpeedDisplay" style="font-size:12px; color:rgba(255,255,255,0.9); font-weight:600; min-width:38px; text-align:center;">1.00x</span>
+            <button id="ytSpeedUpBtn" class="link-go-btn" style="background:linear-gradient(45deg,#FF9800,#F57C00); padding:4px 8px; font-size:12px;">+</button>
+            <button id="ytSpeedResetBtn" class="link-go-btn" style="background:linear-gradient(45deg,#7E57C2,#5E35B1); padding:4px 8px; font-size:11px; margin-left:2px;">1x</button>
         </span>
         <button id="breatheBtn" class="link-go-btn" style="background:linear-gradient(45deg,#2a3040,#3a4050); padding:4px 10px; font-size:12px; letter-spacing:0.1em; margin-left:5px;" title="Breathing exercise timer">breathe</button>
         <button class="link-close-btn" onclick="closePagination()">✕</button>
@@ -1685,6 +1682,12 @@
                     <button id="soaking4Btn" class="jump-btn" style="background: linear-gradient(45deg, #26A69A, #00897B); padding: 6px 12px; font-size: 12px;">Soak 10/4</button>
                     <button id="soaking2Btn" class="jump-btn" style="background: linear-gradient(45deg, rgb(255, 87, 34), rgb(230, 74, 25)); padding: 6px 12px; font-size: 12px;">Soak 10/2</button>
                     <button id="soaking1_5Btn" class="jump-btn" style="background: linear-gradient(45deg, rgb(255, 87, 34), rgb(230, 74, 25)); padding: 6px 12px; font-size: 12px;">Soak 10/1.5</button>
+                </div>
+                <!-- Paste Beat - loads into audio-player -->
+                <div id="beatPlayerWrap" style="margin-top: 10px; padding: 4px 0;">
+                    <button id="beatPasteBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); padding: 6px 14px; font-size: 12px;">📋 Paste Beat</button>
+                </div>
+                <div style="display: none;">
                     <select id="timerCustomSelect" style="display: none; padding: 5px 8px; font-size: 12px; border-radius: 6px; border: 2px solid #9C27B0; background: linear-gradient(45deg, #E1BEE7, #CE93D8); cursor: pointer; font-weight: 600;">
                         <option value="">⏱️ Custom</option>
                         <option value="35">35s</option>
@@ -3885,35 +3888,73 @@
                 play3minThenRewind(this);
             });
 
-            // Speed toggle button - toggles between 1x and 2x playback
-            document.getElementById('speedToggleBtn').addEventListener('click', function() {
-                const btn = this;
-                const current = btn.textContent.trim();
-                const newSpeed = current === '1x' ? 2 : 1;
-                btn.textContent = newSpeed + 'x';
-                btn.style.background = newSpeed === 2
-                    ? 'linear-gradient(45deg, #e53935, #c62828)'
-                    : 'linear-gradient(45deg, #7E57C2, #5E35B1)';
-                if (playerType === 'youtube' && player && playerReady && typeof player.setPlaybackRate === 'function') {
-                    player.setPlaybackRate(newSpeed);
-                } else if ((playerType === 'video' || playerType === 'audio') && player) {
-                    player.playbackRate = newSpeed;
+            // 🎵▶ — play/pause audio-player (Google Sheets mp3 / Paste Beat)
+            var beatFineSpeed = 1.0;
+            document.getElementById('beatPlayPauseBtn').addEventListener('click', function() {
+                var btn = this;
+                if (!audioPlayer || !audioPlayer.src) return;
+                if (audioPlayer.paused) {
+                    audioPlayer.play();
+                    btn.innerHTML = '🎵⏸';
+                    btn.style.background = 'linear-gradient(45deg, #e65100, #FF6D00)';
+                } else {
+                    audioPlayer.pause();
+                    btn.innerHTML = '🎵▶';
+                    btn.style.background = 'linear-gradient(45deg, #1B5E20, #4CAF50)';
                 }
             });
 
-            // Slow speed toggle button - toggles between 1x and 0.5x playback
-            document.getElementById('speedSlowToggleBtn').addEventListener('click', function() {
-                const btn = this;
-                const current = btn.textContent.trim();
-                const newSpeed = current === '1x' ? 0.5 : 1;
-                btn.textContent = newSpeed + 'x';
-                btn.style.background = newSpeed === 0.5
-                    ? 'linear-gradient(45deg, #00BCD4, #0097A7)'
-                    : 'linear-gradient(45deg, #7E57C2, #5E35B1)';
+            // Music speed +/- — targets audio-player only
+            function applyFineSpeed() {
+                beatFineSpeed = Math.round(beatFineSpeed * 100) / 100;
+                beatFineSpeed = Math.max(0.25, Math.min(3.0, beatFineSpeed));
+                document.getElementById('fineSpeedDisplay').textContent = beatFineSpeed.toFixed(2) + 'x';
+                if (audioPlayer) audioPlayer.playbackRate = beatFineSpeed;
+            }
+            document.getElementById('speedUpBtn').addEventListener('click', function() {
+                beatFineSpeed += 0.05; applyFineSpeed();
+            });
+            document.getElementById('speedDownBtn').addEventListener('click', function() {
+                beatFineSpeed -= 0.05; applyFineSpeed();
+            });
+            document.getElementById('speedResetBtn').addEventListener('click', function() {
+                beatFineSpeed = 1.0; applyFineSpeed();
+            });
+
+            // YouTube speed +/- — targets YouTube player only
+            var ytFineSpeed = 1.0;
+            function applyYtSpeed() {
+                ytFineSpeed = Math.round(ytFineSpeed * 100) / 100;
+                ytFineSpeed = Math.max(0.25, Math.min(2.0, ytFineSpeed));
+                document.getElementById('ytSpeedDisplay').textContent = ytFineSpeed.toFixed(2) + 'x';
                 if (playerType === 'youtube' && player && playerReady && typeof player.setPlaybackRate === 'function') {
-                    player.setPlaybackRate(newSpeed);
-                } else if ((playerType === 'video' || playerType === 'audio') && player) {
-                    player.playbackRate = newSpeed;
+                    player.setPlaybackRate(ytFineSpeed);
+                }
+            }
+            document.getElementById('ytSpeedUpBtn').addEventListener('click', function() {
+                ytFineSpeed += 0.05; applyYtSpeed();
+            });
+            document.getElementById('ytSpeedDownBtn').addEventListener('click', function() {
+                ytFineSpeed -= 0.05; applyYtSpeed();
+            });
+            document.getElementById('ytSpeedResetBtn').addEventListener('click', function() {
+                ytFineSpeed = 1.0; applyYtSpeed();
+            });
+
+            // Quick pause/resume (⏸) — YouTube, video (html5Player), and audio-player (Google Sheets mp3)
+            const ytSvg = '<svg width="16" height="12" viewBox="0 0 68 48" style="flex-shrink:0"><path d="M66.5 7.7s-.7-4.7-2.7-6.8C61 -1.7 58-1.7 56.6-1.9 47.3-2.6 34-2.6 34-2.6s-13.3 0-22.6.7C10-1.7 7-1.7 4.2.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.8v5.2c0 5.5.7 11.1.7 11.1s.7 4.7 2.7 6.8c2.8 2.6 6.4 2.5 8 2.8 5.8.5 24.8.7 24.8.7s13.3 0 22.6-.7c1.4-.2 4.4-.2 7.2-2.8 2-2.1 2.7-6.8 2.7-6.8s.7-5.5.7-11.1v-5.2c0-5.6-.7-11.1-.7-11.1z" fill="red"/><path d="M27 33V13l18.2 10L27 33z" fill="white"/></svg>';
+            document.getElementById('quickPauseBtn').addEventListener('click', function() {
+                const btn = this;
+                if (playerType === 'youtube' && player && playerReady) {
+                    const state = player.getPlayerState();
+                    if (state === 1) { player.pauseVideo(); btn.innerHTML = ytSvg + '▶'; btn.style.background = 'linear-gradient(45deg, #4CAF50, #388E3C)'; }
+                    else { player.playVideo(); btn.innerHTML = ytSvg + '⏸'; btn.style.background = 'linear-gradient(45deg, #e53935, #c62828)'; }
+                } else if (playerType === 'video' && html5Player) {
+                    if (html5Player.paused) { html5Player.play(); btn.innerHTML = ytSvg + '⏸'; btn.style.background = 'linear-gradient(45deg, #e53935, #c62828)'; }
+                    else { html5Player.pause(); btn.innerHTML = ytSvg + '▶'; btn.style.background = 'linear-gradient(45deg, #4CAF50, #388E3C)'; }
+                } else if (playerType === 'audio' && audioPlayer) {
+                    if (audioPlayer.paused) { audioPlayer.play(); btn.innerHTML = ytSvg + '⏸'; btn.style.background = 'linear-gradient(45deg, #e53935, #c62828)'; }
+                    else { audioPlayer.pause(); btn.innerHTML = ytSvg + '▶'; btn.style.background = 'linear-gradient(45deg, #4CAF50, #388E3C)'; }
                 }
             });
 
@@ -3935,6 +3976,16 @@
             // Soaking 10/1.5 mode - play 10s, fade out, pause 1.5s, fade in, resume, loop
             document.getElementById('soaking1_5Btn').addEventListener('click', function() {
                 toggleSoaking1_5Mode(this);
+            });
+
+            // Paste Beat — loads into audio-player via processClipboardText
+            document.getElementById('beatPasteBtn').addEventListener('click', async function() {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (text.trim()) processClipboardText(text.trim());
+                } catch(e) {
+                    showStatus('Paste failed: ' + e.message, 'error');
+                }
             });
 
             // Custom timer dropdown - plays selected duration, pauses, rewinds
@@ -8592,16 +8643,22 @@
                     tr.classList.add('gdrive-selected-row');
                     gdriveSelectedRow = ri;
 
-                    // Populate inputs
-                    document.getElementById('gdrive-col1-input').value = col1;
-                    document.getElementById('gdrive-col2-input').value = col2;
+                    // Single-column sheet: col1 is the URL, col2 is empty
+                    // Two-column sheet: col1 is description, col2 is URL
+                    var isSingleCol = !col2.trim();
+                    var mediaUrl = isSingleCol ? col1.trim() : col2.trim();
+                    var label = isSingleCol ? '' : col1;
 
-                    // Load the YouTube link into the player
-                    var url = col2.trim();
-                    if (url && typeof processClipboardText === 'function') {
-                        processClipboardText(url);
-                        var label = col1.length > 50 ? col1.substring(0, 50) + '...' : col1;
-                        gdriveSetStatus('Playing: "' + (label || url) + '"');
+                    // Populate inputs
+                    document.getElementById('gdrive-col1-input').value = isSingleCol ? '' : col1;
+                    document.getElementById('gdrive-col2-input').value = mediaUrl;
+
+                    // Load the media link into the player
+                    if (mediaUrl && typeof processClipboardText === 'function') {
+                        processClipboardText(mediaUrl);
+                        var displayLabel = label || mediaUrl.split('/').pop().split('?')[0];
+                        if (displayLabel.length > 50) displayLabel = displayLabel.substring(0, 50) + '...';
+                        gdriveSetStatus('Playing: "' + displayLabel + '"');
                     } else {
                         gdriveSetStatus('Selected row ' + (ri + 1) + ' — no URL to load');
                     }
