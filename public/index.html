@@ -1682,6 +1682,7 @@
                     <button id="soaking4Btn" class="jump-btn" style="background: linear-gradient(45deg, #26A69A, #00897B); padding: 6px 12px; font-size: 12px;">Soak 10/4</button>
                     <button id="soaking2Btn" class="jump-btn" style="background: linear-gradient(45deg, rgb(255, 87, 34), rgb(230, 74, 25)); padding: 6px 12px; font-size: 12px;">Soak 10/2</button>
                     <button id="soaking1_5Btn" class="jump-btn" style="background: linear-gradient(45deg, rgb(255, 87, 34), rgb(230, 74, 25)); padding: 6px 12px; font-size: 12px;">Soak 10/1.5</button>
+                    <button id="loopSongBtn" class="jump-btn" style="background: linear-gradient(45deg, #7E57C2, #5E35B1); padding: 6px 12px; font-size: 12px;">🔁 Loop</button>
                 </div>
                 <!-- Paste Beat - loads into audio-player -->
                 <div id="beatPlayerWrap" style="margin-top: 10px; padding: 4px 0;">
@@ -3365,6 +3366,9 @@
         let lastClickedTime = null; // Track the last clicked timestamp
         let currentTimeIndex = -1; // Track current position in saved times for cycling
 
+        // Loop song toggle
+        let loopSongEnabled = false;
+
         // Media player state (for HTML5 video/audio)
         let playerType = 'youtube'; // 'youtube', 'video', or 'audio'
         let html5Player = null;
@@ -3652,7 +3656,15 @@
             if (event.data === YT.PlayerState.PLAYING) {
                 startTimeUpdates();
                 updateYtStatusBtn(true);
-            } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+            } else if (event.data === YT.PlayerState.ENDED) {
+                if (loopSongEnabled && player && playerReady) {
+                    player.seekTo(0);
+                    player.playVideo();
+                } else {
+                    stopTimeUpdates();
+                    updateYtStatusBtn(false);
+                }
+            } else if (event.data === YT.PlayerState.PAUSED) {
                 stopTimeUpdates();
                 updateYtStatusBtn(false);
             }
@@ -3871,6 +3883,18 @@
                     toggleLoopTimer(intervalSeconds, this, 25);
                 });
             }
+
+            // Loop song toggle button
+            document.getElementById('loopSongBtn').addEventListener('click', function() {
+                loopSongEnabled = !loopSongEnabled;
+                if (loopSongEnabled) {
+                    this.style.background = 'linear-gradient(45deg, #4CAF50, #388E3C)';
+                    this.textContent = '🔁 Loop ON';
+                } else {
+                    this.style.background = 'linear-gradient(45deg, #7E57C2, #5E35B1)';
+                    this.textContent = '🔁 Loop';
+                }
+            });
 
             // 15-second play button - plays 15s, pauses, rewinds 15s
             document.getElementById('timer15sBtn').addEventListener('click', function() {
@@ -5075,7 +5099,12 @@
             });
 
             mediaElement.addEventListener('ended', () => {
-                stopTimeUpdates();
+                if (loopSongEnabled) {
+                    mediaElement.currentTime = 0;
+                    mediaElement.play();
+                } else {
+                    stopTimeUpdates();
+                }
             });
 
             mediaElement.load();
