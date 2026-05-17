@@ -1653,7 +1653,7 @@
                 </video>
             </div>
 
-            <div class="media-container" id="audioContainer">
+            <div class="media-container" id="audioContainer" style="display: none;">
                 <audio id="audio-player" controls controlsList="nodownload">
                     Your browser does not support the audio tag.
                 </audio>
@@ -1805,6 +1805,7 @@
             <div id="gdrive-audio-section" style="display: none; margin-top: 15px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                     <span style="color: #888; font-size: 12px;" id="ap-track-count"></span>
+                    <button id="apLoopBtn" onclick="apToggleLoop(this)" style="padding: 4px 12px; background: linear-gradient(45deg, #7E57C2, #5E35B1); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 6px;">🔁 Loop</button>
                     <button onclick="apClearPlayer()" style="padding: 4px 12px; background: #dc3545; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;">Clear Player</button>
                 </div>
                 <div id="mainwrap" class="audio-player-wrap">
@@ -3894,6 +3895,12 @@
                     this.style.background = 'linear-gradient(45deg, #7E57C2, #5E35B1)';
                     this.textContent = '🔁 Loop';
                 }
+                // Sync ap-audio loop button
+                var apBtn = document.getElementById('apLoopBtn');
+                if (apBtn) {
+                    apBtn.style.background = this.style.background;
+                    apBtn.textContent = this.textContent;
+                }
             });
 
             // 15-second play button - plays 15s, pauses, rewinds 15s
@@ -5102,6 +5109,18 @@
                 if (loopSongEnabled) {
                     mediaElement.currentTime = 0;
                     mediaElement.play();
+                } else if (typeof window.gdriveSelectedRow === 'number') {
+                    // Advance to next row in Google Sheets table
+                    var nextRow = document.querySelector('.gdrive-csv-table tbody tr[data-row-index="' + (window.gdriveSelectedRow + 1) + '"]');
+                    if (nextRow) {
+                        nextRow.click();
+                        // Auto-play after src loads
+                        mediaElement.addEventListener('loadedmetadata', () => {
+                            mediaElement.play().catch(e => console.log('Autoplay prevented:', e));
+                        }, { once: true });
+                    } else {
+                        stopTimeUpdates();
+                    }
                 } else {
                     stopTimeUpdates();
                 }
@@ -8475,7 +8494,7 @@
         let gdriveTokenClient = null;
         let gdriveWorkbook = null;
         let gdriveFileId = null;
-        let gdriveSelectedRow = null;
+        window.gdriveSelectedRow = null;
 
         function gdriveSetStatus(msg) {
             document.getElementById('gdrive-status').textContent = msg;
@@ -8885,7 +8904,10 @@
             apNpAction.textContent = 'Paused...';
         });
         apAudio.addEventListener('ended', function() {
-            if (apIndex + 1 < apTracks.length) {
+            if (loopSongEnabled) {
+                apAudio.currentTime = 0;
+                apAudio.play();
+            } else if (apIndex + 1 < apTracks.length) {
                 apIndex++;
                 apPlayTrack(apIndex);
             } else {
@@ -8918,6 +8940,24 @@
                 apLoadTrack(0);
             }
         });
+
+        // Loop toggle for ap-audio player
+        window.apToggleLoop = function(btn) {
+            loopSongEnabled = !loopSongEnabled;
+            if (loopSongEnabled) {
+                btn.style.background = 'linear-gradient(45deg, #4CAF50, #388E3C)';
+                btn.textContent = '🔁 Loop ON';
+            } else {
+                btn.style.background = 'linear-gradient(45deg, #7E57C2, #5E35B1)';
+                btn.textContent = '🔁 Loop';
+            }
+            // Sync the other loop button
+            var otherBtn = document.getElementById('loopSongBtn');
+            if (otherBtn) {
+                otherBtn.style.background = btn.style.background;
+                otherBtn.textContent = btn.textContent;
+            }
+        };
 
         // Clear player
         window.apClearPlayer = function() {
