@@ -1606,7 +1606,7 @@
         </div>
 
         <!-- Time Controls -->
-        <div class="time-offset-control">
+        <div class="time-offset-control" style="display:none;">
             <h4>⏰ Time Controls</h4>
             <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
                 <label for="customTimesInput" style="color: #FFC107; font-weight: 600;">Add Media + Times:</label>
@@ -5438,7 +5438,7 @@
                     button.className = 'saved-time-btn time-btn';
                     button.dataset.time = item.time;
                     button.dataset.index = index;
-                    button.textContent = (index + 1) + ' ' + item.time;
+                    button.textContent = (index + 1) + '_' + item.time;
                     button.style.background = colors[index % colors.length];
                     btnContainer.appendChild(button);
                 }
