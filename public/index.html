@@ -9282,6 +9282,22 @@
                 }
             }
 
+            // Rebuild template_for_copy_and_paste and text-section
+            var templateLines = [];
+            entries.forEach(function(e) {
+                templateLines.push(e.name);
+                var urlLine = e.url;
+                if (e.times && e.times.length) {
+                    var timeParts = e.times.map(function(t) {
+                        return t.label ? t.time + '(' + t.label + ')' : t.time;
+                    });
+                    urlLine += ',' + timeParts.join(',');
+                }
+                templateLines.push(urlLine);
+            });
+            template_for_copy_and_paste = templateLines.join('\n');
+            populateQuickLinks();
+
             currentPaginationIndex = 0;
             showPagination();
             loadCurrentPaginationLink();
