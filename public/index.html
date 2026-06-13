@@ -1577,6 +1577,9 @@
             <select id="dbxLinksDropdown" style="padding: 8px 10px; font-size: 13px; background: #1a1a1a; color: white; border: 2px solid #0061FF; border-radius: 6px; max-width: 180px;" disabled>
                 <option value="" disabled selected>DB Links</option>
             </select>
+            <select id="playlistDropdown" style="padding: 8px 10px; font-size: 13px; background: #1a1a1a; color: white; border: 2px solid #43A047; border-radius: 6px; max-width: 180px;">
+                <option value="" disabled selected>Playlists</option>
+            </select>
             <span id="recordingIndicator" class="recording-indicator" style="display:none;">REC</span>
             <span id="processingIndicator" class="processing-indicator" style="display:none;">Saving...</span>
         </div>
@@ -9203,6 +9206,87 @@
                 }
             }, 5000);
         };
+    })();
+    </script>
+
+    <!-- Playlist dropdown (loads from /api/playlists -> Dropbox YOUTUBE_PLAYLISTS_URL) -->
+    <script>
+    (function() {
+        var _playlistData = {};
+        var playlistDD = document.getElementById('playlistDropdown');
+
+        async function fetchPlaylistsJson() {
+            var res;
+            try { res = await fetch('/api/playlists'); } catch(_) {}
+            if (!res || !res.ok) {
+                try { res = await fetch('playlists.json'); } catch(_) {}
+            }
+            return res;
+        }
+
+        async function initPlaylists() {
+            try {
+                var res = await fetchPlaylistsJson();
+                if (res && res.ok) {
+                    _playlistData = await res.json();
+                }
+            } catch(e) {
+                console.log('Failed to load playlists.json: ' + e.message);
+                return;
+            }
+
+            var categories = Object.keys(_playlistData);
+            if (!categories.length) return;
+
+            categories.forEach(function(cat) {
+                var opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat.replace(/_/g, ' ');
+                playlistDD.appendChild(opt);
+            });
+        }
+
+        playlistDD.addEventListener('change', function() {
+            var cat = this.value;
+            if (!cat || !_playlistData[cat]) return;
+
+            var entries = _playlistData[cat];
+            // Build pagination links from playlist entries
+            allPaginationLinks = entries.map(function(e) {
+                var link = { name: e.name, url: e.url, inlineTimes: [] };
+                if (e.times && e.times.length) {
+                    link.inlineTimes = e.times.map(function(t) {
+                        return t.label ? t.time + '(' + t.label + ')' : t.time;
+                    });
+                }
+                return link;
+            });
+            paginationSource = 'playlist';
+
+            // Store inline times into allSavedTimes
+            for (var i = 0; i < allPaginationLinks.length; i++) {
+                var link = allPaginationLinks[i];
+                if (link.inlineTimes && link.inlineTimes.length > 0) {
+                    var key = null;
+                    if (isYouTubeURL(link.url)) {
+                        key = extractVideoId(link.url);
+                    } else {
+                        key = btoa(link.url).replace(/[/+=]/g, '_');
+                    }
+                    if (key) {
+                        allSavedTimes[key] = link.inlineTimes.map(function(t) {
+                            return parseInlineTimeEntry(t);
+                        });
+                    }
+                }
+            }
+
+            currentPaginationIndex = 0;
+            showPagination();
+            loadCurrentPaginationLink();
+        });
+
+        initPlaylists();
     })();
     </script>
 </body>
