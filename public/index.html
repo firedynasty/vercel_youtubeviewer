@@ -1542,24 +1542,30 @@
         <div id="linkLabelDisplay" class="link-label-display" style="display:none">Link Name</div>
         <span id="linkCounter" style="font-size:12px; color:rgba(255,255,255,0.7); font-weight:600; min-width:40px; text-align:center;"></span>
         <button id="ytStatusBtn" class="link-go-btn" style="margin-left:5px;padding:4px 10px;background:linear-gradient(45deg,#888,#666);cursor:pointer;display:flex;align-items:center;gap:4px;" onmouseenter="toggleYtStatus()" onclick="toggleYtStatus()"><svg width="22" height="16" viewBox="0 0 68 48" style="flex-shrink:0"><path d="M66.5 7.7s-.7-4.7-2.7-6.8C61 -1.7 58-1.7 56.6-1.9 47.3-2.6 34-2.6 34-2.6s-13.3 0-22.6.7C10-1.7 7-1.7 4.2.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.8v5.2c0 5.5.7 11.1.7 11.1s.7 4.7 2.7 6.8c2.8 2.6 6.4 2.5 8 2.8 5.8.5 24.8.7 24.8.7s13.3 0 22.6-.7c1.4-.2 4.4-.2 7.2-2.8 2-2.1 2.7-6.8 2.7-6.8s.7-5.5.7-11.1v-5.2c0-5.6-.7-11.1-.7-11.1z" fill="red"/><path d="M27 33V13l18.2 10L27 33z" fill="white"/></svg><span id="ytStatusLabel" style="font-size:12px;font-weight:bold;color:white;">OFF</span></button>
-        <button class="link-go-btn" style="display:none;background:linear-gradient(45deg,#1565C0,#0D47A1);margin-left:5px;padding:8px 14px;" onclick="window.open('https://cdpn.io/pen/debug/KwVxmKR','_blank')">🔗 reader</button>
-        <!-- Music (audio-player) controls -->
-        <span style="display:inline-flex; align-items:center; gap:3px; margin-left:8px;">
-            <button id="beatPlayPauseBtn" class="link-go-btn" style="background:linear-gradient(45deg,#1B5E20,#4CAF50); padding:4px 10px; font-size:13px; display:flex; align-items:center; gap:3px;" title="Play/pause audio player">🎵▶</button>
-            <button id="speedDownBtn" class="link-go-btn" style="background:linear-gradient(45deg,#00BCD4,#0097A7); padding:4px 8px; font-size:12px;">-</button>
-            <span id="fineSpeedDisplay" style="font-size:12px; color:rgba(255,255,255,0.9); font-weight:600; min-width:38px; text-align:center;">1.00x</span>
-            <button id="speedUpBtn" class="link-go-btn" style="background:linear-gradient(45deg,#FF9800,#F57C00); padding:4px 8px; font-size:12px;">+</button>
-            <button id="speedResetBtn" class="link-go-btn" style="background:linear-gradient(45deg,#7E57C2,#5E35B1); padding:4px 8px; font-size:11px; margin-left:2px;">1x</button>
+        <!-- Metronome audio sync toggle -->
+        <span style="display:inline-flex; align-items:center; gap:5px; margin-left:8px;">
+            <label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:12px; color:rgba(255,255,255,0.9); font-weight:600;" title="Sync metronome with YouTube play/pause">
+                🥁
+                <input type="checkbox" id="metronomeSyncToggle" checked style="cursor:pointer;">
+            </label>
+            <span id="metronomeSyncLabel" style="font-size:11px; color:rgba(255,255,255,0.7); font-weight:600;">ON</span>
+            <input type="range" id="metronomeVolumeSlider" min="0" max="1" step="0.01" value="0.5" style="width:60px; cursor:pointer;" title="Metronome volume">
         </span>
-        <!-- YouTube speed controls -->
-        <span style="display:inline-flex; align-items:center; gap:3px; margin-left:8px;">
-            <button id="quickPauseBtn" class="link-go-btn" style="background:linear-gradient(45deg,#e53935,#c62828); padding:4px 10px; font-size:13px; display:flex; align-items:center; gap:3px;"><svg width="16" height="12" viewBox="0 0 68 48" style="flex-shrink:0"><path d="M66.5 7.7s-.7-4.7-2.7-6.8C61 -1.7 58-1.7 56.6-1.9 47.3-2.6 34-2.6 34-2.6s-13.3 0-22.6.7C10-1.7 7-1.7 4.2.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.8v5.2c0 5.5.7 11.1.7 11.1s.7 4.7 2.7 6.8c2.8 2.6 6.4 2.5 8 2.8 5.8.5 24.8.7 24.8.7s13.3 0 22.6-.7c1.4-.2 4.4-.2 7.2-2.8 2-2.1 2.7-6.8 2.7-6.8s.7-5.5.7-11.1v-5.2c0-5.6-.7-11.1-.7-11.1z" fill="red"/><path d="M27 33V13l18.2 10L27 33z" fill="white"/></svg>⏸</button>
-            <button id="ytSpeedDownBtn" class="link-go-btn" style="background:linear-gradient(45deg,#00BCD4,#0097A7); padding:4px 8px; font-size:12px;">-</button>
-            <span id="ytSpeedDisplay" style="font-size:12px; color:rgba(255,255,255,0.9); font-weight:600; min-width:38px; text-align:center;">1.00x</span>
-            <button id="ytSpeedUpBtn" class="link-go-btn" style="background:linear-gradient(45deg,#FF9800,#F57C00); padding:4px 8px; font-size:12px;">+</button>
-            <button id="ytSpeedResetBtn" class="link-go-btn" style="background:linear-gradient(45deg,#7E57C2,#5E35B1); padding:4px 8px; font-size:11px; margin-left:2px;">1x</button>
+        <audio id="metronomeAudio" loop preload="auto" src="https://www.dropbox.com/scl/fi/9f8eco5dxkfj90fgw72cs/60-BPM-4-4-Wood-Metronome-HD-Hgc7pA43DgI.m4a?rlkey=8zll2jqezxsq4vv2jiwhoe4j8&st=eqyg8gjl&raw=1"></audio>
+        <!-- Hidden controls kept for JS compatibility -->
+        <span style="display:none;">
+            <button id="beatPlayPauseBtn">🎵▶</button>
+            <button id="speedDownBtn">-</button>
+            <span id="fineSpeedDisplay">1.00x</span>
+            <button id="speedUpBtn">+</button>
+            <button id="speedResetBtn">1x</button>
+            <button id="quickPauseBtn">⏸</button>
+            <button id="ytSpeedDownBtn">-</button>
+            <span id="ytSpeedDisplay">1.00x</span>
+            <button id="ytSpeedUpBtn">+</button>
+            <button id="ytSpeedResetBtn">1x</button>
+            <button id="breatheBtn">breathe</button>
         </span>
-        <button id="breatheBtn" class="link-go-btn" style="background:linear-gradient(45deg,#2a3040,#3a4050); padding:4px 10px; font-size:12px; letter-spacing:0.1em; margin-left:5px;" title="Breathing exercise timer">breathe</button>
         <button class="link-close-btn" onclick="closePagination()">✕</button>
     </div>
 
@@ -3655,6 +3661,22 @@
             // Auto-append to cloud disabled (replaced by DB Links dropdown)
         }
 
+        // Metronome audio sync
+        let metronomeSyncEnabled = true;
+        const metronomeAudio = document.getElementById('metronomeAudio');
+        metronomeAudio.volume = 0.5;
+        document.getElementById('metronomeSyncToggle').addEventListener('change', function() {
+            metronomeSyncEnabled = this.checked;
+            document.getElementById('metronomeSyncLabel').textContent = this.checked ? 'ON' : 'OFF';
+            if (!metronomeSyncEnabled && metronomeAudio) {
+                metronomeAudio.pause();
+                metronomeAudio.currentTime = 0;
+            }
+        });
+        document.getElementById('metronomeVolumeSlider').addEventListener('input', function() {
+            metronomeAudio.volume = parseFloat(this.value);
+        });
+
         // YouTube player state change callback
         function onPlayerStateChange(event) {
             console.log('🎬 YouTube Player state changed:', event.data);
@@ -3662,6 +3684,10 @@
             if (event.data === YT.PlayerState.PLAYING) {
                 startTimeUpdates();
                 updateYtStatusBtn(true);
+                if (metronomeSyncEnabled && metronomeAudio) {
+                    metronomeAudio.currentTime = 0;
+                    metronomeAudio.play();
+                }
             } else if (event.data === YT.PlayerState.ENDED) {
                 if (loopSongEnabled && player && playerReady) {
                     player.seekTo(0);
@@ -3669,10 +3695,18 @@
                 } else {
                     stopTimeUpdates();
                     updateYtStatusBtn(false);
+                    if (metronomeSyncEnabled && metronomeAudio) {
+                        metronomeAudio.pause();
+                        metronomeAudio.currentTime = 0;
+                    }
                 }
             } else if (event.data === YT.PlayerState.PAUSED) {
                 stopTimeUpdates();
                 updateYtStatusBtn(false);
+                if (metronomeSyncEnabled && metronomeAudio) {
+                    metronomeAudio.pause();
+                    metronomeAudio.currentTime = 0;
+                }
             }
         }
 
