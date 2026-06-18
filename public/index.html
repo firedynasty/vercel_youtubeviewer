@@ -6747,6 +6747,11 @@
             // Jump to the start time immediately
             jumpToYouTubeTime(timerStartTime);
 
+            // If YouTube player is paused, start playing
+            if (playerType === 'youtube' && player && playerReady && typeof player.getPlayerState === 'function' && player.getPlayerState() !== YT.PlayerState.PLAYING) {
+                player.playVideo();
+            }
+
             startTimerLoop();
         }
 
@@ -9669,6 +9674,15 @@ function savePmRename(idx) {
     titleSpan.style.display = '';
 }
 
+function copyPmLink(idx) {
+    navigator.clipboard.writeText(pmEntries[idx].url).then(function() {
+        var titleSpan = document.getElementById('pmTitle' + idx);
+        var orig = titleSpan.textContent;
+        titleSpan.textContent = 'Copied!';
+        setTimeout(function() { titleSpan.textContent = orig; }, 1000);
+    });
+}
+
 function renderPmSections() {
     var container = document.getElementById('pmSectionsContainer');
     container.innerHTML = '';
@@ -9683,6 +9697,7 @@ function renderPmSections() {
         btn.innerHTML = '<span id="pmTitle' + idx + '">' + entry.title + '</span>' +
             '<input type="text" id="pmRenameInput' + idx + '" class="pm-rename-input" style="display:none;" onclick="event.stopPropagation();" onkeydown="event.stopPropagation();if(event.key===\'Enter\'){savePmRename(' + idx + ');}" onkeyup="event.stopPropagation();" onkeypress="event.stopPropagation();" onblur="savePmRename(' + idx + ')">' +
             '<button class="pm-vol-btn" style="background:#2196F3;" onclick="event.stopPropagation();startPmRename(' + idx + ')">&#9998;</button>' +
+            '<button class="pm-vol-btn" style="background:linear-gradient(45deg,#ff9800,#f57c00);" onclick="event.stopPropagation();copyPmLink(' + idx + ')">&#128203;</button>' +
             '<button class="pm-vol-btn" style="background:#f44336;" onclick="event.stopPropagation();removePmEntry(' + idx + ')">X</button>' +
             '<span class="toggle-arrow" id="pmArrow' + idx + '">&#9654;</span>';
 
