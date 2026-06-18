@@ -1655,6 +1655,7 @@
         <div id="linkLabelDisplay" class="link-label-display" style="display:none">Link Name</div>
         <span id="linkCounter" style="font-size:12px; color:rgba(255,255,255,0.7); font-weight:600; min-width:40px; text-align:center;"></span>
         <button id="ytStatusBtn" class="link-go-btn" style="margin-left:5px;padding:4px 10px;background:linear-gradient(45deg,#888,#666);cursor:pointer;display:flex;align-items:center;gap:4px;" onmouseenter="toggleYtStatus()" onclick="toggleYtStatus()"><svg width="22" height="16" viewBox="0 0 68 48" style="flex-shrink:0"><path d="M66.5 7.7s-.7-4.7-2.7-6.8C61 -1.7 58-1.7 56.6-1.9 47.3-2.6 34-2.6 34-2.6s-13.3 0-22.6.7C10-1.7 7-1.7 4.2.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.8v5.2c0 5.5.7 11.1.7 11.1s.7 4.7 2.7 6.8c2.8 2.6 6.4 2.5 8 2.8 5.8.5 24.8.7 24.8.7s13.3 0 22.6-.7c1.4-.2 4.4-.2 7.2-2.8 2-2.1 2.7-6.8 2.7-6.8s.7-5.5.7-11.1v-5.2c0-5.6-.7-11.1-.7-11.1z" fill="red"/><path d="M27 33V13l18.2 10L27 33z" fill="white"/></svg><span id="ytStatusLabel" style="font-size:12px;font-weight:bold;color:white;">OFF</span></button>
+        <button class="pm-toggle-btn" id="pmToggleBtn" onclick="togglePasteMediaModal()">Toggle</button>
         <!-- Metronome audio sync toggle -->
         <span style="display:inline-flex; align-items:center; gap:5px; margin-left:8px;">
             <label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:12px; color:rgba(255,255,255,0.9); font-weight:600;" title="Sync metronome with YouTube play/pause">
@@ -1681,7 +1682,6 @@
             <button id="breatheBtn">breathe</button>
         </span>
         <button class="link-close-btn" onclick="closePagination()">✕</button>
-        <button class="pm-toggle-btn" id="pmToggleBtn" onclick="togglePasteMediaModal()">Toggle</button>
     </div>
 
     <div class="paste-media-modal" id="pasteMediaModal">
@@ -1736,6 +1736,10 @@
             <a href="musicindex.html" target="_blank" class="jump-btn" style="background: linear-gradient(45deg, #1B5E20, #0A3D15); font-size: 12px; padding: 7px 14px; text-decoration: none; color: white;">🎶 Music Index</a>
             <a href="video_viewer.html" target="_blank" class="jump-btn" style="background: linear-gradient(45deg, #B71C1C, #880E4F); font-size: 12px; padding: 7px 14px; text-decoration: none; color: white;">🎬 Video Viewer</a>
             <a href="parser.html" target="_blank" class="jump-btn" style="background: linear-gradient(45deg, #E65100, #BF360C); font-size: 12px; padding: 7px 14px; text-decoration: none; color: white;">📄 Parser</a>
+            <br>
+            <button id="metVolDown" class="jump-btn" style="background: linear-gradient(45deg, #546E7A, #37474F); padding: 6px 10px; font-size: 12px;">🔉 −</button>
+            <span id="metVolDisplay" style="color: rgba(255,255,255,0.9); font-size: 12px; font-weight: 600; min-width: 40px; display: inline-block; text-align: center;">0.17</span>
+            <button id="metVolUp" class="jump-btn" style="background: linear-gradient(45deg, #546E7A, #37474F); padding: 6px 10px; font-size: 12px;">🔊 +</button>
         </div>
 
         <!-- Time Controls -->
@@ -3803,6 +3807,22 @@
         });
         document.getElementById('metronomeVolumeSlider').addEventListener('input', function() {
             metronomeAudio.volume = parseFloat(this.value);
+            document.getElementById('metVolDisplay').textContent = parseFloat(this.value).toFixed(2);
+        });
+
+        function adjustMetronomeVolume(delta) {
+            const slider = document.getElementById('metronomeVolumeSlider');
+            let val = Math.min(1, Math.max(0, parseFloat(slider.value) + delta));
+            val = Math.round(val * 100) / 100;
+            slider.value = val;
+            metronomeAudio.volume = val;
+            document.getElementById('metVolDisplay').textContent = val.toFixed(2);
+        }
+        document.getElementById('metVolDown').addEventListener('click', function() {
+            adjustMetronomeVolume(-0.05);
+        });
+        document.getElementById('metVolUp').addEventListener('click', function() {
+            adjustMetronomeVolume(0.05);
         });
 
         // YouTube player state change callback
@@ -6109,6 +6129,7 @@
                     if (timerAdvanceEvery > 0 && timerLoopsRemaining > 0 && completedLoops % timerAdvanceEvery === 0) {
                         playAdvanceChime();
                         setTimeout(() => playAdvanceChime(), 400);
+                        setTimeout(() => playAdvanceChime(), 800);
                         const playbackStr = document.getElementById('playbackTimeValue').textContent.trim();
                         const playbackSeconds = parseTimeToSeconds(playbackStr) || 0;
                         const newTime = playbackSeconds + timerAdvanceSeconds;
