@@ -6089,6 +6089,29 @@
             } catch(e) {}
         }
 
+        function playAdvanceChimeSpecial() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const now = ctx.currentTime;
+                // Rising arpeggio: C5 → E5 → G5 → C6 (distinct "level up" sound)
+                const notes = [523, 659, 784, 1047];
+                notes.forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.value = freq;
+                    const start = now + i * 0.12;
+                    gain.gain.setValueAtTime(0.18, start);
+                    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.25);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(start);
+                    osc.stop(start + 0.25);
+                });
+                setTimeout(() => ctx.close(), 800);
+            } catch(e) {}
+        }
+
         function startTimerLoop() {
             const currentLoop = timerTotalLoops - timerLoopsRemaining + 1;
 
@@ -6139,14 +6162,6 @@
                         showStatus(`Advanced +${timerAdvanceSeconds}s → ${newTimeStr}`, 'info');
                     }
 
-                    // Escalating chimes: position in cycle determines count
-                    // e.g. with advanceEvery=3: loop 1→1 chime, loop 2→2 chimes, loop 3 (advance)→3 chimes
-                    let chimeCount = 1;
-                    if (timerAdvanceEvery > 0) {
-                        const posInCycle = completedLoops % timerAdvanceEvery;
-                        chimeCount = posInCycle === 0 ? timerAdvanceEvery : posInCycle;
-                    }
-
                     // Rewind to start - always re-read from input so saved time changes are picked up
                     const inputVal = document.getElementById('loopStartTime').value.trim();
                     const currentInputTime = parseTimeToSeconds(inputVal);
@@ -6156,9 +6171,16 @@
                     jumpToYouTubeTime(rewindTime);
 
                     if (timerLoopsRemaining > 0) {
-                        // Play escalating chimes based on position in advance cycle
-                        for (let i = 0; i < chimeCount; i++) {
-                            setTimeout(() => playAdvanceChime(), i * 400);
+                        // Chime pattern: escalating chimes 1x, 2x, 3x then special chime on advance
+                        if (isAdvance) {
+                            playAdvanceChimeSpecial();
+                        } else if (timerAdvanceEvery > 0) {
+                            const posInCycle = completedLoops % timerAdvanceEvery;
+                            for (let i = 0; i < posInCycle; i++) {
+                                setTimeout(() => playAdvanceChime(), i * 400);
+                            }
+                        } else {
+                            playAdvanceChime();
                         }
                         // More loops - restore volume and restart
                         fadeIn();
@@ -6766,7 +6788,7 @@
             timerTotalLoops = 40;  // 30s × 40 = 20 minutes
             timerLoopsRemaining = timerTotalLoops;
             timerButtonRef = buttonElement;
-            timerAdvanceEvery = 3;   // advance every 3 loops
+            timerAdvanceEvery = 4;   // advance every 4 loops (1x, 2x, 3x chimes then special advance chime)
             timerAdvanceSeconds = 30; // advance by 30s
 
             // Get start time from loopStartTime input
