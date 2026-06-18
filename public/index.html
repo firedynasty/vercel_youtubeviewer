@@ -1486,6 +1486,119 @@
         #gdrive-audio-section .audio-playlist .ap-num { min-width: 30px; color: #888; }
         #gdrive-audio-section .audio-playlist .ap-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         #gdrive-audio-section .ap-keycode { font-size: 11px; color: #666; text-align: center; padding: 6px; background: #0d1b2e; }
+
+        /* Paste Media Modal */
+        .pm-toggle-btn {
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            background: rgba(255,255,255,0.15);
+            margin-left: 4px;
+        }
+        .pm-toggle-btn:hover { background: rgba(255,255,255,0.3); }
+        .pm-toggle-btn.active { background: linear-gradient(45deg, #ff9800, #f57c00); border-color: #ff9800; }
+        .paste-media-modal {
+            display: none;
+            position: fixed;
+            top: 46px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 9998;
+            background: rgba(0,0,0,0.85);
+            overflow-y: auto;
+            padding: 16px;
+        }
+        .paste-media-modal.show { display: block; }
+        .paste-media-modal-inner {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .paste-media-input-area {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .paste-media-input-area textarea {
+            flex: 1;
+            min-width: 200px;
+            min-height: 60px;
+            padding: 8px;
+            font-size: 13px;
+            background: #2a2a2a;
+            color: #fff;
+            border: 2px solid #ff9800;
+            border-radius: 6px;
+            resize: vertical;
+        }
+        .paste-media-input-area button {
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #fff;
+        }
+        .pm-add-btn { background: linear-gradient(45deg, #4CAF50, #388E3C); }
+        .pm-paste-btn { background: linear-gradient(45deg, #ff9800, #f57c00); }
+        .pm-clear-btn { background: linear-gradient(45deg, #f44336, #c62828); }
+        .pm-section {
+            margin-top: 12px;
+        }
+        .pm-section-toggle {
+            width: 100%;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #92400e, #b45309);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 5px 30px rgba(0,0,0,0.2);
+        }
+        .pm-section-toggle .toggle-arrow {
+            transition: transform 0.3s ease;
+        }
+        .pm-section-toggle .toggle-arrow.open {
+            transform: rotate(180deg);
+        }
+        .pm-section-body {
+            display: none;
+            background: #1a1a2e;
+            padding: 16px;
+            box-shadow: 0 5px 30px rgba(0,0,0,0.2);
+        }
+        .pm-section-body.show { display: block; }
+        .pm-rename-input {
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            border: 1px solid #2196F3;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 13px;
+            max-width: 160px;
+            outline: none;
+        }
+        .pm-vol-btn {
+            background: linear-gradient(45deg, #1e88e5, #1565c0);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-left: 4px;
+        }
     </style>
 </head>
 <body>
@@ -1568,6 +1681,19 @@
             <button id="breatheBtn">breathe</button>
         </span>
         <button class="link-close-btn" onclick="closePagination()">✕</button>
+        <button class="pm-toggle-btn" id="pmToggleBtn" onclick="togglePasteMediaModal()">Toggle</button>
+    </div>
+
+    <div class="paste-media-modal" id="pasteMediaModal">
+        <div class="paste-media-modal-inner">
+            <div class="paste-media-input-area">
+                <textarea id="pmUrlInput" placeholder="Paste YouTube URL(s) — one per line — can be url(name) or url, name"></textarea>
+                <button class="pm-add-btn" onclick="addPmFromInput()">Add</button>
+                <button class="pm-paste-btn" onclick="pmPasteClipboard()">Clipboard</button>
+                <button class="pm-clear-btn" onclick="clearPmEntries()">Clear</button>
+            </div>
+            <div id="pmSectionsContainer"></div>
+        </div>
     </div>
 
     <div class="container">
@@ -9428,6 +9554,164 @@
         initPlaylists();
     })();
     </script>
+<script>
+// Paste Media Modal
+var pmModalOpen = false;
+var pmEntries = JSON.parse(localStorage.getItem('pmEntries') || '[]');
+var pmOpenStates = {};
+
+function togglePasteMediaModal() {
+    pmModalOpen = !pmModalOpen;
+    document.getElementById('pasteMediaModal').classList.toggle('show', pmModalOpen);
+    document.getElementById('pmToggleBtn').classList.toggle('active', pmModalOpen);
+}
+
+function extractPmVideoId(url) {
+    var m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return m ? m[1] : null;
+}
+
+function parsePmInput(text) {
+    var lines = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l; });
+    lines.forEach(function(line) {
+        var title = '';
+        var url = line;
+        var parenMatch = line.match(/^(https?:\/\/[^\s()]+)\(([^)]+)\)/);
+        if (parenMatch) {
+            url = parenMatch[1];
+            title = parenMatch[2].trim();
+        } else {
+            var parts = line.split(',').map(function(p) { return p.trim(); });
+            url = parts[0];
+            if (parts.length > 1) title = parts.slice(1).join(', ');
+        }
+        var videoId = extractPmVideoId(url);
+        if (!videoId) return;
+        for (var i = 0; i < pmEntries.length; i++) {
+            if (pmEntries[i].videoId === videoId) return;
+        }
+        if (!title) title = 'YouTube ' + videoId;
+        pmEntries.push({ videoId: videoId, title: title, url: url });
+    });
+    savePmEntries();
+    renderPmSections();
+    if (!pmModalOpen) togglePasteMediaModal();
+}
+
+function addPmFromInput() {
+    var text = document.getElementById('pmUrlInput').value.trim();
+    if (!text) return;
+    parsePmInput(text);
+    document.getElementById('pmUrlInput').value = '';
+}
+
+function pmPasteClipboard() {
+    navigator.clipboard.readText().then(function(text) {
+        if (!text.trim()) return;
+        document.getElementById('pmUrlInput').value = text;
+    });
+}
+
+function savePmEntries() {
+    localStorage.setItem('pmEntries', JSON.stringify(pmEntries));
+}
+
+function clearPmEntries() {
+    pmEntries = [];
+    savePmEntries();
+    pmOpenStates = {};
+    renderPmSections();
+}
+
+function togglePmSection(idx) {
+    pmOpenStates[idx] = !pmOpenStates[idx];
+    var body = document.getElementById('pmBody' + idx);
+    var arrow = document.getElementById('pmArrow' + idx);
+    if (!body || !arrow) return;
+    body.classList.toggle('show', pmOpenStates[idx]);
+    arrow.classList.toggle('open', pmOpenStates[idx]);
+    if (pmOpenStates[idx]) {
+        var iframe = document.getElementById('pmIframe' + idx);
+        if (iframe && (!iframe.getAttribute('src') || iframe.getAttribute('src') === '')) {
+            iframe.src = 'https://www.youtube.com/embed/' + pmEntries[idx].videoId + '?enablejsapi=1';
+        }
+    }
+}
+
+function removePmEntry(idx) {
+    pmEntries.splice(idx, 1);
+    savePmEntries();
+    pmOpenStates = {};
+    renderPmSections();
+}
+
+function startPmRename(idx) {
+    var titleSpan = document.getElementById('pmTitle' + idx);
+    var input = document.getElementById('pmRenameInput' + idx);
+    titleSpan.style.display = 'none';
+    input.style.display = 'inline-block';
+    input.value = pmEntries[idx].title;
+    input.focus();
+    input.select();
+}
+
+function savePmRename(idx) {
+    var titleSpan = document.getElementById('pmTitle' + idx);
+    var input = document.getElementById('pmRenameInput' + idx);
+    if (input.style.display === 'none') return;
+    var newName = input.value.trim();
+    if (newName) {
+        pmEntries[idx].title = newName;
+        titleSpan.textContent = newName;
+        savePmEntries();
+    }
+    input.style.display = 'none';
+    titleSpan.style.display = '';
+}
+
+function renderPmSections() {
+    var container = document.getElementById('pmSectionsContainer');
+    container.innerHTML = '';
+
+    pmEntries.forEach(function(entry, idx) {
+        var section = document.createElement('div');
+        section.className = 'pm-section';
+
+        var btn = document.createElement('button');
+        btn.className = 'pm-section-toggle';
+        btn.onclick = function() { togglePmSection(idx); };
+        btn.innerHTML = '<span id="pmTitle' + idx + '">' + entry.title + '</span>' +
+            '<input type="text" id="pmRenameInput' + idx + '" class="pm-rename-input" style="display:none;" onclick="event.stopPropagation();" onkeydown="event.stopPropagation();if(event.key===\'Enter\'){savePmRename(' + idx + ');}" onkeyup="event.stopPropagation();" onkeypress="event.stopPropagation();" onblur="savePmRename(' + idx + ')">' +
+            '<button class="pm-vol-btn" style="background:#2196F3;" onclick="event.stopPropagation();startPmRename(' + idx + ')">&#9998;</button>' +
+            '<button class="pm-vol-btn" style="background:#f44336;" onclick="event.stopPropagation();removePmEntry(' + idx + ')">X</button>' +
+            '<span class="toggle-arrow" id="pmArrow' + idx + '">&#9654;</span>';
+
+        var body = document.createElement('div');
+        body.className = 'pm-section-body';
+        body.id = 'pmBody' + idx;
+
+        var iframeWrap = document.createElement('div');
+        iframeWrap.style.cssText = 'position:relative;padding-bottom:56.25%;height:0;overflow:hidden;';
+        var iframe = document.createElement('iframe');
+        iframe.id = 'pmIframe' + idx;
+        iframe.width = '100%';
+        iframe.height = '100%';
+        iframe.style.cssText = 'position:absolute;top:0;left:0;';
+        iframe.src = '';
+        iframe.frameBorder = '0';
+        iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+        iframe.allowFullscreen = true;
+        iframeWrap.appendChild(iframe);
+        body.appendChild(iframeWrap);
+
+        section.appendChild(btn);
+        section.appendChild(body);
+        container.appendChild(section);
+    });
+}
+
+renderPmSections();
+</script>
 </body>
 </html>
 
