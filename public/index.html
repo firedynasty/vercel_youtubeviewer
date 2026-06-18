@@ -6108,6 +6108,7 @@
                     const completedLoops = timerTotalLoops - timerLoopsRemaining;
                     if (timerAdvanceEvery > 0 && timerLoopsRemaining > 0 && completedLoops % timerAdvanceEvery === 0) {
                         playAdvanceChime();
+                        setTimeout(() => playAdvanceChime(), 400);
                         const playbackStr = document.getElementById('playbackTimeValue').textContent.trim();
                         const playbackSeconds = parseTimeToSeconds(playbackStr) || 0;
                         const newTime = playbackSeconds + timerAdvanceSeconds;
@@ -6127,6 +6128,8 @@
                     jumpToYouTubeTime(rewindTime);
 
                     if (timerLoopsRemaining > 0) {
+                        // Play chime on every loop restart
+                        playAdvanceChime();
                         // More loops - restore volume and restart
                         fadeIn();
                         showStatus(`Loop ${timerTotalLoops - timerLoopsRemaining} complete. Starting next...`, 'info', true);
