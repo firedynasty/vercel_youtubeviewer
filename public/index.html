@@ -1697,8 +1697,9 @@
                     <button id="loopSongBtn" class="jump-btn" style="background: linear-gradient(45deg, #7E57C2, #5E35B1); padding: 6px 12px; font-size: 12px;">🔁 Loop</button>
                 </div>
                 <!-- Paste Beat - loads into audio-player -->
-                <div id="beatPlayerWrap" style="margin-top: 10px; padding: 4px 0;">
+                <div id="beatPlayerWrap" style="display: none; margin-top: 10px; padding: 4px 0;">
                     <button id="beatPasteBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); padding: 6px 14px; font-size: 12px;">📋 Paste Beat</button>
+                    <span style="display:block; margin-top:5px; font-size:11px; color:#aaa;">30s adds +30s after every 3 repeats</span>
                 </div>
                 <div style="display: none;">
                     <select id="timerCustomSelect" style="display: none; padding: 5px 8px; font-size: 12px; border-radius: 6px; border: 2px solid #9C27B0; background: linear-gradient(45deg, #E1BEE7, #CE93D8); cursor: pointer; font-weight: 600;">
@@ -5912,6 +5913,36 @@
             }
         }
 
+        function playAdvanceChime() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const now = ctx.currentTime;
+                // First note: C5 (523 Hz)
+                const osc1 = ctx.createOscillator();
+                const gain1 = ctx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.value = 523;
+                gain1.gain.setValueAtTime(0.15, now);
+                gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                osc1.connect(gain1);
+                gain1.connect(ctx.destination);
+                osc1.start(now);
+                osc1.stop(now + 0.15);
+                // Second note: E5 (659 Hz)
+                const osc2 = ctx.createOscillator();
+                const gain2 = ctx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.value = 659;
+                gain2.gain.setValueAtTime(0.15, now + 0.1);
+                gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                osc2.connect(gain2);
+                gain2.connect(ctx.destination);
+                osc2.start(now + 0.1);
+                osc2.stop(now + 0.25);
+                setTimeout(() => ctx.close(), 500);
+            } catch(e) {}
+        }
+
         function startTimerLoop() {
             const currentLoop = timerTotalLoops - timerLoopsRemaining + 1;
 
@@ -5950,6 +5981,7 @@
                     // Auto-advance: every N loops, read playback time and advance by M seconds
                     const completedLoops = timerTotalLoops - timerLoopsRemaining;
                     if (timerAdvanceEvery > 0 && timerLoopsRemaining > 0 && completedLoops % timerAdvanceEvery === 0) {
+                        playAdvanceChime();
                         const playbackStr = document.getElementById('playbackTimeValue').textContent.trim();
                         const playbackSeconds = parseTimeToSeconds(playbackStr) || 0;
                         const newTime = playbackSeconds + timerAdvanceSeconds;
