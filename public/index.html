@@ -1529,6 +1529,21 @@
             -moz-animation: color-fade 10s infinite;
             animation: color-fade 10s infinite;
         }
+        /* Audio Visualizer Overlay */
+        .visualizer-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 9997;
+            pointer-events: none;
+        }
+        .visualizer-overlay.active {
+            display: block;
+        }
+        .visualizer-overlay canvas {
+            width: 100%;
+            height: 100%;
+        }
         /* Scripture Overlay */
         .scripture-overlay {
             display: none;
@@ -1729,6 +1744,7 @@
         <button class="pm-toggle-btn" id="pmToggleBtn" onclick="togglePasteMediaModal()">Toggle</button>
         <button class="pm-toggle-btn" id="colorFadeBtn" onclick="toggleColorFade()">🎨 Fade</button>
         <button class="pm-toggle-btn" id="scriptureBtn" onclick="toggleScripture()">📜 Scripture</button>
+        <button class="pm-toggle-btn" id="visualizerBtn" onclick="toggleVisualizer()">🎵 Visualizer</button>
         <!-- Metronome audio sync toggle -->
         <span style="display:inline-flex; align-items:center; gap:5px; margin-left:8px;">
             <label style="display:flex; align-items:center; gap:4px; cursor:pointer; font-size:12px; color:rgba(255,255,255,0.9); font-weight:600;" title="Sync metronome with YouTube play/pause">
@@ -1767,6 +1783,11 @@
             </div>
             <div id="pmSectionsContainer"></div>
         </div>
+    </div>
+
+    <!-- Audio Visualizer Overlay -->
+    <div id="visualizerOverlay" class="visualizer-overlay">
+        <canvas id="visualizerCanvas"></canvas>
     </div>
 
     <!-- Scripture Overlay -->
@@ -9864,6 +9885,122 @@ function renderPmSections() {
 }
 
 renderPmSections();
+
+// ============ AUDIO VISUALIZER OVERLAY ============
+(function() {
+    let visualizerActive = false;
+    let visualizerStream = null;
+    let visualizerCtx = null;
+    let visualizerAnalyser = null;
+    let visualizerAnimId = null;
+
+    window.toggleVisualizer = async function() {
+        const overlay = document.getElementById('visualizerOverlay');
+        const btn = document.getElementById('visualizerBtn');
+        const canvas = document.getElementById('visualizerCanvas');
+
+        if (visualizerActive) {
+            // Turn off
+            visualizerActive = false;
+            overlay.classList.remove('active');
+            btn.classList.remove('active');
+            if (visualizerAnimId) cancelAnimationFrame(visualizerAnimId);
+            if (visualizerStream) {
+                visualizerStream.getTracks().forEach(t => t.stop());
+                visualizerStream = null;
+            }
+            if (visualizerCtx) {
+                visualizerCtx.close();
+                visualizerCtx = null;
+            }
+            return;
+        }
+
+        try {
+            // Request tab audio capture
+            visualizerStream = await navigator.mediaDevices.getDisplayMedia({
+                video: true,
+                audio: true
+            });
+
+            // Stop the video track — we only need audio
+            visualizerStream.getVideoTracks().forEach(t => t.stop());
+
+            const audioTracks = visualizerStream.getAudioTracks();
+            if (!audioTracks.length) {
+                alert('No audio captured. Make sure to check "Share tab audio" in the prompt.');
+                visualizerStream.getTracks().forEach(t => t.stop());
+                visualizerStream = null;
+                return;
+            }
+
+            visualizerActive = true;
+            overlay.classList.add('active');
+            btn.classList.add('active');
+
+            // Set up Web Audio
+            visualizerCtx = new AudioContext();
+            const source = visualizerCtx.createMediaStreamSource(visualizerStream);
+            visualizerAnalyser = visualizerCtx.createAnalyser();
+            visualizerAnalyser.fftSize = 256;
+            source.connect(visualizerAnalyser);
+            // Don't connect to destination — audio already plays from YouTube
+
+            const bufferLength = visualizerAnalyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const ctx = canvas.getContext('2d');
+
+            function renderFrame() {
+                if (!visualizerActive) return;
+                visualizerAnimId = requestAnimationFrame(renderFrame);
+
+                const WIDTH = canvas.width;
+                const HEIGHT = canvas.height;
+
+                visualizerAnalyser.getByteFrequencyData(dataArray);
+
+                ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+                const barWidth = (WIDTH / bufferLength) * 2.5;
+                let x = 0;
+
+                for (let i = 0; i < bufferLength; i++) {
+                    const barHeight = dataArray[i];
+
+                    const r = barHeight + (25 * (i / bufferLength));
+                    const g = 250 * (i / bufferLength);
+                    const b = 50;
+
+                    ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',0.7)';
+                    ctx.fillRect(x, HEIGHT - barHeight, barWidth, barHeight);
+
+                    x += barWidth + 1;
+                }
+            }
+
+            renderFrame();
+
+            // Handle stream ending (user stops sharing)
+            visualizerStream.getAudioTracks()[0].onended = function() {
+                if (visualizerActive) toggleVisualizer();
+            };
+
+            // Resize canvas on window resize
+            window.addEventListener('resize', function() {
+                if (visualizerActive) {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                }
+            });
+
+        } catch (err) {
+            console.warn('Visualizer capture cancelled or failed:', err);
+        }
+    };
+})();
 
 // ============ SCRIPTURE OVERLAY ============
 (function() {
