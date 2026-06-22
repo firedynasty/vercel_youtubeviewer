@@ -1,0 +1,48 @@
+Bug: Last loaded video not restoring on page reload
+====================================================
+
+Symptom
+-------
+After pasting a YouTube URL via the "📋 Paste Media + Times" button and reloading
+the page, the player would revert to the default video instead of restoring the
+last watched video.
+
+Root Causes (3 separate issues)
+---------------------------------
+
+1. Page load restore blocked by saved times
+   - On page load, `onYouTubeIframeAPIReady` called `loadSavedTimesFromIndexedDB()`
+   - If any saved times existed in `allSavedTimes`, it would render those times
+     but SKIP calling `loadMediaFromUrl(lastLoadedVideo)` entirely
+   - Fix: Always restore lastLoadedVideo first, then call loadTimesForCurrentVideo()
+
+2. processClipboardText bypasses loadMediaFromUrl
+   - The clipboard paste button calls `processClipboardText()` which has its own
+     inline YouTube player initialization code
+   - It never calls `loadMediaFromUrl()`, so the `localStorage.setItem('lastLoadedVideo')`
+     added there had no effect for clipboard pastes
+   - Fix: Added `localStorage.setItem('lastLoadedVideo', firstEntry)` directly in
+     `processClipboardText()` before the player is initialized
+
+3. processVideoAndTimes also bypasses loadMediaFromUrl
+   - `loadDefaultVideo()` calls `processVideoAndTimes()` which also has its own
+     inline player init and never persisted the URL
+   - Fix: Added `localStorage.setItem('lastLoadedVideo', firstEntry)` in
+     `processVideoAndTimes()` when a valid media URL is detected
+
+localStorage key
+----------------
+Key: lastLoadedVideo
+Value: full YouTube URL (e.g. https://www.youtube.com/watch?v=GlkxpF6DkRE&t=6132s)
+
+Verified via console logs showing:
+  💾 [lastLoadedVideo] saved from processClipboardText: <url>   (on paste)
+  💾 [lastLoadedVideo] on page load restore, value: <url>        (on reload)
+  🎬 Restoring last loaded video: <url>                          (restore confirmed)
+
+Commits
+-------
+0225346 - Fix lastLoadedVideo not restoring on page load when saved times exist
+cc81e30 - Fix lastLoadedVideo not updating when loading via clipboard paste
+70f2fcf - Fix lastLoadedVideo not persisting from clipboard paste (processClipboardText)
+c0459d0 - Add debug logs to trace lastLoadedVideo save/restore flow (removed after verification)

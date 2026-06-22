@@ -3851,13 +3851,10 @@
             } else {
                 // Always restore last loaded video, then load saved times for it
                 const lastVideo = localStorage.getItem('lastLoadedVideo');
-                console.log('💾 [lastLoadedVideo] on page load restore, value:', lastVideo);
-                console.log('💾 [localStorage all keys]:', Object.keys(localStorage).join(', '));
                 if (lastVideo) {
                     console.log('🎬 Restoring last loaded video:', lastVideo);
                     loadMediaFromUrl(lastVideo);
                 } else {
-                    console.log('💾 [lastLoadedVideo] not found, loading default');
                     loadDefaultVideo();
                 }
                 // Load saved times for the current video
@@ -3984,7 +3981,6 @@
         // Load default video
         function loadDefaultVideo() {
             console.log('🎬 DEBUG: Loading defaultVideo:', defaultVideo);
-            console.log('💾 [lastLoadedVideo] current value BEFORE loadDefaultVideo:', localStorage.getItem('lastLoadedVideo'));
 
             // Process the default video string (same format as addCustomTimes)
             processVideoAndTimes(defaultVideo);
@@ -4024,7 +4020,6 @@
             if (mediaType) {
                 // It's a valid media URL - load it
                 localStorage.setItem('lastLoadedVideo', firstEntry);
-                console.log('💾 [lastLoadedVideo] saved from processVideoAndTimes:', firstEntry);
                 if (mediaType === 'youtube') {
                     // YouTube URL - use YouTube player
                     const videoId = extractVideoId(firstEntry);
@@ -5052,7 +5047,6 @@
 
             // Always persist the last loaded video URL
             localStorage.setItem('lastLoadedVideo', url);
-            console.log('💾 [lastLoadedVideo] saved from loadMediaFromUrl:', url);
 
             // Convert Dropbox share URLs to direct/raw URLs for streaming
             if (isDropboxURL(url)) url = convertDropboxUrl(url);
@@ -5167,7 +5161,6 @@
 
             // Persist the loaded URL so it restores on reload
             localStorage.setItem('lastLoadedVideo', firstEntry);
-            console.log('💾 [lastLoadedVideo] saved from processClipboardText:', firstEntry);
 
             if (mediaType === 'youtube') {
                 const videoId = extractVideoId(firstEntry);
