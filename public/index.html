@@ -5044,6 +5044,9 @@
                 return;
             }
 
+            // Always persist the last loaded video URL
+            localStorage.setItem('lastLoadedVideo', url);
+
             // Convert Dropbox share URLs to direct/raw URLs for streaming
             if (isDropboxURL(url)) url = convertDropboxUrl(url);
 
