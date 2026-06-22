@@ -3849,23 +3849,17 @@
                     }
                 }, 500);
             } else {
-                // Try to load saved times from IndexedDB
-                loadSavedTimesFromIndexedDB().then(savedTimes => {
-                    if (savedTimes && savedTimes.length > 0) {
-                        // Load saved times from IndexedDB
-                        renderSavedTimes(savedTimes);
-                        console.log('💾 Loaded saved times from IndexedDB on page load');
-                    } else {
-                        // Try last loaded video from localStorage, else default
-                        const lastVideo = localStorage.getItem('lastLoadedVideo');
-                        if (lastVideo) {
-                            console.log('🎬 Restoring last loaded video:', lastVideo);
-                            loadMediaFromUrl(lastVideo);
-                        } else {
-                            loadDefaultVideo();
-                        }
-                    }
-                });
+                // Always restore last loaded video, then load saved times for it
+                const lastVideo = localStorage.getItem('lastLoadedVideo');
+                if (lastVideo) {
+                    console.log('🎬 Restoring last loaded video:', lastVideo);
+                    loadMediaFromUrl(lastVideo);
+                } else {
+                    loadDefaultVideo();
+                }
+                // Load saved times for the current video
+                loadTimesForCurrentVideo();
+                renderSavedTimesTable();
             }
         }
 
