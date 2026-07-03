@@ -4571,10 +4571,16 @@
                     return;
                 }
 
-                // Cmd+Ctrl+1: trigger +30s loop time button
-                if ((e.metaKey && e.ctrlKey) && e.key === '1') {
+                // Number keys 1-9: click corresponding saved time button
+                if (e.key >= '1' && e.key <= '9') {
+                    const activeEl = document.activeElement;
+                    const timeInput = document.getElementById('savedTimeInput');
+                    const commentInput = document.getElementById('savedTimeComment');
+                    if (activeEl === timeInput || activeEl === commentInput) return;
                     e.preventDefault();
-                    document.getElementById('loopTimePlus30')?.click();
+                    const idx = parseInt(e.key) - 1;
+                    const btns = document.querySelectorAll('#savedTimesButtons .saved-time-btn');
+                    if (btns[idx]) btns[idx].click();
                     return;
                 }
             });
@@ -9184,8 +9190,6 @@
         var apTracks = [];
         var apIndex = 0;
         var apPlaying = false;
-        var apTrackNumberInput = '';
-        var apTrackInputTimeout = null;
         var apAudio = document.getElementById('ap-audio');
         var apNpAction = document.getElementById('ap-npAction');
         var apNpTitle = document.getElementById('ap-npTitle');
@@ -9345,24 +9349,6 @@
                 document.getElementById('ap-btnPrev').click();
             } else if (e.key === 'ArrowRight') {
                 document.getElementById('ap-btnNext').click();
-            } else if (e.key >= '0' && e.key <= '9') {
-                e.preventDefault();
-                if (apTrackInputTimeout) clearTimeout(apTrackInputTimeout);
-                apTrackNumberInput += e.key;
-                if (keyDisplay) keyDisplay.textContent = 'Entering track: ' + apTrackNumberInput + ' (plays in 1.5s)';
-                apTrackInputTimeout = setTimeout(function() {
-                    var num = parseInt(apTrackNumberInput);
-                    if (num > 0 && num <= apTracks.length) {
-                        apPlayTrack(num - 1);
-                        if (keyDisplay) keyDisplay.textContent = 'Playing track ' + num + ': ' + apTracks[num - 1].name;
-                    } else {
-                        if (keyDisplay) keyDisplay.textContent = 'Invalid track: ' + num + '. Range: 1-' + apTracks.length;
-                    }
-                    apTrackNumberInput = '';
-                    setTimeout(function() {
-                        if (keyDisplay) keyDisplay.textContent = 'Press 0-9 to play track, arrows to navigate, ~ toggle play/pause';
-                    }, 3000);
-                }, 1500);
             }
         });
 
