@@ -15,20 +15,44 @@
   ],
   "basketball": [
     {
-      "name": "stepback",
-      "url": "https://www.youtube.com/shorts/AvAH3N6RXxw"
+      "name": "against-pyhysical-defender",
+      "url": "https://www.youtube.com/watch?v=QJdHoI7VO9E"
     },
     {
-      "name": "highlights-curry-3",
-      "url": "https://www.youtube.com/watch?v=G_5n8myDG2o"
+      "name": "basic-dribbling",
+      "url": "https://www.youtube.com/watch?v=vR0e6jztDIg"
     },
     {
-      "name": "highlights-white-side-three",
-      "url": "https://www.youtube.com/watch?v=-DJ84qhxtBc"
+      "name": "beating-defense",
+      "url": "https://www.youtube.com/shorts/38fnNC0PFlY"
     },
     {
-      "name": "highlight",
-      "url": "https://www.youtube.com/shorts/tHhqSvtLAmQ"
+      "name": "change-direction",
+      "url": "https://www.youtube.com/watch?v=Coim-2LzADI"
+    },
+    {
+      "name": "change-pace-go-see-the-shorts-at-youtube",
+      "url": "https://www.youtube.com/watch?v=Jkk-eDqYbWw"
+    },
+    {
+      "name": "cheat-code",
+      "url": "https://www.youtube.com/shorts/4zXqlX_7Ms0"
+    },
+    {
+      "name": "defense",
+      "url": "https://www.youtube.com/shorts/6yXSKocO82Y"
+    },
+    {
+      "name": "dirk-fade",
+      "url": "https://www.youtube.com/shorts/BVGmjMcghGI"
+    },
+    {
+      "name": "dribbline-drills",
+      "url": "https://www.youtube.com/watch?v=loraMUWKteA"
+    },
+    {
+      "name": "drive-to-spin",
+      "url": "https://www.youtube.com/shorts/XtXiJKHgeUs"
     },
     {
       "name": "fade-away",
@@ -39,44 +63,12 @@
       "url": "https://www.youtube.com/shorts/qagyfGfPgPA"
     },
     {
-      "name": "dirk-fade",
-      "url": "https://www.youtube.com/shorts/BVGmjMcghGI"
-    },
-    {
-      "name": "drive-to-spin",
-      "url": "https://www.youtube.com/shorts/XtXiJKHgeUs"
-    },
-    {
-      "name": "foot-work",
-      "url": "https://www.youtube.com/shorts/RiW8eOy7P08"
-    },
-    {
-      "name": "shimmy-fade",
-      "url": "https://www.youtube.com/shorts/6VAJI1nF6kw"
-    },
-    {
-      "name": "hesi-change-velocity",
-      "url": "https://www.youtube.com/shorts/ZM-ek6FNuPk"
-    },
-    {
-      "name": "velocity",
-      "url": "https://www.youtube.com/shorts/dmRNjpnKNQw"
-    },
-    {
       "name": "fast-slow-drills",
       "url": "https://www.youtube.com/shorts/XboEEjBwCMY"
     },
     {
-      "name": "slow-down-here-quick",
-      "url": "https://www.youtube.com/shorts/B-L_PHMXm8Y"
-    },
-    {
-      "name": "change-pace-go-see-the-shorts-at-youtube",
-      "url": "https://www.youtube.com/watch?v=Jkk-eDqYbWw"
-    },
-    {
-      "name": "shooting-coach-Mike",
-      "url": "https://www.youtube.com/watch?v=EoQu1XJfEb8"
+      "name": "foot-work",
+      "url": "https://www.youtube.com/shorts/RiW8eOy7P08"
     },
     {
       "name": "getting-shifty",
@@ -165,24 +157,12 @@
       ]
     },
     {
-      "name": "pick-the-play",
-      "url": "https://www.youtube.com/watch?v=j16FCb3BbDs&t=155s"
+      "name": "hesi-change-velocity",
+      "url": "https://www.youtube.com/shorts/ZM-ek6FNuPk"
     },
     {
-      "name": "against-pyhysical-defender",
-      "url": "https://www.youtube.com/watch?v=QJdHoI7VO9E"
-    },
-    {
-      "name": "nba-how-to",
-      "url": "https://www.youtube.com/watch?v=e7sWXixI77M&t=97s"
-    },
-    {
-      "name": "manipulate-the-ball",
-      "url": "https://www.youtube.com/shorts/oo594Kzt41A"
-    },
-    {
-      "name": "dribbline-drills",
-      "url": "https://www.youtube.com/watch?v=loraMUWKteA"
+      "name": "highlight",
+      "url": "https://www.youtube.com/shorts/tHhqSvtLAmQ"
     },
     {
       "name": "highlight-shot-floater",
@@ -195,16 +175,46 @@
       ]
     },
     {
+      "name": "highlights-curry-3",
+      "url": "https://www.youtube.com/watch?v=G_5n8myDG2o",
+      "times": [
+        {
+          "time": "1:07",
+          "label": "curry-3"
+        },
+        {
+          "time": "2:17",
+          "label": "steal"
+        }
+      ]
+    },
+    {
+      "name": "highlights-white-side-three",
+      "url": "https://www.youtube.com/watch?v=-DJ84qhxtBc"
+    },
+    {
+      "name": "how-to-play-d",
+      "url": "https://www.youtube.com/watch?v=0syPnHUaFTU"
+    },
+    {
+      "name": "manipulate-the-ball",
+      "url": "https://www.youtube.com/shorts/oo594Kzt41A"
+    },
+    {
+      "name": "nba-how-to",
+      "url": "https://www.youtube.com/watch?v=e7sWXixI77M&t=97s"
+    },
+    {
       "name": "passing",
       "url": "https://www.youtube.com/watch?v=-WRHRhWdsko"
     },
     {
-      "name": "change-direction",
-      "url": "https://www.youtube.com/watch?v=Coim-2LzADI"
+      "name": "pick-the-play",
+      "url": "https://www.youtube.com/watch?v=j16FCb3BbDs&t=155s"
     },
     {
-      "name": "basic-dribbling",
-      "url": "https://www.youtube.com/watch?v=vR0e6jztDIg"
+      "name": "pivot-foot",
+      "url": "https://www.youtube.com/watch?v=tYEhdC3re3Y"
     },
     {
       "name": "pound-dribble-then-quick",
@@ -215,52 +225,68 @@
       "url": "https://www.youtube.com/shorts/R5VA2APUY6o"
     },
     {
-      "name": "spins eal",
-      "url": "https://www.youtube.com/shorts/IevpBe7PZnQ"
+      "name": "reverse1-believe",
+      "url": "https://www.youtube.com/watch?v=PxcB-DPjWIY"
     },
     {
-      "name": "wide-base",
-      "url": "https://www.youtube.com/shorts/32tT-NjdmLM"
+      "name": "reverse2-5-examples",
+      "url": "https://www.youtube.com/watch?v=jeA61SPLpv4"
     },
     {
-      "name": "beating-defense",
-      "url": "https://www.youtube.com/shorts/38fnNC0PFlY"
+      "name": "reverse3-shorts",
+      "url": "https://www.youtube.com/shorts/19HJF2XHDaU"
     },
     {
-      "name": "defense",
-      "url": "https://www.youtube.com/shorts/6yXSKocO82Y"
+      "name": "scissor step",
+      "url": "https://www.youtube.com/watch?v=utf_AtrtBxU"
     },
     {
-      "name": "wall-up-d",
-      "url": "https://www.youtube.com/shorts/IPyNQ7z_CLM"
+      "name": "shimmy-fade",
+      "url": "https://www.youtube.com/shorts/6VAJI1nF6kw"
     },
     {
-      "name": "cheat-code",
-      "url": "https://www.youtube.com/shorts/4zXqlX_7Ms0"
+      "name": "shooting-coach-Mike",
+      "url": "https://www.youtube.com/watch?v=EoQu1XJfEb8"
     },
     {
-      "name": "how-to-play-d",
-      "url": "https://www.youtube.com/watch?v=0syPnHUaFTU"
+      "name": "shooting-pull-up",
+      "url": "https://www.youtube.com/watch?v=ci_Z8c0cIZQ&t=630s"
     },
     {
       "name": "shooting-drills",
       "url": "https://www.youtube.com/shorts/7DLuEHmM4yE"
     },
     {
-      "name": "shooting-guide-hand-placement",
-      "url": "https://www.youtube.com/shorts/0iwg60Tmqaw"
-    },
-    {
       "name": "shooting-energy-transfer",
       "url": "https://www.youtube.com/watch?v=jeF4mVb3_Q0"
     },
     {
-      "name": "pivot-foot",
-      "url": "https://www.youtube.com/watch?v=tYEhdC3re3Y"
+      "name": "shooting-guide-hand-placement",
+      "url": "https://www.youtube.com/shorts/0iwg60Tmqaw"
     },
     {
-      "name": "scissor step",
-      "url": "https://www.youtube.com/watch?v=utf_AtrtBxU"
+      "name": "slow-down-here-quick",
+      "url": "https://www.youtube.com/shorts/B-L_PHMXm8Y"
+    },
+    {
+      "name": "spins eal",
+      "url": "https://www.youtube.com/shorts/IevpBe7PZnQ"
+    },
+    {
+      "name": "stepback",
+      "url": "https://www.youtube.com/shorts/AvAH3N6RXxw"
+    },
+    {
+      "name": "velocity",
+      "url": "https://www.youtube.com/shorts/dmRNjpnKNQw"
+    },
+    {
+      "name": "wall-up-d",
+      "url": "https://www.youtube.com/shorts/IPyNQ7z_CLM"
+    },
+    {
+      "name": "wide-base",
+      "url": "https://www.youtube.com/shorts/32tT-NjdmLM"
     }
   ],
   "classical": [
@@ -275,6 +301,32 @@
     {
       "name": "\"Rachmaninoff Op.32 (No.10",
       "url": "12, 13) ｜ Romantic Jazz Piano [wJ4VoxSlW1g]\",https://www.dropbox.com/scl/fi/p0u9qegboef02ac94wzee/Rachmaninoff-Op.32-No.10-12-13-Romantic-Jazz-Piano-wJ4VoxSlW1g.mp3?rlkey=ouszoqets7cuubmm2rdwqi1ze&raw=1"
+    }
+  ],
+  "focus_music": [
+    {
+      "name": "deadline",
+      "url": "https://www.youtube.com/watch?v=jVbKQb6NOyY"
+    },
+    {
+      "name": "lock-in",
+      "url": "https://www.youtube.com/watch?v=1AIprUoIcJE"
+    },
+    {
+      "name": "anti-procrastination",
+      "url": "https://www.youtube.com/watch?v=1MGhGrKnGAk"
+    },
+    {
+      "name": "cello",
+      "url": "https://www.youtube.com/watch?v=mojzVGko4zA"
+    },
+    {
+      "name": "classical",
+      "url": "https://www.youtube.com/watch?v=ViZf4iovMMk"
+    },
+    {
+      "name": "refocus",
+      "url": "https://www.youtube.com/watch?v=LScw8NFAI3E"
     }
   ],
   "gospel_hip_hop": [
@@ -295,6 +347,12 @@
     {
       "name": "Day in the Life",
       "url": "https://www.youtube.com/watch?v=nW25yhdyhz8&t=609s"
+    }
+  ],
+  "inspiring_music": [
+    {
+      "name": "UFC-at-the-white-house-band",
+      "url": "https://www.youtube.com/watch?v=UOlxpAcmRIs"
     }
   ],
   "jdilla_instrumental": [
@@ -713,6 +771,20 @@
     {
       "name": "psalms-jazz-like-go",
       "url": "https://www.youtube.com/watch?v=iHH3RlpY3lg"
+    }
+  ],
+  "soaking": [
+    {
+      "name": "quiet-time",
+      "url": "https://www.youtube.com/watch?v=2JsArLBjn70"
+    },
+    {
+      "name": "brown-noise",
+      "url": "https://www.youtube.com/watch?v=ca3fBRmmrBA"
+    },
+    {
+      "name": "reset",
+      "url": "https://www.youtube.com/watch?v=EnjyNDP0ues&t=7051s"
     }
   ]
 }
