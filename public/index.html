@@ -1723,6 +1723,31 @@
                 <button id="metTapBeatBtn" style="flex:1; padding:15px 0; border-radius:14px; border:none; cursor:pointer; font-size:18px; letter-spacing:1px; background:#C9A24B; color:#1e1e1e; font-family:inherit;">Tap the beat</button>
             </div>
 
+            <!-- Beat Detection -->
+            <div style="border-top:1px solid rgba(255,255,255,0.1); margin-top:14px; padding-top:14px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                    <span style="font-size:12px; color:#8C7E63; letter-spacing:2px; text-transform:uppercase; font-family:sans-serif;">Beat Detection</span>
+                    <button id="beatDetectBtn" style="padding:6px 16px; border-radius:10px; border:1px solid rgba(255,255,255,0.15); cursor:pointer; font-size:13px; background:transparent; color:#e0e0e0; font-family:inherit;">Listen</button>
+                </div>
+                <div id="beatDetectStatus" style="display:none;">
+                    <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:6px;">
+                        <span style="font-size:36px; color:#e0e0e0; font-family:Georgia,serif;" id="beatDetectBpm">--</span>
+                        <span style="font-size:13px; color:#8C7E63;">detected BPM</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                        <span style="font-size:12px; color:#8C7E63; min-width:68px; font-family:sans-serif;">confidence</span>
+                        <div style="flex:1; height:6px; background:#333; border-radius:3px; overflow:hidden;">
+                            <div id="beatDetectConfBar" style="width:0%; height:100%; background:#C9A24B; border-radius:3px; transition:width 0.3s;"></div>
+                        </div>
+                        <span id="beatDetectConfPct" style="font-size:12px; color:#8C7E63; min-width:32px; text-align:right; font-family:sans-serif;">0%</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <input type="checkbox" id="beatDetectAutoApply" checked style="accent-color:#C9A24B;">
+                        <label for="beatDetectAutoApply" style="font-size:12px; color:#8C7E63; font-family:sans-serif;">Auto-apply when confidence &gt; 60%</label>
+                    </div>
+                </div>
+            </div>
+
             <p style="font-size:12px; color:#8C7E63; text-align:center; margin:12px 2px 0; line-height:1.5; font-family:sans-serif;">
                 Tap 2–4 times along with the music to set the tempo — the pulse keeps going on its own. Tap again anytime to re-sync when the music breathes.
             </p>
@@ -9657,6 +9682,11 @@ renderPmSections();
     let visualizerActive = false;
     let visualizerStream = null;
     let visualizerCtx = null;
+
+    // Expose stream for beat detection reuse
+    window._getVisualizerStream = function() {
+        return visualizerActive ? visualizerStream : null;
+    };
     let visualizerAnalyser = null;
     let visualizerAnimId = null;
 
@@ -9766,6 +9796,271 @@ renderPmSections();
             console.warn('Visualizer capture cancelled or failed:', err);
         }
     };
+})();
+
+// ============ BEAT DETECTION ENGINE (web-audio-beat-detector) ============
+(function() {
+    'use strict';
+
+    let bdActive = false;
+    let bdStream = null;
+    let bdRecorder = null;
+    let bdAudioCtx = null;
+    let bdChunkTimer = null;
+    let guessFunc = null;       // loaded from CDN
+    let detectedBpm = 0;
+    let analysisCount = 0;
+    const CHUNK_SECONDS = 6;    // record 6s chunks for analysis
+
+    function getElements() {
+        return {
+            btn: document.getElementById('beatDetectBtn'),
+            status: document.getElementById('beatDetectStatus'),
+            bpmEl: document.getElementById('beatDetectBpm'),
+            confBar: document.getElementById('beatDetectConfBar'),
+            confPct: document.getElementById('beatDetectConfPct'),
+            autoApply: document.getElementById('beatDetectAutoApply')
+        };
+    }
+
+    // Load the library once via dynamic import from CDN
+    async function loadLibrary() {
+        if (guessFunc) return;
+        try {
+            var mod = await import('https://esm.sh/web-audio-beat-detector@8.2.37');
+            guessFunc = mod.guess;
+        } catch (err) {
+            console.error('Failed to load web-audio-beat-detector:', err);
+            alert('Could not load beat detection library. Check your internet connection.');
+            throw err;
+        }
+    }
+
+    async function startDetection() {
+        var els = getElements();
+
+        // Show loading state while library loads
+        els.btn.textContent = 'Loading...';
+        els.btn.style.color = '#8C7E63';
+        await loadLibrary();
+
+        // Reuse visualizer stream if active, otherwise capture our own
+        var existingStream = window._getVisualizerStream ? window._getVisualizerStream() : null;
+        var stream;
+
+        if (existingStream && existingStream.getAudioTracks().length > 0) {
+            stream = existingStream;
+            bdStream = null; // don't own it
+        } else {
+            // Capture tab audio directly — no visualizer overlay
+            try {
+                stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                    audio: true
+                });
+                stream.getVideoTracks().forEach(function(t) { t.stop(); });
+
+                if (!stream.getAudioTracks().length) {
+                    alert('No audio captured. Make sure to check "Share tab audio".');
+                    stream.getTracks().forEach(function(t) { t.stop(); });
+                    els.btn.textContent = 'Listen';
+                    els.btn.style.color = '#e0e0e0';
+                    return;
+                }
+                bdStream = stream;
+
+                stream.getAudioTracks()[0].onended = function() {
+                    if (bdActive) stopDetection();
+                };
+            } catch (err) {
+                console.warn('Beat detection capture cancelled:', err);
+                els.btn.textContent = 'Listen';
+                els.btn.style.color = '#e0e0e0';
+                return;
+            }
+        }
+
+        bdAudioCtx = new AudioContext();
+        if (bdAudioCtx.state === 'suspended') await bdAudioCtx.resume();
+
+        bdActive = true;
+        detectedBpm = 0;
+        analysisCount = 0;
+
+        els.btn.textContent = 'Stop';
+        els.btn.style.background = '#C9A24B';
+        els.btn.style.color = '#1e1e1e';
+        els.status.style.display = 'block';
+        els.bpmEl.textContent = '...';
+        els.confBar.style.width = '0%';
+        els.confPct.textContent = '';
+
+        // Start the first recording chunk
+        startChunk(stream);
+    }
+
+    function startChunk(stream) {
+        if (!bdActive) return;
+
+        var els = getElements();
+        // Show a counting indicator while recording
+        var countdown = CHUNK_SECONDS;
+        els.confPct.textContent = countdown + 's';
+        els.confBar.style.background = '#8C7E63';
+        els.confBar.style.width = '0%';
+
+        var countInterval = setInterval(function() {
+            if (!bdActive) { clearInterval(countInterval); return; }
+            countdown--;
+            if (countdown > 0) {
+                els.confPct.textContent = countdown + 's';
+                els.confBar.style.width = Math.round(((CHUNK_SECONDS - countdown) / CHUNK_SECONDS) * 100) + '%';
+            }
+        }, 1000);
+
+        var chunks = [];
+        bdRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+        bdRecorder.ondataavailable = function(e) {
+            if (e.data.size > 0) chunks.push(e.data);
+        };
+
+        bdRecorder.onstop = async function() {
+            clearInterval(countInterval);
+            if (!bdActive || chunks.length === 0) return;
+
+            els.confPct.textContent = 'analyzing...';
+            els.confBar.style.width = '100%';
+
+            try {
+                // Decode the recorded chunk into an AudioBuffer
+                var blob = new Blob(chunks, { type: 'audio/webm' });
+                var arrayBuf = await blob.arrayBuffer();
+                var audioBuffer = await bdAudioCtx.decodeAudioData(arrayBuf);
+
+                // Run the library's guess() on the buffer
+                var result = await guessFunc(audioBuffer);
+                var bpm = Math.round(result.bpm);
+
+                analysisCount++;
+
+                // Smooth: if we already have a BPM, blend toward the new one
+                if (detectedBpm === 0) {
+                    detectedBpm = bpm;
+                } else {
+                    // Check for harmonic ambiguity (double/half time)
+                    var ratio = bpm / detectedBpm;
+                    if (ratio > 1.8 && ratio < 2.2) {
+                        bpm = Math.round(bpm / 2); // prefer slower for classical
+                    } else if (ratio > 0.45 && ratio < 0.55) {
+                        bpm = Math.round(bpm * 2);
+                    }
+                    detectedBpm = Math.round(detectedBpm * 0.4 + bpm * 0.6);
+                }
+
+                // Confidence grows with consistent readings
+                var conf = Math.min(1, analysisCount * 0.35);
+
+                updateUI(conf);
+
+                // Auto-apply to metronome on first successful detection, then wait 120s
+                if (els.autoApply && els.autoApply.checked && detectedBpm > 0) {
+                    var slider = document.getElementById('metBpmSlider');
+                    if (slider) {
+                        slider.value = detectedBpm;
+                        slider.dispatchEvent(new Event('input'));
+                    }
+                    // Cooldown — don't re-analyze for 120s
+                    els.confPct.textContent = 'applied';
+                    var cooldown = 60;
+                    var cooldownInterval = setInterval(function() {
+                        if (!bdActive) { clearInterval(cooldownInterval); return; }
+                        cooldown--;
+                        els.confPct.textContent = 'next in ' + cooldown + 's';
+                        if (cooldown <= 0) {
+                            clearInterval(cooldownInterval);
+                            if (bdActive) startChunk(stream);
+                        }
+                    }, 1000);
+                    return; // skip the immediate startChunk below
+                }
+            } catch (err) {
+                console.warn('Beat analysis failed on this chunk:', err);
+                els.confPct.textContent = 'retrying...';
+            }
+
+            // Start next chunk (only if we didn't enter cooldown above)
+            if (bdActive) startChunk(stream);
+        };
+
+        bdRecorder.start();
+
+        // Stop recording after CHUNK_SECONDS
+        bdChunkTimer = setTimeout(function() {
+            if (bdRecorder && bdRecorder.state === 'recording') {
+                bdRecorder.stop();
+            }
+        }, CHUNK_SECONDS * 1000);
+    }
+
+    function stopDetection() {
+        bdActive = false;
+
+        if (bdChunkTimer) { clearTimeout(bdChunkTimer); bdChunkTimer = null; }
+        if (bdRecorder && bdRecorder.state === 'recording') {
+            bdRecorder.stop();
+        }
+        bdRecorder = null;
+
+        if (bdStream) {
+            bdStream.getTracks().forEach(function(t) { t.stop(); });
+            bdStream = null;
+        }
+        if (bdAudioCtx) {
+            bdAudioCtx.close();
+            bdAudioCtx = null;
+        }
+
+        var els = getElements();
+        els.btn.textContent = 'Listen';
+        els.btn.style.background = 'transparent';
+        els.btn.style.color = '#e0e0e0';
+        els.status.style.display = 'none';
+    }
+
+    function updateUI(conf) {
+        var els = getElements();
+        if (!els.bpmEl) return;
+
+        els.bpmEl.textContent = detectedBpm > 0 ? detectedBpm : '--';
+
+        var pct = Math.round(conf * 100);
+        els.confBar.style.width = pct + '%';
+        els.confPct.textContent = pct + '%';
+
+        if (conf > 0.6) {
+            els.confBar.style.background = '#C9A24B';
+        } else if (conf > 0.3) {
+            els.confBar.style.background = '#8C7E63';
+        } else {
+            els.confBar.style.background = '#666';
+        }
+    }
+
+    function initBeatDetect() {
+        var btn = document.getElementById('beatDetectBtn');
+        if (!btn) return;
+        btn.addEventListener('click', function() {
+            if (bdActive) stopDetection();
+            else startDetection();
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initBeatDetect);
+    } else {
+        initBeatDetect();
+    }
 })();
 
 // ============ SCRIPTURE OVERLAY ============
