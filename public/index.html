@@ -1687,6 +1687,25 @@
                 <button id="metTapSmall" class="met-pill-btn" style="min-width:52px;">Tap</button>
             </div>
 
+            <!-- Tempo Marking Preset -->
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:14px;">
+                <span style="font-size:12px; color:#8C7E63; letter-spacing:2px; text-transform:uppercase; font-family:sans-serif; min-width:50px;">Tempo</span>
+                <button id="metTempoPrev" class="met-icon-btn" style="min-width:30px; font-size:12px;">&laquo;</button>
+                <select id="metTempoPreset" style="flex:1; background:#111; color:#e0e0e0; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:6px 8px; font-size:13px; font-family:Georgia,serif;">
+                    <option value="">— select —</option>
+                    <option value="30">Grave (30)</option>
+                    <option value="53">Largo (53)</option>
+                    <option value="71">Adagio (71)</option>
+                    <option value="92">Andante (92)</option>
+                    <option value="114">Moderato (114)</option>
+                    <option value="138">Allegro (138)</option>
+                    <option value="176">Vivace (176)</option>
+                    <option value="192">Presto (192)</option>
+                    <option value="220">Prestissimo (220)</option>
+                </select>
+                <button id="metTempoNext" class="met-icon-btn" style="min-width:30px; font-size:12px;">&raquo;</button>
+            </div>
+
             <!-- Pattern -->
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                 <span style="font-size:12px; color:#8C7E63; letter-spacing:2px; text-transform:uppercase; font-family:sans-serif;">Pattern</span>
@@ -10581,6 +10600,33 @@ renderPmSections();
         // Key select
         document.getElementById('metKeySelect').addEventListener('change', function() {
             metNote = this.value;
+        });
+
+        // Tempo marking preset
+        var tempoPreset = document.getElementById('metTempoPreset');
+        tempoPreset.addEventListener('change', function() {
+            var val = parseInt(this.value);
+            if (val) clampBpm(val);
+        });
+
+        document.getElementById('metTempoPrev').addEventListener('click', function() {
+            var idx = tempoPreset.selectedIndex;
+            if (idx > 1) { // skip index 0 ("— select —")
+                tempoPreset.selectedIndex = idx - 1;
+            } else {
+                tempoPreset.selectedIndex = 1; // go to first real option
+            }
+            var val = parseInt(tempoPreset.value);
+            if (val) clampBpm(val);
+        });
+
+        document.getElementById('metTempoNext').addEventListener('click', function() {
+            var idx = tempoPreset.selectedIndex;
+            if (idx < tempoPreset.options.length - 1) {
+                tempoPreset.selectedIndex = idx + 1;
+            }
+            var val = parseInt(tempoPreset.value);
+            if (val) clampBpm(val);
         });
 
         // Volume
