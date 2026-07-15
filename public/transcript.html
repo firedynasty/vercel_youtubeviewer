@@ -232,6 +232,41 @@ body.light .format-info {
 body.light .toggle-row { color: #555; }
 body.light .status { color: #2E7D32; }
 body.light .status.error { color: #c62828; }
+
+/* Article view */
+#articleView {
+  display: none;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 0 20px 60px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.15rem;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+#articleView .article-timestamp {
+  color: #667eea;
+  font-weight: bold;
+  font-size: 0.9rem;
+  font-family: monospace;
+  margin-top: 1.5em;
+  margin-bottom: 0.2em;
+}
+
+#articleView .article-text {
+  margin: 0 0 0.8em;
+}
+
+body.light #articleView .article-timestamp {
+  color: #4a5dc7;
+}
+
+body.article-mode .container,
+body.article-mode .music-navbar .nav-title { display: none; }
+body.article-mode #articleView { display: block; }
+body.article-mode .music-navbar { border-bottom-color: #43A047; }
   </style>
 </head>
 <body>
@@ -240,7 +275,10 @@ body.light .status.error { color: #c62828; }
   <span class="nav-title">Transcript Cleaner</span>
   <button class="music-nav-link" style="background:linear-gradient(45deg,#FF6B35,#F7931E);" onclick="window.open('index.html','_blank')">Main</button>
   <button class="music-nav-link" style="background:linear-gradient(45deg,#546E7A,#37474F);" onclick="toggleLight()">Light</button>
+  <button class="music-nav-link" id="articleBtn" style="background:linear-gradient(45deg,#43A047,#2E7D32);display:none;" onclick="toggleArticle()">Article</button>
 </div>
+
+<div id="articleView"></div>
 
 <div class="container">
   <h1>Transcript Cleaner</h1>
@@ -287,8 +325,44 @@ dropped one of the biggest..."></textarea>
 <script>
 function toggleLight() {
   document.body.classList.toggle('light');
-  const btn = document.querySelector('.music-navbar .music-nav-link:last-child');
-  btn.textContent = document.body.classList.contains('light') ? 'Dark' : 'Light';
+  var btns = document.querySelectorAll('.music-navbar .music-nav-link');
+  btns[1].textContent = document.body.classList.contains('light') ? 'Dark' : 'Light';
+}
+
+function toggleArticle() {
+  var btn = document.getElementById('articleBtn');
+  if (document.body.classList.contains('article-mode')) {
+    document.body.classList.remove('article-mode');
+    btn.textContent = 'Article';
+    btn.style.background = 'linear-gradient(45deg,#43A047,#2E7D32)';
+  } else {
+    buildArticleView();
+    document.body.classList.add('article-mode');
+    btn.textContent = 'Editor';
+    btn.style.background = 'linear-gradient(45deg,#E65100,#BF360C)';
+    window.scrollTo(0, 0);
+  }
+}
+
+function buildArticleView() {
+  var output = document.getElementById('outputText').value;
+  if (!output) return;
+  var container = document.getElementById('articleView');
+  var html = '';
+  var lines = output.split('\n');
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    if (/^\[[\d:]+\]$/.test(line.trim())) {
+      html += '<div class="article-timestamp">' + escHtml(line.trim()) + '</div>';
+    } else if (line.trim()) {
+      html += '<div class="article-text">' + escHtml(line) + '</div>';
+    }
+  }
+  container.innerHTML = html;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function wrap(text, width) {
@@ -436,6 +510,7 @@ function cleanTranscript() {
   setStatus('parseStatus', `Cleaned ${segments.length} segments.`);
   document.getElementById('outputSection').style.display = '';
   document.getElementById('outputText').value = output.trim();
+  document.getElementById('articleBtn').style.display = '';
 }
 
 function isEndOfTranscript(line, lines, idx) {
