@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transcript Cleaner</title>
+  <style>
+@import url("https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz:300,400");
+
+html, body {
+  -webkit-font-smoothing: antialiased;
+  background-color: #111;
+  color: #C8C7C8;
+  font: 20px/24px "Yanone Kaffeesatz", HelveticaNeue, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 300;
+  margin: 0;
+  padding: 10px 0;
+}
+
+* { box-sizing: border-box; }
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+h1 {
+  text-align: center;
+  color: #667eea;
+  font-size: 2rem;
+  margin: 20px 0 5px;
+  font-weight: 400;
+}
+
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 1rem;
+  margin-bottom: 20px;
+}
+
+.section {
+  background: linear-gradient(135deg, rgba(38, 50, 56, 0.8), rgba(55, 71, 79, 0.8));
+  border: 1px solid rgba(144, 164, 174, 0.3);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 1rem 0;
+}
+
+.section h3 {
+  color: #667eea;
+  font-weight: 400;
+  font-size: 1.3rem;
+  margin: 0 0 12px;
+}
+
+textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(144,164,174,0.4);
+  border-radius: 8px;
+  padding: 12px;
+  color: #E0E0E0;
+  font-family: monospace;
+  font-size: 0.85rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+}
+
+.btn-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+.btn {
+  background: linear-gradient(45deg, #455A64, #37474F);
+  color: #E0E0E0;
+  border: 1px solid rgba(144,164,174,0.4);
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.btn:hover {
+  background: linear-gradient(45deg, #546E7A, #455A64);
+  border-color: #667eea;
+}
+
+.btn.primary {
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  border-color: transparent;
+  color: white;
+}
+
+.btn.primary:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn.green {
+  background: linear-gradient(45deg, #43A047, #2E7D32);
+  border-color: transparent;
+  color: white;
+}
+
+.btn.green:hover {
+  box-shadow: 0 4px 12px rgba(67, 160, 71, 0.4);
+}
+
+.status {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #8BC34A;
+  margin-top: 8px;
+  min-height: 1.2em;
+}
+
+.status.error { color: #f44336; }
+
+.format-info {
+  background: rgba(102, 126, 234, 0.08);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 10px 0;
+  font-size: 0.85rem;
+  color: #90A4AE;
+  line-height: 1.6;
+}
+
+/* Navbar */
+.music-navbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 50px;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 9999;
+  padding: 0 20px;
+  border-bottom: 3px solid #667eea;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.5);
+}
+
+body { padding-top: 53px; }
+
+.music-nav-link {
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: bold;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.music-nav-link:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  color: white;
+}
+
+.music-navbar .nav-title {
+  color: #CE93D8;
+  font-weight: 600;
+  font-size: 15px;
+  margin-right: auto;
+  white-space: nowrap;
+}
+
+.toggle-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 8px 0;
+  font-size: 0.85rem;
+  color: #90A4AE;
+}
+
+.toggle-row label {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+  </style>
+</head>
+<body>
+<!-- Navbar -->
+<div class="music-navbar">
+  <span class="nav-title">Transcript Cleaner</span>
+  <button class="music-nav-link" style="background:linear-gradient(45deg,#FF6B35,#F7931E);" onclick="window.open('index.html','_blank')">Main</button>
+  <button class="music-nav-link" style="background:linear-gradient(45deg,#667eea,#764ba2);" onclick="window.open('parser.html','_blank')">Tracklist</button>
+  <button class="music-nav-link" style="background:linear-gradient(45deg,#6A1B9A,#4A148C);" onclick="window.open('parser2.html','_blank')">Link Cleaner</button>
+</div>
+
+<div class="container">
+  <h1>Transcript Cleaner</h1>
+  <p class="subtitle">Paste raw YouTube transcript (Select All) — get clean formatted text</p>
+
+  <!-- Step 1: Paste -->
+  <div class="section">
+    <h3>1. Paste Raw Transcript</h3>
+    <div class="format-info">
+      On your phone: open YouTube transcript panel, tap Select All, Copy, then paste here.
+      The cleaner strips duration labels ("6 seconds", "1 minute, 7 seconds"), recommended videos, channel info, and all other noise.
+    </div>
+    <textarea id="inputText" rows="14" placeholder="Paste your raw transcript here...
+
+Transcript
+Search transcript
+0:00
+Hey everyone. So yesterday...
+0:06
+6 seconds
+dropped one of the biggest..."></textarea>
+    <div class="toggle-row">
+      <label><input type="checkbox" id="showTimestamps" checked> Show timestamps</label>
+      <label><input type="checkbox" id="groupByMinute" checked> Group by minute</label>
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="cleanTranscript()">Clean</button>
+      <button class="btn" onclick="document.getElementById('inputText').value=''; clearOutput()">Clear</button>
+    </div>
+    <div class="status" id="parseStatus"></div>
+  </div>
+
+  <!-- Step 2: Output -->
+  <div class="section" id="outputSection" style="display:none;">
+    <h3>2. Cleaned Transcript</h3>
+    <textarea id="outputText" rows="20" readonly></textarea>
+    <div class="btn-row">
+      <button class="btn green" onclick="copyOutput()">Copy to Clipboard</button>
+      <span class="status" id="copyStatus"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+function wrap(text, width) {
+  width = width || 45;
+  const words = text.split(' ');
+  let lines = [], line = '';
+  words.forEach(function(word) {
+    if (line.length + word.length + 1 <= width) {
+      line += line ? (' ' + word) : word;
+    } else {
+      if (line) lines.push(line);
+      line = word;
+    }
+  });
+  if (line) lines.push(line);
+  return lines.join('\n');
+}
+
+function cleanTranscript() {
+  const raw = document.getElementById('inputText').value.trim();
+  if (!raw) {
+    setStatus('parseStatus', 'Paste a transcript first.', true);
+    return;
+  }
+
+  const showTimestamps = document.getElementById('showTimestamps').checked;
+  const groupByMinute = document.getElementById('groupByMinute').checked;
+
+  const lines = raw.split('\n');
+
+  // Extract timestamp + text pairs
+  const segments = [];
+  let i = 0;
+
+  // Skip leading noise: "Transcript", "Search transcript", "Follow along..."
+  while (i < lines.length) {
+    const line = lines[i].trim();
+    if (/^\d+:\d{2}/.test(line)) break;
+    i++;
+  }
+
+  while (i < lines.length) {
+    const line = lines[i].trim();
+
+    // Match timestamp line: 0:00, 1:07, 12:34, 1:23:45
+    const tsMatch = line.match(/^(\d{1,2}:\d{2}(?::\d{2})?)$/);
+    if (tsMatch) {
+      const timestamp = tsMatch[1];
+      i++;
+
+      // Skip duration description lines like "6 seconds", "1 minute, 7 seconds", "2 minutes, 3 seconds"
+      while (i < lines.length) {
+        const next = lines[i].trim();
+        if (/^\d+\s+(second|minute|hour)s?(\s*,\s*\d+\s+(second|minute|hour)s?)*$/i.test(next)) {
+          i++;
+        } else {
+          break;
+        }
+      }
+
+      // Collect text lines until next timestamp or end-of-transcript noise
+      let text = '';
+      while (i < lines.length) {
+        const next = lines[i].trim();
+        // Next timestamp
+        if (/^\d{1,2}:\d{2}(?::\d{2})?$/.test(next)) break;
+        // Duration line that got separated
+        if (/^\d+\s+(second|minute|hour)s?(\s*,\s*\d+\s+(second|minute|hour)s?)*$/i.test(next)) {
+          i++;
+          continue;
+        }
+        // End-of-transcript markers
+        if (isEndOfTranscript(next, lines, i)) break;
+        if (next) text += (text ? ' ' : '') + next;
+        i++;
+      }
+
+      if (text) {
+        segments.push({ timestamp, text });
+      }
+    } else {
+      // Check if we've hit the end-of-transcript section
+      if (isEndOfTranscript(line, lines, i)) break;
+      i++;
+    }
+  }
+
+  if (segments.length === 0) {
+    setStatus('parseStatus', 'No transcript segments found. Make sure you copied the transcript panel.', true);
+    clearOutput();
+    return;
+  }
+
+  // Format output
+  let output = '';
+
+  if (groupByMinute && showTimestamps) {
+    let lastMinute = -1;
+    let block = [];
+
+    for (const seg of segments) {
+      const m = seg.timestamp.match(/^(?:(\d+):)?(\d+):\d{2}$/);
+      const minute = m ? (m[1] ? parseInt(m[1]) * 60 + parseInt(m[2]) : parseInt(m[2])) : -1;
+
+      if (minute !== lastMinute) {
+        if (block.length > 0) {
+          output += wrap(block.join(' ')) + '\n\n';
+        }
+        output += '[' + seg.timestamp + ']\n';
+        block = [];
+        lastMinute = minute;
+      }
+      block.push(seg.text);
+    }
+    if (block.length > 0) {
+      output += wrap(block.join(' ')) + '\n\n';
+    }
+  } else if (showTimestamps) {
+    for (const seg of segments) {
+      output += '[' + seg.timestamp + ']\n' + wrap(seg.text) + '\n\n';
+    }
+  } else {
+    // No timestamps — just flowing text grouped into paragraphs by minute
+    if (groupByMinute) {
+      let lastMinute = -1;
+      let block = [];
+      for (const seg of segments) {
+        const m = seg.timestamp.match(/^(?:(\d+):)?(\d+):\d{2}$/);
+        const minute = m ? (m[1] ? parseInt(m[1]) * 60 + parseInt(m[2]) : parseInt(m[2])) : -1;
+        if (minute !== lastMinute && block.length > 0) {
+          output += wrap(block.join(' ')) + '\n\n';
+          block = [];
+        }
+        lastMinute = minute;
+        block.push(seg.text);
+      }
+      if (block.length > 0) {
+        output += wrap(block.join(' ')) + '\n\n';
+      }
+    } else {
+      output = wrap(segments.map(s => s.text).join(' '));
+    }
+  }
+
+  setStatus('parseStatus', `Cleaned ${segments.length} segments.`);
+  document.getElementById('outputSection').style.display = '';
+  document.getElementById('outputText').value = output.trim();
+}
+
+function isEndOfTranscript(line, lines, idx) {
+  // Common patterns that signal end of transcript content
+  if (!line) return false;
+  // Video title line (all caps or mixed with exclamation, typically long)
+  // Channel name + subscriber count pattern
+  if (/^\d[\d,.]*[KkMm]?\s*subscribers?$/i.test(line)) return true;
+  // "X views" pattern
+  if (/^\d[\d,.]*[KkMm]?\s*views$/i.test(line)) return true;
+  // Date like "Jul 15, 2026"
+  if (/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}$/i.test(line)) return true;
+  // "Subscribe" or channel action buttons
+  if (/^Subscribe$/i.test(line)) return true;
+  // "Comments" section
+  if (/^Comments$/i.test(line)) return true;
+  // "Ask" section
+  if (/^Ask$/i.test(line)) return true;
+  // Recommended video durations like "15:04" followed by video titles
+  // Subscriber counts like "84.5K subscribers"
+  if (/^[\d.]+[KkMm]\s+subscribers$/i.test(line)) return true;
+  // "Follow along using the transcript"
+  if (/^Follow along/i.test(line)) return true;
+  // "Transcript" as a section header at the end
+  if (line === 'Transcript' && idx > 10) return true;
+  // Video metadata: "X views • Y ago"
+  if (/views\s*[•·]\s*\d/i.test(line)) return true;
+  return false;
+}
+
+function clearOutput() {
+  document.getElementById('outputSection').style.display = 'none';
+  document.getElementById('parseStatus').textContent = '';
+}
+
+function copyOutput() {
+  const text = document.getElementById('outputText').value;
+  navigator.clipboard.writeText(text).then(() => {
+    setStatus('copyStatus', 'Copied!');
+  }).catch(() => {
+    const el = document.getElementById('outputText');
+    el.select();
+    document.execCommand('copy');
+    setStatus('copyStatus', 'Copied!');
+  });
+}
+
+function setStatus(id, msg, isError) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'status' + (isError ? ' error' : '');
+}
+</script>
+</body>
+</html>
