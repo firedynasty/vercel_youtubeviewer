@@ -242,8 +242,6 @@ body.light .status.error { color: #c62828; }
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 1.15rem;
   line-height: 1.8;
-  white-space: pre-wrap;
-  word-wrap: break-word;
 }
 
 #articleView .article-timestamp {
@@ -350,13 +348,26 @@ function buildArticleView() {
   var container = document.getElementById('articleView');
   var html = '';
   var lines = output.split('\n');
+  var paragraph = [];
   for (var i = 0; i < lines.length; i++) {
-    var line = lines[i];
-    if (/^\[[\d:]+\]$/.test(line.trim())) {
-      html += '<div class="article-timestamp">' + escHtml(line.trim()) + '</div>';
-    } else if (line.trim()) {
-      html += '<div class="article-text">' + escHtml(line) + '</div>';
+    var line = lines[i].trim();
+    if (/^\[[\d:]+\]$/.test(line)) {
+      if (paragraph.length) {
+        html += '<p class="article-text">' + escHtml(paragraph.join(' ')) + '</p>';
+        paragraph = [];
+      }
+      html += '<div class="article-timestamp">' + escHtml(line) + '</div>';
+    } else if (line) {
+      paragraph.push(line);
+    } else {
+      if (paragraph.length) {
+        html += '<p class="article-text">' + escHtml(paragraph.join(' ')) + '</p>';
+        paragraph = [];
+      }
     }
+  }
+  if (paragraph.length) {
+    html += '<p class="article-text">' + escHtml(paragraph.join(' ')) + '</p>';
   }
   container.innerHTML = html;
 }
