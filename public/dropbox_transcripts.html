@@ -19,6 +19,51 @@ html, body {
 
 * { box-sizing: border-box; }
 
+/* Navbar */
+.music-navbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 50px;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 9999;
+  padding: 0 20px;
+  border-bottom: 3px solid #667eea;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.5);
+}
+
+body { padding-top: 53px; }
+
+.music-nav-link {
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: bold;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.music-nav-link:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  color: white;
+}
+
+.music-navbar .nav-title {
+  color: #CE93D8;
+  font-weight: 600;
+  font-size: 15px;
+  margin-right: auto;
+  white-space: nowrap;
+}
+
 .container {
   max-width: 900px;
   margin: 0 auto;
@@ -37,7 +82,16 @@ h1 {
   text-align: center;
   color: #888;
   font-size: 1rem;
-  margin-bottom: 20px;
+  margin-bottom: 5px;
+}
+
+.subtitle a {
+  color: #667eea;
+  text-decoration: none;
+}
+
+.subtitle a:hover {
+  text-decoration: underline;
 }
 
 .section {
@@ -182,12 +236,28 @@ h1 {
   border: 1px solid rgba(144, 164, 174, 0.2);
   border-radius: 8px;
   padding: 16px;
-  font-size: 0.95rem;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1.8;
   max-height: 70vh;
   overflow-y: auto;
+}
+
+.transcript-content .timestamp {
+  color: #667eea;
+  font-weight: bold;
+  font-family: monospace;
+  font-size: 0.85em;
+  margin-top: 1.2em;
+  margin-bottom: 0.3em;
+  display: block;
+}
+
+.transcript-content .timestamp:first-child {
+  margin-top: 0;
+}
+
+.transcript-content .paragraph {
+  margin: 0 0 0.8em;
 }
 
 .loading {
@@ -202,7 +272,15 @@ h1 {
   color: #666;
 }
 
-/* Copy button */
+/* Toolbar */
+.toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
 .copy-btn {
   background: linear-gradient(45deg, #43A047, #2E7D32);
   border: none;
@@ -218,55 +296,156 @@ h1 {
 .copy-btn:hover {
   box-shadow: 0 4px 12px rgba(67, 160, 71, 0.4);
 }
+
+.font-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(144,164,174,0.3);
+  color: #E0E0E0;
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.font-btn:hover {
+  background: rgba(255,255,255,0.2);
+  border-color: #667eea;
+}
+
+.font-label {
+  font-size: 0.8rem;
+  color: #888;
+  margin-left: 4px;
+}
+
+/* Light mode */
+body.light {
+  background-color: #f5f5f5;
+  color: #222;
+}
+
+body.light .music-navbar {
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom-color: #4a5dc7;
+}
+
+body.light .music-navbar .nav-title {
+  color: #4a5dc7;
+}
+
+body.light .section {
+  background: #fff;
+  border-color: #ddd;
+}
+
+body.light h1 { color: #4a5dc7; }
+body.light .subtitle { color: #666; }
+body.light .subtitle a { color: #4a5dc7; }
+
+body.light .file-list li:hover {
+  background: rgba(102, 126, 234, 0.08);
+}
+
+body.light .file-list li {
+  border-bottom-color: #eee;
+}
+
+body.light .file-date { color: #999; }
+
+body.light .viewer-title { color: #4a5dc7; }
+body.light .viewer-meta a { color: #4a5dc7; }
+
+body.light .transcript-content {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: #ddd;
+  color: #222;
+}
+
+body.light .transcript-content .timestamp {
+  color: #4a5dc7;
+}
+
+body.light .close-btn {
+  background: rgba(244, 67, 54, 0.1);
+}
+
+body.light .font-btn {
+  background: rgba(0,0,0,0.05);
+  border-color: #ccc;
+  color: #333;
+}
+
+body.light .font-label { color: #666; }
+body.light .status { color: #2E7D32; }
+body.light .status.error { color: #c62828; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>YouTube Transcripts</h1>
-    <p class="subtitle">Browse transcripts from Dropbox</p>
 
-    <!-- Auth section -->
-    <div id="auth-section" class="section" style="text-align: center;">
-      <button id="sign-in-btn" class="btn primary" onclick="handleSignIn()">Sign in with Dropbox</button>
-      <div id="auth-status" class="status"></div>
-    </div>
+<!-- Navbar -->
+<div class="music-navbar">
+  <span class="nav-title">YT Transcripts</span>
+  <button class="music-nav-link" style="background:linear-gradient(45deg,#FF6B35,#F7931E);" onclick="window.open('index.html','_blank')">Main</button>
+  <button class="music-nav-link" style="background:linear-gradient(45deg,#546E7A,#37474F);" id="themeBtn" onclick="toggleTheme()">Light</button>
+  <a class="music-nav-link" style="background:linear-gradient(45deg,#0D47A1,#1565C0);" href="https://www.dropbox.com/home/blob_vercel_replacement/youtubetranscriptup" target="_blank">Dropbox Folder</a>
+</div>
 
-    <!-- File list view -->
-    <div id="list-view" style="display: none;">
-      <div class="section">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <span style="color: #667eea; font-size: 1.1rem;">Files</span>
-          <button class="btn" onclick="loadFiles()" style="padding: 6px 14px; font-size: 0.8rem;">Refresh</button>
-        </div>
-        <ul id="file-list" class="file-list"></ul>
-        <div id="list-loading" class="loading" style="display: none;">Loading...</div>
-        <div id="list-empty" class="empty" style="display: none;">No transcript files found.</div>
+<div class="container">
+  <h1>YouTube Transcripts</h1>
+  <p class="subtitle">Browse transcripts from Dropbox &middot; <a href="https://www.dropbox.com/home/blob_vercel_replacement/youtubetranscriptup" target="_blank">Manage files</a></p>
+
+  <!-- Auth section -->
+  <div id="auth-section" class="section" style="text-align: center;">
+    <button id="sign-in-btn" class="btn primary" onclick="handleSignIn()">Sign in with Dropbox</button>
+    <div id="auth-status" class="status"></div>
+  </div>
+
+  <!-- File list view -->
+  <div id="list-view" style="display: none;">
+    <div class="section">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <span style="color: #667eea; font-size: 1.1rem;">Files</span>
+        <button class="btn" onclick="loadFiles()" style="padding: 6px 14px; font-size: 0.8rem;">Refresh</button>
       </div>
-    </div>
-
-    <!-- Transcript viewer -->
-    <div id="viewer" style="display: none;">
-      <div class="section">
-        <div class="viewer-header">
-          <button class="close-btn" onclick="closeViewer()" title="Back to list">&times;</button>
-          <span id="viewer-title" class="viewer-title"></span>
-        </div>
-        <div id="viewer-meta" class="viewer-meta"></div>
-        <div style="margin-bottom: 10px;">
-          <button class="copy-btn" onclick="copyTranscript()">Copy transcript</button>
-          <span id="copy-status" class="status" style="display: inline; margin-left: 10px;"></span>
-        </div>
-        <div id="transcript-content" class="transcript-content"></div>
-      </div>
+      <ul id="file-list" class="file-list"></ul>
+      <div id="list-loading" class="loading" style="display: none;">Loading...</div>
+      <div id="list-empty" class="empty" style="display: none;">No transcript files found.</div>
     </div>
   </div>
 
+  <!-- Transcript viewer -->
+  <div id="viewer" style="display: none;">
+    <div class="section">
+      <div class="viewer-header">
+        <button class="close-btn" onclick="closeViewer()" title="Back to list">&times;</button>
+        <span id="viewer-title" class="viewer-title"></span>
+      </div>
+      <div id="viewer-meta" class="viewer-meta"></div>
+      <div class="toolbar">
+        <button class="copy-btn" onclick="copyTranscript()">Copy</button>
+        <span id="copy-status" class="status" style="margin: 0;"></span>
+        <span style="flex:1;"></span>
+        <span class="font-label">Font</span>
+        <button class="font-btn" onclick="changeFontSize(-1)" title="Decrease font size">&minus;</button>
+        <button class="font-btn" onclick="changeFontSize(1)" title="Increase font size">+</button>
+      </div>
+      <div id="transcript-content" class="transcript-content"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 const APP_KEY = 'pqeqkzb3yvnta3n';
-const DROPBOX_FOLDER = '/youtubetranscriptsupload';
+const DROPBOX_FOLDER = '/blob_vercel_replacement/youtubetranscriptup';
 const REDIRECT_URI = window.location.origin + window.location.pathname;
 
 let accessToken = null;
+let currentFontSize = 18;
 
 // PKCE helpers
 function generateCodeVerifier() {
@@ -281,6 +460,20 @@ async function generateCodeChallenge(verifier) {
   const digest = await crypto.subtle.digest('SHA-256', data);
   return btoa(String.fromCharCode(...new Uint8Array(digest)))
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+// Theme toggle
+function toggleTheme() {
+  document.body.classList.toggle('light');
+  document.getElementById('themeBtn').textContent =
+    document.body.classList.contains('light') ? 'Dark' : 'Light';
+}
+
+// Font size
+function changeFontSize(delta) {
+  currentFontSize = Math.max(10, Math.min(36, currentFontSize + delta * 2));
+  const el = document.getElementById('transcript-content');
+  el.style.fontSize = currentFontSize + 'px';
 }
 
 // Auth
@@ -365,7 +558,6 @@ async function listFiles() {
     cursor = contData.cursor;
   }
 
-  // Filter to .txt files, sort by modified date descending
   return entries
     .filter(e => e['.tag'] === 'file' && e.name.endsWith('.txt'))
     .sort((a, b) => new Date(b.client_modified) - new Date(a.client_modified));
@@ -382,6 +574,64 @@ async function downloadFile(path) {
 
   if (!res.ok) throw new Error(`Download failed: HTTP ${res.status}`);
   return await res.text();
+}
+
+// Format transcript with minute timestamps
+function formatTranscript(rawText) {
+  // Split into sentences/chunks and group by estimated minute
+  // The Python script saves either plain text or timestamped text
+  // Check if it already has [X:00] timestamps
+  const hasTimestamps = /\[\d+:00\]/.test(rawText);
+
+  if (hasTimestamps) {
+    // Already has timestamps from --timestamps flag
+    const parts = rawText.split(/(\[\d+:00\])/);
+    let html = '';
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i].trim();
+      if (!part) continue;
+      if (/^\[\d+:00\]$/.test(part)) {
+        html += `<span class="timestamp">${part}</span>`;
+      } else {
+        html += `<span class="paragraph">${escapeHtml(part)}</span>`;
+      }
+    }
+    return html;
+  }
+
+  // Plain text - split into paragraphs by sentences, add minute markers
+  // Estimate ~150 words per minute of speech
+  const words = rawText.split(/\s+/);
+  const wordsPerMinute = 150;
+  let html = '';
+  let currentMinute = 0;
+  html += `<span class="timestamp">[0:00]</span>`;
+
+  let currentParagraph = [];
+  for (let i = 0; i < words.length; i++) {
+    currentParagraph.push(words[i]);
+    const minute = Math.floor(i / wordsPerMinute);
+
+    if (minute > currentMinute) {
+      // Flush current paragraph
+      html += `<span class="paragraph">${escapeHtml(currentParagraph.join(' '))}</span>`;
+      currentParagraph = [];
+      currentMinute = minute;
+      html += `<span class="timestamp">[${minute}:00]</span>`;
+    }
+  }
+
+  if (currentParagraph.length > 0) {
+    html += `<span class="paragraph">${escapeHtml(currentParagraph.join(' '))}</span>`;
+  }
+
+  return html;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 // UI
@@ -413,7 +663,6 @@ async function loadFiles() {
 
       const name = document.createElement('span');
       name.className = 'file-name';
-      // Clean up filename for display
       const displayName = file.name.replace('.txt', '').replace(/_/g, ' ');
       name.textContent = displayName;
 
@@ -444,7 +693,7 @@ async function openFile(path, filename) {
 
   titleEl.textContent = 'Loading...';
   metaEl.innerHTML = '';
-  contentEl.textContent = '';
+  contentEl.innerHTML = '';
 
   try {
     const text = await downloadFile(path);
@@ -471,7 +720,9 @@ async function openFile(path, filename) {
     if (fetched) metaHtml += `<span style="margin-left: 12px; color: #666;">Fetched: ${fetched}</span>`;
     metaEl.innerHTML = metaHtml;
 
-    contentEl.textContent = body || text;
+    // Format with timestamps
+    contentEl.innerHTML = formatTranscript(body || text);
+    contentEl.style.fontSize = currentFontSize + 'px';
   } catch (e) {
     titleEl.textContent = 'Error';
     contentEl.textContent = 'Failed to load file: ' + e.message;

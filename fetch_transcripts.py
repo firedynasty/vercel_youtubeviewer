@@ -21,7 +21,7 @@ from datetime import datetime
 import yt_dlp
 from youtube_transcript_api import YouTubeTranscriptApi
 
-DROPBOX_FOLDER = "dropbox:/youtubetranscriptsupload"
+DROPBOX_FOLDER = "dropbox:/blob_vercel_replacement/youtubetranscriptup"
 LOCAL_TEMP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_transcript_temp")
 
 

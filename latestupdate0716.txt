@@ -1,0 +1,27 @@
+Latest Update - July 16, 2026
+
+Built a YouTube transcript pipeline:
+
+1. Python script (fetch_transcripts.py) that:
+   - Reads YouTube channel URLs from channels.txt (one per line)
+   - Uses yt-dlp to get the most recent video(s) from each channel
+   - Uses youtube-transcript-api to pull the transcript
+   - Uploads .txt files to Dropbox (/youtubetranscriptsupload/) via rclone
+
+2. Dropbox transcript viewer page (public/dropbox_transcripts.html):
+   - Standalone HTML page matching the existing dark theme
+   - Signs in with Dropbox using PKCE OAuth (same app key as vercel_dropbox)
+   - Lists all transcript .txt files from Dropbox, sorted newest first
+   - Click a file to read the transcript with title and YouTube link
+   - X button to go back to the file list
+   - Copy button to grab transcript text
+
+3. Added "DB Transcripts" nav button to main index.html
+
+Usage:
+   python fetch_transcripts.py --file channels.txt          # 1 most recent video per channel
+   python fetch_transcripts.py --file channels.txt -n 5     # 5 most recent per channel
+   python fetch_transcripts.py "https://www.youtube.com/@channelname"  # single channel
+
+Note: Had to upgrade youtube-transcript-api from 0.6.2 to 1.2.4 (old version had a parsing bug).
+Note: Vercel deploy was delayed due to GitHub outage affecting webhooks - manually triggered deploy using commit e0bc4b9.
