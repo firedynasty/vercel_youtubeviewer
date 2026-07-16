@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Transcripts</title>
+  <style>
+@import url("https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz:300,400");
+
+html, body {
+  -webkit-font-smoothing: antialiased;
+  background-color: #111;
+  color: #C8C7C8;
+  font: 20px/24px "Yanone Kaffeesatz", HelveticaNeue, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 300;
+  margin: 0;
+  padding: 10px 0;
+}
+
+* { box-sizing: border-box; }
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+h1 {
+  text-align: center;
+  color: #667eea;
+  font-size: 2rem;
+  margin: 20px 0 5px;
+  font-weight: 400;
+}
+
+.subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 1rem;
+  margin-bottom: 20px;
+}
+
+.section {
+  background: linear-gradient(135deg, rgba(38, 50, 56, 0.8), rgba(55, 71, 79, 0.8));
+  border: 1px solid rgba(144, 164, 174, 0.3);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 1rem 0;
+}
+
+.btn {
+  background: linear-gradient(45deg, #455A64, #37474F);
+  color: #E0E0E0;
+  border: 1px solid rgba(144,164,174,0.4);
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: all 0.2s;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn:hover {
+  background: linear-gradient(45deg, #546E7A, #455A64);
+  border-color: #667eea;
+}
+
+.btn.primary {
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  border-color: transparent;
+  color: white;
+}
+
+.btn.primary:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.status {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #8BC34A;
+  margin-top: 8px;
+  min-height: 1.2em;
+}
+
+.status.error { color: #f44336; }
+
+/* File list */
+.file-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.file-list li {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(144, 164, 174, 0.15);
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.file-list li:last-child {
+  border-bottom: none;
+}
+
+.file-list li:hover {
+  background: rgba(102, 126, 234, 0.12);
+}
+
+.file-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.file-name {
+  flex: 1;
+  word-break: break-word;
+}
+
+.file-date {
+  font-size: 0.75rem;
+  color: #666;
+  flex-shrink: 0;
+}
+
+/* Transcript viewer */
+.viewer-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.close-btn {
+  background: rgba(244, 67, 54, 0.2);
+  border: 1px solid rgba(244, 67, 54, 0.4);
+  color: #f44336;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.close-btn:hover {
+  background: rgba(244, 67, 54, 0.4);
+}
+
+.viewer-title {
+  color: #667eea;
+  font-size: 1.3rem;
+  font-weight: 400;
+  flex: 1;
+  word-break: break-word;
+}
+
+.viewer-meta {
+  margin-bottom: 16px;
+}
+
+.viewer-meta a {
+  color: #667eea;
+  text-decoration: none;
+}
+
+.viewer-meta a:hover {
+  text-decoration: underline;
+}
+
+.transcript-content {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(144, 164, 174, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #888;
+}
+
+.empty {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+/* Copy button */
+.copy-btn {
+  background: linear-gradient(45deg, #43A047, #2E7D32);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  color: white;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.copy-btn:hover {
+  box-shadow: 0 4px 12px rgba(67, 160, 71, 0.4);
+}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>YouTube Transcripts</h1>
+    <p class="subtitle">Browse transcripts from Dropbox</p>
+
+    <!-- Auth section -->
+    <div id="auth-section" class="section" style="text-align: center;">
+      <button id="sign-in-btn" class="btn primary" onclick="handleSignIn()">Sign in with Dropbox</button>
+      <div id="auth-status" class="status"></div>
+    </div>
+
+    <!-- File list view -->
+    <div id="list-view" style="display: none;">
+      <div class="section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <span style="color: #667eea; font-size: 1.1rem;">Files</span>
+          <button class="btn" onclick="loadFiles()" style="padding: 6px 14px; font-size: 0.8rem;">Refresh</button>
+        </div>
+        <ul id="file-list" class="file-list"></ul>
+        <div id="list-loading" class="loading" style="display: none;">Loading...</div>
+        <div id="list-empty" class="empty" style="display: none;">No transcript files found.</div>
+      </div>
+    </div>
+
+    <!-- Transcript viewer -->
+    <div id="viewer" style="display: none;">
+      <div class="section">
+        <div class="viewer-header">
+          <button class="close-btn" onclick="closeViewer()" title="Back to list">&times;</button>
+          <span id="viewer-title" class="viewer-title"></span>
+        </div>
+        <div id="viewer-meta" class="viewer-meta"></div>
+        <div style="margin-bottom: 10px;">
+          <button class="copy-btn" onclick="copyTranscript()">Copy transcript</button>
+          <span id="copy-status" class="status" style="display: inline; margin-left: 10px;"></span>
+        </div>
+        <div id="transcript-content" class="transcript-content"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const APP_KEY = 'pqeqkzb3yvnta3n';
+const DROPBOX_FOLDER = '/youtubetranscriptsupload';
+const REDIRECT_URI = window.location.origin + window.location.pathname;
+
+let accessToken = null;
+
+// PKCE helpers
+function generateCodeVerifier() {
+  const array = new Uint8Array(64);
+  crypto.getRandomValues(array);
+  return btoa(String.fromCharCode(...array))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function generateCodeChallenge(verifier) {
+  const data = new TextEncoder().encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+// Auth
+async function handleSignIn() {
+  const verifier = generateCodeVerifier();
+  const challenge = await generateCodeChallenge(verifier);
+  sessionStorage.setItem('dropbox_code_verifier', verifier);
+  const url = `https://www.dropbox.com/oauth2/authorize?client_id=${APP_KEY}&response_type=code&code_challenge=${challenge}&code_challenge_method=S256&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&token_access_type=online`;
+  window.location.href = url;
+}
+
+async function handleAuthRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  if (!code) return false;
+
+  const verifier = sessionStorage.getItem('dropbox_code_verifier');
+  if (!verifier) return false;
+
+  const body = new URLSearchParams({
+    code,
+    grant_type: 'authorization_code',
+    client_id: APP_KEY,
+    redirect_uri: REDIRECT_URI,
+    code_verifier: verifier,
+  });
+
+  try {
+    const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+    const data = await res.json();
+    if (data.access_token) {
+      accessToken = data.access_token;
+      sessionStorage.removeItem('dropbox_code_verifier');
+      window.history.replaceState({}, document.title, REDIRECT_URI);
+      return true;
+    }
+  } catch (e) {
+    document.getElementById('auth-status').textContent = 'Auth error: ' + e.message;
+    document.getElementById('auth-status').className = 'status error';
+  }
+  return false;
+}
+
+// Dropbox API calls
+async function listFiles() {
+  const res = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ path: DROPBOX_FOLDER }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error_summary || `HTTP ${res.status}`);
+  }
+
+  const data = await res.json();
+  let entries = data.entries || [];
+
+  let hasMore = data.has_more;
+  let cursor = data.cursor;
+  while (hasMore) {
+    const cont = await fetch('https://api.dropboxapi.com/2/files/list_folder/continue', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ cursor }),
+    });
+    if (!cont.ok) break;
+    const contData = await cont.json();
+    entries = entries.concat(contData.entries || []);
+    hasMore = contData.has_more;
+    cursor = contData.cursor;
+  }
+
+  // Filter to .txt files, sort by modified date descending
+  return entries
+    .filter(e => e['.tag'] === 'file' && e.name.endsWith('.txt'))
+    .sort((a, b) => new Date(b.client_modified) - new Date(a.client_modified));
+}
+
+async function downloadFile(path) {
+  const res = await fetch('https://content.dropboxapi.com/2/files/download', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Dropbox-API-Arg': JSON.stringify({ path }),
+    },
+  });
+
+  if (!res.ok) throw new Error(`Download failed: HTTP ${res.status}`);
+  return await res.text();
+}
+
+// UI
+async function loadFiles() {
+  const listEl = document.getElementById('file-list');
+  const loadingEl = document.getElementById('list-loading');
+  const emptyEl = document.getElementById('list-empty');
+
+  listEl.innerHTML = '';
+  loadingEl.style.display = 'block';
+  emptyEl.style.display = 'none';
+
+  try {
+    const files = await listFiles();
+    loadingEl.style.display = 'none';
+
+    if (files.length === 0) {
+      emptyEl.style.display = 'block';
+      return;
+    }
+
+    files.forEach(file => {
+      const li = document.createElement('li');
+      li.onclick = () => openFile(file.path_display, file.name);
+
+      const icon = document.createElement('span');
+      icon.className = 'file-icon';
+      icon.textContent = '\uD83D\uDCC4';
+
+      const name = document.createElement('span');
+      name.className = 'file-name';
+      // Clean up filename for display
+      const displayName = file.name.replace('.txt', '').replace(/_/g, ' ');
+      name.textContent = displayName;
+
+      const date = document.createElement('span');
+      date.className = 'file-date';
+      const d = new Date(file.client_modified);
+      date.textContent = d.toLocaleDateString();
+
+      li.appendChild(icon);
+      li.appendChild(name);
+      li.appendChild(date);
+      listEl.appendChild(li);
+    });
+  } catch (e) {
+    loadingEl.style.display = 'none';
+    emptyEl.style.display = 'block';
+    emptyEl.textContent = 'Error: ' + e.message;
+  }
+}
+
+async function openFile(path, filename) {
+  document.getElementById('list-view').style.display = 'none';
+  document.getElementById('viewer').style.display = 'block';
+
+  const titleEl = document.getElementById('viewer-title');
+  const metaEl = document.getElementById('viewer-meta');
+  const contentEl = document.getElementById('transcript-content');
+
+  titleEl.textContent = 'Loading...';
+  metaEl.innerHTML = '';
+  contentEl.textContent = '';
+
+  try {
+    const text = await downloadFile(path);
+
+    // Parse the header (Title, URL, Fetched lines before the === separator)
+    const parts = text.split(/={10,}/);
+    const header = parts[0] || '';
+    const body = (parts[1] || '').trim();
+
+    let title = filename.replace('.txt', '').replace(/_/g, ' ');
+    let url = '';
+    let fetched = '';
+
+    header.split('\n').forEach(line => {
+      if (line.startsWith('Title: ')) title = line.substring(7).trim();
+      if (line.startsWith('URL: ')) url = line.substring(5).trim();
+      if (line.startsWith('Fetched: ')) fetched = line.substring(9).trim();
+    });
+
+    titleEl.textContent = title;
+
+    let metaHtml = '';
+    if (url) metaHtml += `<a href="${url}" target="_blank">${url}</a>`;
+    if (fetched) metaHtml += `<span style="margin-left: 12px; color: #666;">Fetched: ${fetched}</span>`;
+    metaEl.innerHTML = metaHtml;
+
+    contentEl.textContent = body || text;
+  } catch (e) {
+    titleEl.textContent = 'Error';
+    contentEl.textContent = 'Failed to load file: ' + e.message;
+  }
+}
+
+function closeViewer() {
+  document.getElementById('viewer').style.display = 'none';
+  document.getElementById('list-view').style.display = 'block';
+}
+
+function copyTranscript() {
+  const text = document.getElementById('transcript-content').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const s = document.getElementById('copy-status');
+    s.textContent = 'Copied!';
+    setTimeout(() => s.textContent = '', 2000);
+  });
+}
+
+// Init
+(async function init() {
+  const authed = await handleAuthRedirect();
+  if (authed) {
+    document.getElementById('auth-section').style.display = 'none';
+    document.getElementById('list-view').style.display = 'block';
+    loadFiles();
+  }
+})();
+</script>
+</body>
+</html>

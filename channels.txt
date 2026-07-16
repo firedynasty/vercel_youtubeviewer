@@ -1,0 +1,5 @@
+# YouTube channels - one URL per line
+# Lines starting with # are ignored
+# Supports channel URLs (@handle) or video URLs (auto-detects channel)
+
+https://www.youtube.com/@TBNIsrael
