@@ -57,6 +57,18 @@
     padding-left:10px;
   }
 
+  .tempo-row{
+    display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;
+  }
+  .tempo-btn{
+    background:var(--panel);border:1px solid var(--line);color:var(--parchment-dim);
+    font-family:'Source Sans 3',sans-serif;font-size:11px;font-weight:600;
+    padding:7px 0;border-radius:8px;cursor:pointer;flex:1 1 0;min-width:0;
+    transition:background .12s, color .12s, border-color .12s;text-align:center;
+  }
+  .tempo-btn:hover{background:var(--panel-hi);color:var(--parchment);}
+  .tempo-btn.active{background:var(--brass);color:var(--ink);border-color:var(--brass);}
+
   .transport{display:flex;gap:10px;margin-bottom:22px;}
   .btn-play{
     flex:1;background:var(--brass);color:#1a1710;font-weight:700;font-size:15px;
@@ -94,6 +106,20 @@
   .beat-groups{display:flex;gap:8px;flex:1;}
   .beat-group{display:flex;gap:4px;flex:1;}
 
+  .vol-row{
+    display:flex;align-items:center;gap:10px;margin-bottom:14px;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 14px;
+  }
+  .vol-row span{font-size:14px;color:var(--parchment-dim);}
+  .vol-row input[type="range"]{
+    flex:1;height:4px;-webkit-appearance:none;background:var(--panel-hi);
+    border-radius:2px;outline:none;
+  }
+  .vol-row input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--brass);cursor:pointer;
+  }
+
   .foot-note{text-align:center;color:var(--parchment-dim);font-size:11.5px;margin-top:20px;line-height:1.6;opacity:.75;}
 </style>
 </head>
@@ -113,6 +139,14 @@
       </div>
       <button id="bpmUp">+</button>
     </div>
+  </div>
+
+  <div class="tempo-row" id="tempoRow"></div>
+
+  <div class="vol-row">
+    <span>&#128264;</span>
+    <input type="range" id="volSlider" min="0" max="100" value="80">
+    <span>&#128266;</span>
   </div>
 
   <p class="preset-desc" id="presetDesc"></p>
@@ -416,6 +450,38 @@
   const playBtn = document.getElementById('playBtn');
   const clearBtn = document.getElementById('clearBtn');
 
+  const TEMPOS = [
+    {name:'Grave', bpm:30},
+    {name:'Largo', bpm:53},
+    {name:'Adagio', bpm:71},
+    {name:'Andante', bpm:92},
+    {name:'Moderato', bpm:114},
+    {name:'Allegro', bpm:138},
+    {name:'Vivace', bpm:176},
+    {name:'Presto', bpm:192},
+    {name:'Prestissimo', bpm:220},
+  ];
+
+  const tempoRow = document.getElementById('tempoRow');
+  TEMPOS.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'tempo-btn';
+    btn.textContent = t.name;
+    btn.title = t.bpm + ' BPM';
+    btn.addEventListener('click', () => {
+      bpm = t.bpm;
+      bpmVal.textContent = bpm;
+      updateTempoHighlight();
+    });
+    tempoRow.appendChild(btn);
+  });
+
+  function updateTempoHighlight(){
+    tempoRow.querySelectorAll('.tempo-btn').forEach((btn, i) => {
+      btn.classList.toggle('active', bpm === TEMPOS[i].bpm);
+    });
+  }
+
   presets.forEach((p, i) => {
     const opt = document.createElement('option');
     opt.value = i;
@@ -432,6 +498,7 @@
     bpm = p.bpm;
     bpmVal.textContent = bpm;
     presetDesc.textContent = p.desc;
+    updateTempoHighlight();
     renderGrid();
   }
 
@@ -483,10 +550,10 @@
   });
 
   document.getElementById('bpmUp').addEventListener('click', () => {
-    bpm = Math.min(220, bpm+2); bpmVal.textContent = bpm;
+    bpm = Math.min(220, bpm+2); bpmVal.textContent = bpm; updateTempoHighlight();
   });
   document.getElementById('bpmDown').addEventListener('click', () => {
-    bpm = Math.max(40, bpm-2); bpmVal.textContent = bpm;
+    bpm = Math.max(40, bpm-2); bpmVal.textContent = bpm; updateTempoHighlight();
   });
 
   clearBtn.addEventListener('click', () => {
@@ -494,8 +561,19 @@
     renderGrid();
   });
 
+  let masterGain = null;
+  const volSlider = document.getElementById('volSlider');
+  volSlider.addEventListener('input', () => {
+    if(masterGain) masterGain.gain.value = volSlider.value / 100;
+  });
+
   function ensureAudio(){
     if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(!masterGain){
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = volSlider.value / 100;
+      masterGain.connect(audioCtx.destination);
+    }
     if(audioCtx.state === 'suspended') audioCtx.resume();
   }
 
@@ -506,7 +584,7 @@
     osc.frequency.exponentialRampToValueAtTime(45, time+0.12);
     gain.gain.setValueAtTime(0.9, time);
     gain.gain.exponentialRampToValueAtTime(0.001, time+0.22);
-    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.connect(gain); gain.connect(masterGain);
     osc.start(time); osc.stop(time+0.25);
   }
   function playSnare(time){
@@ -521,7 +599,7 @@
     const gain = audioCtx.createGain();
     gain.gain.setValueAtTime(0.55, time);
     gain.gain.exponentialRampToValueAtTime(0.001, time+0.15);
-    noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+    noise.connect(filter); filter.connect(gain); gain.connect(masterGain);
     noise.start(time); noise.stop(time+0.15);
 
     const osc = audioCtx.createOscillator();
@@ -529,7 +607,7 @@
     osc.frequency.value = 190;
     oGain.gain.setValueAtTime(0.3, time);
     oGain.gain.exponentialRampToValueAtTime(0.001, time+0.1);
-    osc.connect(oGain); oGain.connect(audioCtx.destination);
+    osc.connect(oGain); oGain.connect(masterGain);
     osc.start(time); osc.stop(time+0.1);
   }
   function playHat(time){
@@ -544,7 +622,7 @@
     const gain = audioCtx.createGain();
     gain.gain.setValueAtTime(0.28, time);
     gain.gain.exponentialRampToValueAtTime(0.001, time+0.04);
-    noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+    noise.connect(filter); filter.connect(gain); gain.connect(masterGain);
     noise.start(time); noise.stop(time+0.05);
   }
   function playCrash(time){
@@ -557,7 +635,7 @@
       osc.frequency.value = f * (1 + idx*0.003);
       gain.gain.setValueAtTime(0.16 / (idx+1), time);
       gain.gain.exponentialRampToValueAtTime(0.001, time + 0.9);
-      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.connect(gain); gain.connect(masterGain);
       osc.start(time); osc.stop(time + 0.9);
     });
     const bufferSize = audioCtx.sampleRate * 0.9;
@@ -571,7 +649,7 @@
     const nGain = audioCtx.createGain();
     nGain.gain.setValueAtTime(0.22, time);
     nGain.gain.exponentialRampToValueAtTime(0.001, time + 0.85);
-    noise.connect(filter); filter.connect(nGain); nGain.connect(audioCtx.destination);
+    noise.connect(filter); filter.connect(nGain); nGain.connect(masterGain);
     noise.start(time); noise.stop(time + 0.85);
   }
   function playTone(time){
@@ -581,7 +659,7 @@
     osc.frequency.value = 330;
     gain.gain.setValueAtTime(0.4, time);
     gain.gain.exponentialRampToValueAtTime(0.001, time+0.18);
-    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.connect(gain); gain.connect(masterGain);
     osc.start(time); osc.stop(time+0.2);
   }
 

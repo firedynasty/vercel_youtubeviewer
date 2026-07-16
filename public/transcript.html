@@ -278,6 +278,9 @@ body.article-mode .music-navbar { border-bottom-color: #43A047; }
 
 <div id="articleView"></div>
 
+<!-- Page down button -->
+<button title="Page down" id="pageDownBtn" onclick="window.scrollBy({top: window.innerHeight * 0.9, behavior: 'smooth'})" onmouseenter="this.style.opacity='0.35';this.style.transform='scale(1.1)'" onmouseleave="this.style.opacity='0.15';this.style.transform=''" style="position:sticky;top:50%;left:6px;z-index:10;width:48px;height:48px;background:rgba(255,255,255,0.08);border-radius:50%;border:1.5px solid rgba(255,255,255,0.6);opacity:0.15;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:0.2s;margin-bottom:-48px;float:left;"><svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="rgba(255,255,255,0.7)" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+
 <div class="container">
   <h1>Transcript Cleaner</h1>
   <p class="subtitle">Paste raw YouTube transcript (Select All) — get clean formatted text</p>
@@ -324,7 +327,13 @@ dropped one of the biggest..."></textarea>
 function toggleLight() {
   document.body.classList.toggle('light');
   var btns = document.querySelectorAll('.music-navbar .music-nav-link');
-  btns[1].textContent = document.body.classList.contains('light') ? 'Dark' : 'Light';
+  var isLight = document.body.classList.contains('light');
+  btns[1].textContent = isLight ? 'Dark' : 'Light';
+  var pd = document.getElementById('pageDownBtn');
+  var color = isLight ? '0,0,0' : '255,255,255';
+  pd.style.background = 'rgba(' + color + ',0.08)';
+  pd.style.borderColor = 'rgba(' + color + ',0.6)';
+  pd.querySelector('path').setAttribute('stroke', 'rgba(' + color + ',0.7)');
 }
 
 function toggleArticle() {
