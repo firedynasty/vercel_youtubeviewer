@@ -1550,6 +1550,9 @@
     </style>
 </head>
 <body>
+    <!-- React mount point (src/index.js requires this; App.js renders nothing) -->
+    <div id="root" style="display:none;"></div>
+
     <!-- Saved Videos Sidebar -->
     <div id="savedVideosSidebar" class="saved-videos-sidebar">
         <div class="sidebar-header">
@@ -1887,7 +1890,8 @@
                 <button id="clipboardTimeBtn" onclick="jumpToClipboardTime()" style="margin-left: 8px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #E91E63, #C2185B); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">📋Time</button>
                 <button id="clipboardPasteMediaBtn" onclick="pasteMediaOrTimes()" style="margin-left: 8px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #FF9800, #F57C00); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">📋c Link</button>
                 <button id="halfSpeedBtn" onclick="toggleHalfSpeed(this)" style="margin-left: 8px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #7E57C2, #5E35B1); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">1x</button>
-                <div style="width: 100%; display: flex; align-items: center; gap: 6px; margin-top: 6px;">
+                <button onclick="var r=document.getElementById('soakLoopRow');var h=r.style.display==='none';r.style.display=h?'flex':'none';this.textContent=h?'▲':'▼'" style="margin-left: 8px; padding: 4px 8px; border: none; border-radius: 6px; background: rgba(255,255,255,0.12); color: #ccc; cursor: pointer; font-size: 11px;">▼</button>
+                <div id="soakLoopRow" style="width: 100%; display: flex; align-items: center; gap: 6px; margin-top: 6px;">
                     <button id="timer15sBtn" class="jump-btn" style="background: linear-gradient(45deg, #7E57C2, #5E35B1); padding: 6px 12px; font-size: 12px;">⏱️ 15s</button>
                     <button id="timer30sBtn" class="jump-btn" style="background: linear-gradient(45deg, #00BCD4, #0097A7); padding: 6px 12px; font-size: 12px;">⏱️ 30s</button>
                     <button id="timer3minBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); padding: 6px 12px; font-size: 12px;">⏱️ 3m</button>
@@ -1952,6 +1956,32 @@
 
 
 
+
+        <!-- Timestamp Logger -->
+        <div class="config-panel" style="margin-top: 30px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                <h4 style="margin:0;">Timestamp Logger</h4>
+                <button class="config-btn" id="toggleTsLoggerBtn" onclick="document.getElementById('tsLoggerBody').style.display = document.getElementById('tsLoggerBody').style.display === 'none' ? '' : 'none'; this.textContent = document.getElementById('tsLoggerBody').style.display === 'none' ? '▼ Show' : '▲ Hide'" style="padding:4px 10px; font-size:0.8rem;">▲ Hide</button>
+            </div>
+            <div id="tsLoggerBody">
+                <div class="config-row">
+                    <input type="text" id="tsNoteInput" class="config-input" placeholder="Note (optional) — press Enter to stamp" style="flex:2;" onkeydown="if(event.key==='Enter')tsStamp()" />
+                    <button class="config-btn" onclick="tsStamp()" style="background:#3ea6ff; color:#000; border-color:transparent; font-weight:700;">Stamp</button>
+                </div>
+                <div class="config-row">
+                    <textarea id="tsNotesArea" class="config-input" placeholder="Free-form notes..." rows="5" style="resize:vertical; font-family:'Courier New',monospace; font-size:12px;"></textarea>
+                </div>
+                <div class="config-row" style="justify-content:flex-end;">
+                    <span id="tsCount" style="flex:1; font-size:11px; color:#666;"></span>
+                    <button class="config-btn" id="tsMakeSheetBtn" onclick="tsMakeNewSheet()" style="display:none; background:linear-gradient(45deg,#1565C0,#0D47A1); border-color:transparent; color:white;">📊 New Sheet</button>
+                    <button class="config-btn" onclick="tsCopy()" style="background:#8e44ad; border-color:transparent; color:white;">Copy</button>
+                    <button class="config-btn" onclick="tsSaveTxt()" style="background:#27ae60; border-color:transparent; color:white;">Save .txt</button>
+                    <button class="config-btn" onclick="tsClear()" style="background:#e74c3c; border-color:transparent; color:white;">Clear</button>
+                </div>
+                <div id="tsEntries" style="max-height:200px; overflow-y:auto; font-family:'Courier New',monospace; font-size:12px; margin-top:6px;"></div>
+                <div id="tsStatus" style="font-size:12px; text-align:center; color:#888; margin-top:6px;">Stamp timestamps while watching</div>
+            </div>
+        </div>
 
         <!-- Google Sheets YouTube Links -->
         <div class="config-panel" style="margin-top: 30px;">
@@ -8634,6 +8664,7 @@
                 sel.disabled = true;
                 document.getElementById('gdrive-table-area').innerHTML = '';
                 gdriveClearInputs();
+                document.getElementById('tsMakeSheetBtn').style.display = 'none';
                 gdriveSetStatus('Signed out.');
                 return;
             }
@@ -8688,6 +8719,7 @@
                 });
                 sel.disabled = false;
                 gdriveSetStatus('Loaded "' + fileName + '" — ' + gdriveWorkbook.SheetNames.length + ' sheets');
+                document.getElementById('tsMakeSheetBtn').style.display = '';
             } catch (err) {
                 gdriveSetStatus('Error: ' + err.message);
             }
@@ -8899,6 +8931,85 @@
                 gdriveSetStatus('Error replacing: ' + err.message);
             }
         };
+        // --- Save Timestamp Logger to new sheet tab ---
+        window.tsMakeNewSheet = async function() {
+            if (!gdriveAccessToken) { document.getElementById('tsStatus').textContent = 'Sign in to Google Sheets first'; document.getElementById('tsStatus').style.color = '#e74c3c'; return; }
+            if (!gdriveFileId)      { document.getElementById('tsStatus').textContent = 'Load a spreadsheet first (Google Sheets section)'; document.getElementById('tsStatus').style.color = '#e74c3c'; return; }
+
+            // Build sheet content matching the .txt format the AppleScript expects:
+            // Row 1: comma-separated timestamps
+            // Row 2: empty
+            // Row 3: ---
+            // Row 4+: [ts] note  (only for entries that have notes)
+            // Then empty row + free-form notes (one line per row)
+            var tsEntriesRaw = [];
+            try { var saved = localStorage.getItem('tsLogger_v1'); if (saved) tsEntriesRaw = JSON.parse(saved).entries || []; } catch(_) {}
+
+            if (!tsEntriesRaw.length) { document.getElementById('tsStatus').textContent = 'No timestamps to save'; document.getElementById('tsStatus').style.color = '#e74c3c'; return; }
+
+            var now = new Date();
+            var mm = String(now.getMonth()+1).padStart(2,'0');
+            var dd = String(now.getDate()).padStart(2,'0');
+            var hh = String(now.getHours()).padStart(2,'0');
+            var min = String(now.getMinutes()).padStart(2,'0');
+            var vidSuffix = (typeof currentVideoId !== 'undefined' && currentVideoId) ? '_' + currentVideoId : '';
+            var sheetTitle = 'ts_' + mm + dd + '_' + hh + min + vidSuffix;
+
+            var rows = [];
+            // Line 1: comma-separated timestamps
+            rows.push([tsEntriesRaw.map(function(e) { return e.ts; }).join(',')]);
+            // URL line if available
+            var url = '';
+            if (typeof currentVideoId !== 'undefined' && currentVideoId) url = 'https://www.youtube.com/watch?v=' + currentVideoId;
+            else if (typeof currentMediaUrl !== 'undefined' && currentMediaUrl) url = currentMediaUrl;
+            if (url) rows.push([url]);
+            rows.push(['']);
+            rows.push(['---']);
+            // Noted entries
+            var noted = tsEntriesRaw.filter(function(e) { return e.note; });
+            noted.forEach(function(e) { rows.push(['[' + e.ts + '] ' + e.note]); });
+            // Free-form notes
+            var freeNotes = document.getElementById('tsNotesArea').value.trim();
+            if (freeNotes) {
+                rows.push(['']);
+                freeNotes.split('\n').forEach(function(line) { rows.push([line]); });
+            }
+
+            document.getElementById('tsStatus').textContent = 'Creating sheet…';
+            document.getElementById('tsStatus').style.color = '#aaa';
+            try {
+                // 1. Add new sheet tab
+                var addResp = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + gdriveFileId + ':batchUpdate', {
+                    method: 'POST',
+                    headers: { Authorization: 'Bearer ' + gdriveAccessToken, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requests: [{ addSheet: { properties: { title: sheetTitle } } }] })
+                });
+                if (!addResp.ok) { var e = await addResp.json().catch(function(){return{};}); throw new Error(e.error?.message || 'addSheet failed'); }
+
+                // 2. Write the rows
+                var range = encodeURIComponent(sheetTitle) + '!A1';
+                var writeResp = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + gdriveFileId + '/values/' + range + '?valueInputOption=RAW', {
+                    method: 'PUT',
+                    headers: { Authorization: 'Bearer ' + gdriveAccessToken, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ values: rows })
+                });
+                if (!writeResp.ok) { var e2 = await writeResp.json().catch(function(){return{};}); throw new Error(e2.error?.message || 'write failed'); }
+
+                document.getElementById('tsStatus').textContent = 'Saved to sheet "' + sheetTitle + '"!';
+                document.getElementById('tsStatus').style.color = '#2ecc71';
+                // Reload the workbook so the new tab appears in the dropdown
+                await gdriveLoadSpreadsheet(gdriveFileId, '(reloaded)');
+                // Select the new sheet
+                var sel = document.getElementById('gdrive-sheet-select');
+                for (var i = 0; i < sel.options.length; i++) {
+                    if (sel.options[i].value === sheetTitle) { sel.selectedIndex = i; sel.dispatchEvent(new Event('change')); break; }
+                }
+            } catch(err) {
+                document.getElementById('tsStatus').textContent = 'Error: ' + err.message;
+                document.getElementById('tsStatus').style.color = '#e74c3c';
+            }
+        };
+
         // --- Audio Player for Google Sheets audio links ---
         var apTracks = [];
         var apIndex = 0;
@@ -10659,6 +10770,131 @@ renderPmSections();
     } else {
         initMetronomeModal();
     }
+})();
+</script>
+<!-- Timestamp Logger Script -->
+<script>
+(function() {
+    var LS_KEY = 'tsLogger_v1';
+    var tsEntries = [];
+
+    function tsSave() {
+        try {
+            localStorage.setItem(LS_KEY, JSON.stringify({
+                entries: tsEntries,
+                notes: document.getElementById('tsNotesArea').value
+            }));
+        } catch(_) {}
+    }
+
+    function tsRestore() {
+        try {
+            var raw = localStorage.getItem(LS_KEY);
+            if (!raw) return;
+            var data = JSON.parse(raw);
+            if (data.entries) tsEntries = data.entries;
+            if (data.notes) document.getElementById('tsNotesArea').value = data.notes;
+            tsRender();
+            if (tsEntries.length) {
+                document.getElementById('tsStatus').textContent = tsEntries.length + ' stamp' + (tsEntries.length > 1 ? 's' : '') + ' restored';
+                document.getElementById('tsStatus').style.color = '#2ecc71';
+            }
+        } catch(_) {}
+    }
+
+    function formatTime(seconds) {
+        var h = Math.floor(seconds / 3600);
+        var m = Math.floor((seconds % 3600) / 60);
+        var s = Math.floor(seconds % 60);
+        if (h > 0) return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+        return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    }
+
+    window.tsStamp = function() {
+        var t = null;
+        if (typeof player !== 'undefined' && player && typeof player.getCurrentTime === 'function') {
+            t = player.getCurrentTime();
+        } else if (document.getElementById('html5-player') && document.getElementById('html5-player').currentTime > 0) {
+            t = document.getElementById('html5-player').currentTime;
+        } else if (document.getElementById('audio-player') && document.getElementById('audio-player').currentTime > 0) {
+            t = document.getElementById('audio-player').currentTime;
+        }
+        if (t === null) {
+            document.getElementById('tsStatus').textContent = 'No player active — load a video first';
+            document.getElementById('tsStatus').style.color = '#e74c3c';
+            return;
+        }
+        var ts = formatTime(t);
+        var note = document.getElementById('tsNoteInput').value.trim();
+        tsEntries.push({ ts: ts, note: note });
+        document.getElementById('tsNoteInput').value = '';
+        document.getElementById('tsNoteInput').focus();
+        tsRender();
+        tsSave();
+        document.getElementById('tsStatus').textContent = 'Stamped ' + ts;
+        document.getElementById('tsStatus').style.color = '#2ecc71';
+    };
+
+    function tsRender() {
+        var el = document.getElementById('tsEntries');
+        el.innerHTML = tsEntries.map(function(e) {
+            var noteHtml = e.note ? '<span style="color:#ccc; margin-left:4px;">— ' + e.note.replace(/</g,'&lt;') + '</span>' : '';
+            return '<div style="padding:4px 0; border-bottom:1px solid #2a2a4a;"><span style="color:#3ea6ff; font-weight:bold;">[' + e.ts + ']</span>' + noteHtml + '</div>';
+        }).join('');
+        el.scrollTop = el.scrollHeight;
+        document.getElementById('tsCount').textContent = tsEntries.length ? tsEntries.length + ' timestamp' + (tsEntries.length > 1 ? 's' : '') : '';
+    }
+
+    function buildFullText() {
+        var url = '';
+        if (typeof currentVideoId !== 'undefined' && currentVideoId) url = 'https://www.youtube.com/watch?v=' + currentVideoId;
+        else if (typeof currentMediaUrl !== 'undefined' && currentMediaUrl) url = currentMediaUrl;
+        var out = url ? url + '\n\n' : '';
+        tsEntries.forEach(function(e) {
+            out += '[' + e.ts + ']';
+            if (e.note) out += ' ' + e.note;
+            out += '\n';
+        });
+        var notes = document.getElementById('tsNotesArea').value.trim();
+        if (notes) out += '\n' + notes + '\n';
+        return out;
+    }
+
+    window.tsCopy = function() {
+        if (!tsEntries.length) { document.getElementById('tsStatus').textContent = 'Nothing to copy'; document.getElementById('tsStatus').style.color = '#e74c3c'; return; }
+        navigator.clipboard.writeText(buildFullText()).then(function() {
+            document.getElementById('tsStatus').textContent = 'Copied to clipboard!';
+            document.getElementById('tsStatus').style.color = '#2ecc71';
+        });
+    };
+
+    window.tsSaveTxt = function() {
+        if (!tsEntries.length) { document.getElementById('tsStatus').textContent = 'Nothing to save'; document.getElementById('tsStatus').style.color = '#e74c3c'; return; }
+        var blob = new Blob([buildFullText()], { type: 'text/plain' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'yt_timestamps.txt';
+        a.click();
+        URL.revokeObjectURL(url);
+        document.getElementById('tsStatus').textContent = 'Saved!';
+        document.getElementById('tsStatus').style.color = '#2ecc71';
+    };
+
+    window.tsClear = function() {
+        tsEntries = [];
+        document.getElementById('tsNotesArea').value = '';
+        tsRender();
+        tsSave();
+        document.getElementById('tsStatus').textContent = 'Cleared';
+        document.getElementById('tsStatus').style.color = '#888';
+    };
+
+    // Auto-save notes as you type
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('tsNotesArea').addEventListener('input', tsSave);
+        tsRestore();
+    });
 })();
 </script>
 </body>
