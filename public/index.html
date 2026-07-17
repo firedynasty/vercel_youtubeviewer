@@ -1877,6 +1877,8 @@
 
             <!-- Current Time Display (below video players) -->
             <div class="current-time-display" id="currentTimeDisplay" style="display: none; flex-wrap: wrap;">
+                <button id="ctdToggleBtn" onclick="var c=document.getElementById('ctdCollapse');var h=c.style.display==='none';c.style.display=h?'':'none';this.textContent=h?'▲':'▼';" style="padding: 4px 8px; border: none; border-radius: 6px; background: rgba(255,255,255,0.12); color: #ccc; cursor: pointer; font-size: 11px; margin-right: 4px;">▼</button>
+                <div id="ctdCollapse" style="display: flex; flex-wrap: wrap; align-items: center; gap: 0; width: 100%;">
                 <button id="loopTimeMinus2" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-right: 4px;">−2s</button>
                 <button id="loopTimeMinus5" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-right: 4px;">−5s</button>
                 <button id="loopTimeMinus15" class="jump-btn" style="background: linear-gradient(45deg, #9E9E9E, #757575); padding: 4px 8px; font-size: 11px; margin-right: 4px;">−15s</button>
@@ -1890,7 +1892,6 @@
                 <button id="clipboardTimeBtn" onclick="jumpToClipboardTime()" style="margin-left: 8px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #E91E63, #C2185B); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">📋Time</button>
                 <button id="clipboardPasteMediaBtn" onclick="pasteMediaOrTimes()" style="margin-left: 8px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #FF9800, #F57C00); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">📋c Link</button>
                 <button id="halfSpeedBtn" onclick="toggleHalfSpeed(this)" style="margin-left: 8px; padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #7E57C2, #5E35B1); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">1x</button>
-                <button onclick="var r=document.getElementById('soakLoopRow');var h=r.style.display==='none';r.style.display=h?'flex':'none';this.textContent=h?'▲':'▼'" style="margin-left: 8px; padding: 4px 8px; border: none; border-radius: 6px; background: rgba(255,255,255,0.12); color: #ccc; cursor: pointer; font-size: 11px;">▼</button>
                 <div id="soakLoopRow" style="width: 100%; display: flex; align-items: center; gap: 6px; margin-top: 6px;">
                     <button id="timer15sBtn" class="jump-btn" style="background: linear-gradient(45deg, #7E57C2, #5E35B1); padding: 6px 12px; font-size: 12px;">⏱️ 15s</button>
                     <button id="timer30sBtn" class="jump-btn" style="background: linear-gradient(45deg, #00BCD4, #0097A7); padding: 6px 12px; font-size: 12px;">⏱️ 30s</button>
@@ -1929,6 +1930,7 @@
                         <input type="radio" name="timerRepeat" value="80" style="cursor: pointer;"> 80 times
                     </label>
                 </span>
+                </div><!-- end ctdCollapse -->
             </div>
 
             <!-- Dropbox Content Textarea -->
