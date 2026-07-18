@@ -560,6 +560,8 @@
       bpm = t.bpm;
       bpmVal.textContent = bpm;
       updateTempoHighlight();
+      metBpm = t.bpm;
+      document.getElementById('metBpmVal').textContent = metBpm;
     });
     tempoRow.appendChild(btn);
   });
