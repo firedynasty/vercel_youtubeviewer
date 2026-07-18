@@ -820,12 +820,10 @@
       presetSelect.dispatchEvent(new Event('change'));
     } else if(e.key === ']'){
       e.preventDefault();
-      metBpm = Math.min(240, metBpm+2);
-      document.getElementById('metBpmVal').textContent = metBpm;
+      bpm = Math.min(220, bpm+2); bpmVal.textContent = bpm; updateTempoHighlight();
     } else if(e.key === '['){
       e.preventDefault();
-      metBpm = Math.max(40, metBpm-2);
-      document.getElementById('metBpmVal').textContent = metBpm;
+      bpm = Math.max(40, bpm-2); bpmVal.textContent = bpm; updateTempoHighlight();
     }
   });
 
