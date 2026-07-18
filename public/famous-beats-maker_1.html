@@ -539,30 +539,32 @@
   const clearBtn = document.getElementById('clearBtn');
 
   const TEMPOS = [
-    {name:'Grave', bpm:30},
-    {name:'Largo', bpm:53},
-    {name:'Adagio', bpm:71},
-    {name:'Andante', bpm:92},
-    {name:'Moderato', bpm:114},
-    {name:'Allegro', bpm:138},
-    {name:'Vivace', bpm:176},
-    {name:'Presto', bpm:192},
-    {name:'Prestissimo', bpm:220},
+    {name:'Grave', bpm:30, key:null},
+    {name:'Largo', bpm:53, key:'1'},
+    {name:'Adagio', bpm:71, key:'2'},
+    {name:'Andante', bpm:92, key:'3'},
+    {name:'Moderato', bpm:114, key:'4'},
+    {name:'Allegro', bpm:138, key:'5'},
+    {name:'Vivace', bpm:176, key:'6'},
+    {name:'Presto', bpm:192, key:'7'},
+    {name:'Prestissimo', bpm:220, key:'8'},
   ];
+
+  function applyTempo(t){
+    bpm = t.bpm;
+    bpmVal.textContent = bpm;
+    updateTempoHighlight();
+    metBpm = t.bpm;
+    document.getElementById('metBpmVal').textContent = metBpm;
+  }
 
   const tempoRow = document.getElementById('tempoRow');
   TEMPOS.forEach(t => {
     const btn = document.createElement('button');
     btn.className = 'tempo-btn';
-    btn.textContent = t.name;
+    btn.textContent = t.key ? t.key + ' ' + t.name : t.name;
     btn.title = t.bpm + ' BPM';
-    btn.addEventListener('click', () => {
-      bpm = t.bpm;
-      bpmVal.textContent = bpm;
-      updateTempoHighlight();
-      metBpm = t.bpm;
-      document.getElementById('metBpmVal').textContent = metBpm;
-    });
+    btn.addEventListener('click', () => applyTempo(t));
     tempoRow.appendChild(btn);
   });
 
@@ -821,9 +823,14 @@
     } else if(e.key === ']'){
       e.preventDefault();
       bpm = Math.min(220, bpm+2); bpmVal.textContent = bpm; updateTempoHighlight();
+      metBpm = Math.min(240, metBpm+2); document.getElementById('metBpmVal').textContent = metBpm;
     } else if(e.key === '['){
       e.preventDefault();
       bpm = Math.max(40, bpm-2); bpmVal.textContent = bpm; updateTempoHighlight();
+      metBpm = Math.max(40, metBpm-2); document.getElementById('metBpmVal').textContent = metBpm;
+    } else {
+      const t = TEMPOS.find(t => t.key === e.key);
+      if(t){ e.preventDefault(); applyTempo(t); }
     }
   });
 
