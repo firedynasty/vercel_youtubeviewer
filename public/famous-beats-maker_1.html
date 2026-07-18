@@ -121,6 +121,60 @@
   }
 
   .foot-note{text-align:center;color:var(--parchment-dim);font-size:11.5px;margin-top:20px;line-height:1.6;opacity:.75;}
+
+  /* ── Metronome ── */
+  .met-section{margin-top:28px;border-top:1px solid var(--line);padding-top:22px;}
+  .met-controls{display:flex;gap:10px;align-items:stretch;margin-bottom:12px;}
+  .met-bpm-row{
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:8px 14px;display:flex;align-items:center;gap:10px;min-width:118px;
+  }
+  .met-bpm-row button{
+    width:26px;height:26px;border-radius:50%;background:var(--panel-hi);
+    border:1px solid var(--line);color:var(--parchment);font-size:15px;cursor:pointer;flex-shrink:0;
+  }
+  .met-btn-play{
+    flex:1;background:var(--panel-hi);border:1px solid var(--led-hat);color:var(--led-hat);
+    font-weight:700;font-size:14px;padding:10px;border-radius:12px;cursor:pointer;
+    transition:background .12s, color .12s;
+  }
+  .met-btn-play.active{background:var(--led-hat);color:var(--ink);}
+  .met-btn-tap{
+    background:var(--panel);border:1px solid var(--line);color:var(--parchment-dim);
+    font-size:14px;font-weight:600;padding:10px 16px;border-radius:12px;cursor:pointer;
+    transition:background .08s;
+  }
+  .met-btn-tap:active{background:var(--panel-hi);}
+  .met-vol-row{
+    display:flex;align-items:center;gap:10px;margin-bottom:12px;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 14px;
+  }
+  .met-vol-row span{font-size:14px;color:var(--parchment-dim);}
+  .met-vol-row input[type="range"]{
+    flex:1;height:4px;-webkit-appearance:none;background:var(--panel-hi);
+    border-radius:2px;outline:none;
+  }
+  .met-vol-row input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--led-hat);cursor:pointer;
+  }
+  .met-lights{display:flex;gap:8px;margin-bottom:12px;}
+  .met-light{
+    flex:1;height:18px;border-radius:5px;background:var(--led-off);
+    border:1px solid rgba(238,230,214,0.07);transition:background .05s, box-shadow .05s;
+  }
+  .met-light.inactive{opacity:.18;}
+  .met-light.on-accent{background:var(--led-hat);box-shadow:0 0 10px rgba(127,166,149,0.65);}
+  .met-light.on-tick{background:rgba(127,166,149,0.3);}
+  .met-sig-row{display:flex;align-items:center;gap:8px;}
+  .met-sig-label{font-size:11px;color:var(--parchment-dim);letter-spacing:.05em;text-transform:uppercase;}
+  .met-sig-btn{
+    background:var(--panel);border:1px solid var(--line);color:var(--parchment-dim);
+    font-family:'Source Sans 3',sans-serif;font-size:12px;font-weight:600;
+    padding:5px 13px;border-radius:8px;cursor:pointer;
+    transition:background .1s, color .1s, border-color .1s;
+  }
+  .met-sig-btn.active{background:var(--led-hat);color:var(--ink);border-color:var(--led-hat);}
 </style>
 </head>
 <body>
@@ -159,6 +213,40 @@
   <div class="sequencer" id="sequencer"></div>
 
   <div class="foot-note">Sounds are synthesized in the browser — no samples used.<br>Patterns represent the classic rhythmic feel of each style, not a reproduced recording.</div>
+
+  <!-- Metronome -->
+  <div class="met-section">
+    <div class="eyebrow">Metronome</div>
+    <div class="met-controls">
+      <div class="met-bpm-row">
+        <button id="metBpmDown">−</button>
+        <div>
+          <div class="bpm-val" id="metBpmVal">120</div>
+          <div class="bpm-label">BPM</div>
+        </div>
+        <button id="metBpmUp">+</button>
+      </div>
+      <button class="met-btn-play" id="metPlayBtn">▶ Start</button>
+      <button class="met-btn-tap" id="metTapBtn">Tap</button>
+    </div>
+    <div class="met-vol-row">
+      <span>&#128264;</span>
+      <input type="range" id="metVolSlider" min="0" max="100" value="50">
+      <span>&#128266;</span>
+    </div>
+    <div class="met-lights" id="metLights">
+      <div class="met-light" id="metL0"></div>
+      <div class="met-light" id="metL1"></div>
+      <div class="met-light" id="metL2"></div>
+      <div class="met-light" id="metL3"></div>
+    </div>
+    <div class="met-sig-row">
+      <span class="met-sig-label">Time sig</span>
+      <button class="met-sig-btn active" data-beats="4">4/4</button>
+      <button class="met-sig-btn" data-beats="3">3/4</button>
+      <button class="met-sig-btn" data-beats="2">2/4</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -730,12 +818,156 @@
       presetSelect.dispatchEvent(new Event('change'));
     } else if(e.key === ']'){
       e.preventDefault();
-      bpm = Math.min(220, bpm+2); bpmVal.textContent = bpm;
+      metBpm = Math.min(240, metBpm+2);
+      document.getElementById('metBpmVal').textContent = metBpm;
     } else if(e.key === '['){
       e.preventDefault();
-      bpm = Math.max(40, bpm-2); bpmVal.textContent = bpm;
+      metBpm = Math.max(40, metBpm-2);
+      document.getElementById('metBpmVal').textContent = metBpm;
     }
   });
+
+  // ── Metronome ──────────────────────────────────────────────────────────────
+  let metIsPlaying = false;
+  let metBpm = 120;
+  let metNextNoteTime = 0;
+  let metBeatIdx = 0;
+  let metTimerInterval = null;
+  let metVolume = 0.5;
+  let metPattern = [true, false, false, false]; // 4/4
+  let metGain = null;
+  let metTaps = [];
+
+  const metLights = [
+    document.getElementById('metL0'),
+    document.getElementById('metL1'),
+    document.getElementById('metL2'),
+    document.getElementById('metL3'),
+  ];
+
+  function ensureMetGain() {
+    ensureAudio();
+    if (!metGain) {
+      metGain = audioCtx.createGain();
+      metGain.gain.value = metVolume;
+      metGain.connect(audioCtx.destination);
+    }
+  }
+
+  function refreshMetLights() {
+    metLights.forEach((l, i) => {
+      l.classList.remove('on-accent', 'on-tick');
+      l.classList.toggle('inactive', i >= metPattern.length);
+    });
+  }
+
+  function flashMetLight(beatIdx, accent) {
+    metLights.forEach(l => l.classList.remove('on-accent', 'on-tick'));
+    const light = metLights[beatIdx];
+    if (light && !light.classList.contains('inactive')) {
+      light.classList.add(accent ? 'on-accent' : 'on-tick');
+      setTimeout(() => light.classList.remove('on-accent', 'on-tick'), 120);
+    }
+  }
+
+  function playMetClick(time, accent, beatIdx) {
+    const osc = audioCtx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(accent ? 880 : 660, time);
+    osc.frequency.exponentialRampToValueAtTime(accent ? 440 : 330, time + 0.05);
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(0.0001, time);
+    g.gain.exponentialRampToValueAtTime(accent ? 0.7 : 0.45, time + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, time + 0.08);
+    osc.connect(g);
+    g.connect(metGain);
+    osc.start(time);
+    osc.stop(time + 0.1);
+    const delay = Math.max(0, (time - audioCtx.currentTime) * 1000);
+    setTimeout(() => flashMetLight(beatIdx, accent), delay);
+  }
+
+  function metScheduler() {
+    while (metNextNoteTime < audioCtx.currentTime + 0.1) {
+      playMetClick(metNextNoteTime, metPattern[metBeatIdx], metBeatIdx);
+      metNextNoteTime += 60.0 / metBpm;
+      metBeatIdx = (metBeatIdx + 1) % metPattern.length;
+    }
+  }
+
+  function metStart() {
+    ensureMetGain();
+    metBeatIdx = 0;
+    metNextNoteTime = audioCtx.currentTime + 0.06;
+    metTimerInterval = setInterval(metScheduler, 25);
+    metIsPlaying = true;
+    document.getElementById('metPlayBtn').textContent = '⏸ Stop';
+    document.getElementById('metPlayBtn').classList.add('active');
+  }
+
+  function metStop() {
+    clearInterval(metTimerInterval);
+    metTimerInterval = null;
+    metIsPlaying = false;
+    metLights.forEach(l => l.classList.remove('on-accent', 'on-tick'));
+    document.getElementById('metPlayBtn').textContent = '▶ Start';
+    document.getElementById('metPlayBtn').classList.remove('active');
+  }
+
+  function metTapBeat() {
+    ensureMetGain();
+    const now = audioCtx.currentTime;
+    metTaps = metTaps.filter(x => now - x < 2.2);
+    metTaps.push(now);
+    if (metTaps.length >= 2) {
+      let sum = 0;
+      for (let i = 1; i < metTaps.length; i++) sum += metTaps[i] - metTaps[i - 1];
+      metBpm = Math.min(240, Math.max(40, Math.round(60 / (sum / (metTaps.length - 1)))));
+      document.getElementById('metBpmVal').textContent = metBpm;
+    }
+    const tapBeatIdx = (metTaps.length - 1) % metPattern.length;
+    playMetClick(now + 0.004, tapBeatIdx === 0, tapBeatIdx);
+    metNextNoteTime = now + 60 / metBpm;
+    metBeatIdx = (tapBeatIdx + 1) % metPattern.length;
+    if (!metTimerInterval) {
+      metTimerInterval = setInterval(metScheduler, 25);
+    }
+    metIsPlaying = true;
+    document.getElementById('metPlayBtn').textContent = '⏸ Stop';
+    document.getElementById('metPlayBtn').classList.add('active');
+  }
+
+  document.getElementById('metPlayBtn').addEventListener('click', () => {
+    metIsPlaying ? metStop() : metStart();
+  });
+  document.getElementById('metTapBtn').addEventListener('click', metTapBeat);
+
+  document.getElementById('metBpmUp').addEventListener('click', () => {
+    metBpm = Math.min(240, metBpm + 2);
+    document.getElementById('metBpmVal').textContent = metBpm;
+  });
+  document.getElementById('metBpmDown').addEventListener('click', () => {
+    metBpm = Math.max(40, metBpm - 2);
+    document.getElementById('metBpmVal').textContent = metBpm;
+  });
+
+  document.getElementById('metVolSlider').addEventListener('input', function() {
+    metVolume = this.value / 100;
+    if (metGain) metGain.gain.value = metVolume;
+  });
+
+  document.querySelectorAll('.met-sig-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const beats = +btn.dataset.beats;
+      metPattern = Array.from({length: beats}, (_, i) => i === 0);
+      document.querySelectorAll('.met-sig-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      metBeatIdx = 0;
+      refreshMetLights();
+    });
+  });
+
+  refreshMetLights();
 
   loadPreset(0);
 })();
