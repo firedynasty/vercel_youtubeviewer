@@ -214,6 +214,17 @@
 
   <div class="foot-note">Sounds are synthesized in the browser — no samples used.<br>Patterns represent the classic rhythmic feel of each style, not a reproduced recording.</div>
 
+  <div class="foot-note" style="margin-top:14px;text-align:left;line-height:2;">
+    <span style="color:var(--brass);font-weight:700;letter-spacing:.08em;font-size:10.5px;text-transform:uppercase;">Keyboard shortcuts</span><br>
+    <span style="opacity:.9;"><kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">Enter</kbd> Play / Stop beats &nbsp;&nbsp;
+    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">9</kbd> Play / Stop beats &nbsp;&nbsp;
+    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">0</kbd> Start / Stop metronome</span><br>
+    <span style="opacity:.9;"><kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">← →</kbd> Previous / Next preset &nbsp;&nbsp;
+    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">[ ]</kbd> BPM −2 / +2 (both)</span><br>
+    <span style="opacity:.9;"><kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">- +</kbd> Volume −5 / +5 (both) &nbsp;&nbsp;
+    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">1–8</kbd> Tempo preset (Largo → Prestissimo)</span>
+  </div>
+
   <!-- Metronome -->
   <div class="met-section">
     <div class="eyebrow">Metronome</div>
@@ -846,6 +857,12 @@
       document.getElementById('metVolSlider').value = newMetVol;
       metVolume = newMetVol / 100;
       if(metGain) metGain.gain.value = metVolume;
+    } else if(e.key === '9'){
+      e.preventDefault();
+      playing ? stop() : start();
+    } else if(e.key === '0'){
+      e.preventDefault();
+      metIsPlaying ? metStop() : metStart();
     } else {
       const t = TEMPOS.find(t => t.key === e.key);
       if(t){ e.preventDefault(); applyTempo(t); }
