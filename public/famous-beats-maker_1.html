@@ -828,6 +828,24 @@
       e.preventDefault();
       bpm = Math.max(40, bpm-2); bpmVal.textContent = bpm; updateTempoHighlight();
       metBpm = Math.max(40, metBpm-2); document.getElementById('metBpmVal').textContent = metBpm;
+    } else if(e.key === '+' || e.key === '='){
+      e.preventDefault();
+      const newVol = Math.min(100, +volSlider.value + 5);
+      volSlider.value = newVol;
+      if(masterGain) masterGain.gain.value = newVol / 100;
+      const newMetVol = Math.min(100, +document.getElementById('metVolSlider').value + 5);
+      document.getElementById('metVolSlider').value = newMetVol;
+      metVolume = newMetVol / 100;
+      if(metGain) metGain.gain.value = metVolume;
+    } else if(e.key === '-'){
+      e.preventDefault();
+      const newVol = Math.max(0, +volSlider.value - 5);
+      volSlider.value = newVol;
+      if(masterGain) masterGain.gain.value = newVol / 100;
+      const newMetVol = Math.max(0, +document.getElementById('metVolSlider').value - 5);
+      document.getElementById('metVolSlider').value = newMetVol;
+      metVolume = newMetVol / 100;
+      if(metGain) metGain.gain.value = metVolume;
     } else {
       const t = TEMPOS.find(t => t.key === e.key);
       if(t){ e.preventDefault(); applyTempo(t); }
