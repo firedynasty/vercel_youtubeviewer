@@ -217,12 +217,12 @@
   <div class="foot-note" style="margin-top:14px;text-align:left;line-height:2;">
     <span style="color:var(--brass);font-weight:700;letter-spacing:.08em;font-size:10.5px;text-transform:uppercase;">Keyboard shortcuts</span><br>
     <span style="opacity:.9;"><kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">Enter</kbd> Play / Stop beats &nbsp;&nbsp;
-    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">9</kbd> Play / Stop beats &nbsp;&nbsp;
-    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">0</kbd> Start / Stop metronome</span><br>
+    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">o</kbd> Play / Stop beats &nbsp;&nbsp;
+    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">p</kbd> Start / Stop metronome</span><br>
     <span style="opacity:.9;"><kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">← →</kbd> Previous / Next preset &nbsp;&nbsp;
     <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">[ ]</kbd> BPM −2 / +2 (both)</span><br>
     <span style="opacity:.9;"><kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">- +</kbd> Volume −5 / +5 (both) &nbsp;&nbsp;
-    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">1–8</kbd> Tempo preset (Largo → Prestissimo)</span>
+    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">q–i</kbd> Tempo preset (Largo → Prestissimo)</span>
   </div>
 
   <!-- Metronome -->
@@ -528,6 +528,46 @@
       hat: pattern([]),
       tone: pattern([0,1,2,3,4,5,8])
     },
+    {
+      name: "Sunday Porch (acoustic R&B)",
+      bpm: 92,
+      desc: "Warm, playful sway — the kind of two-chord loop you hum over on a good day.",
+      kick: pattern([0,6,8]),
+      snare: pattern([4,12]),
+      hat: pattern([0,2,4,6,8,10,12,14]),
+      crash: pattern([]),
+      tone: pattern([10,14])
+    },
+    {
+      name: "Skip in the Step (acoustic R&B)",
+      bpm: 100,
+      desc: "Upbeat and bouncy with a hop in the kick — invites an ad-lib on every offbeat.",
+      kick: pattern([0,3,8,10]),
+      snare: pattern([4,12]),
+      hat: pattern([2,6,10,14]),
+      crash: pattern([0]),
+      tone: pattern([7,15])
+    },
+    {
+      name: "Window Seat (acoustic R&B)",
+      bpm: 78,
+      desc: "Reflective and unhurried — wide space between hits so a lyric can sit in the pocket.",
+      kick: pattern([0,10]),
+      snare: pattern([4,12]),
+      hat: pattern([0,4,8,12]),
+      crash: pattern([]),
+      tone: pattern([6,14])
+    },
+    {
+      name: "Golden Hour (acoustic R&B)",
+      bpm: 88,
+      desc: "Tender but forward-moving — reflective verses that can open up into a singable hook.",
+      kick: pattern([0,6,8,12]),
+      snare: pattern([4,12]),
+      hat: pattern([0,2,4,6,8,10,12,14]),
+      crash: pattern([]),
+      tone: pattern([2,10])
+    },
   ];
 
   let grid = {};
@@ -551,14 +591,14 @@
 
   const TEMPOS = [
     {name:'Grave', bpm:30, key:null},
-    {name:'Largo', bpm:53, key:'1'},
-    {name:'Adagio', bpm:71, key:'2'},
-    {name:'Andante', bpm:92, key:'3'},
-    {name:'Moderato', bpm:114, key:'4'},
-    {name:'Allegro', bpm:138, key:'5'},
-    {name:'Vivace', bpm:176, key:'6'},
-    {name:'Presto', bpm:192, key:'7'},
-    {name:'Prestissimo', bpm:220, key:'8'},
+    {name:'Largo', bpm:53, key:'q'},
+    {name:'Adagio', bpm:71, key:'w'},
+    {name:'Andante', bpm:92, key:'e'},
+    {name:'Moderato', bpm:114, key:'r'},
+    {name:'Allegro', bpm:138, key:'t'},
+    {name:'Vivace', bpm:176, key:'y'},
+    {name:'Presto', bpm:192, key:'u'},
+    {name:'Prestissimo', bpm:220, key:'i'},
   ];
 
   function applyTempo(t){
@@ -857,10 +897,10 @@
       document.getElementById('metVolSlider').value = newMetVol;
       metVolume = newMetVol / 100;
       if(metGain) metGain.gain.value = metVolume;
-    } else if(e.key === '9'){
+    } else if(e.key === 'o'){
       e.preventDefault();
       playing ? stop() : start();
-    } else if(e.key === '0'){
+    } else if(e.key === 'p'){
       e.preventDefault();
       metIsPlaying ? metStop() : metStart();
     } else {
