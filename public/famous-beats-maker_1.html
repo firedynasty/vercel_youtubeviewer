@@ -679,6 +679,126 @@
       crash: pattern([]),
       tone: pattern([0])
     },
+    {
+      name: "Menu Trap (NBA 2K)",
+      bpm: 140,
+      desc: "Half-time trap in the classic 2K menu mold — booming kick, hard clap on 3, hats implying the rolls.",
+      kick: pattern([0, 6, 10]),
+      snare: pattern([8]),
+      hat: pattern([0, 2, 4, 6, 8, 10, 12, 13, 14, 15]),
+      crash: pattern([0]),
+      tone: pattern([])
+    },
+    {
+      name: "Boom Bap Court (NBA 2K)",
+      bpm: 90,
+      desc: "Head-nod boom-bap — dusty kick-snare with a swung hat for that old-school hoop-intro feel.",
+      kick: pattern([0, 3, 8]),
+      snare: pattern([4, 12]),
+      hat: pattern([0, 2, 4, 6, 8, 10, 12, 14]),
+      crash: pattern([]),
+      tone: pattern([7, 15])
+    },
+    {
+      name: "Hype Anthem (NBA 2K)",
+      bpm: 150,
+      desc: "High-energy stadium hip-hop — driving kick and a big backbeat to get the arena on its feet.",
+      kick: pattern([0, 4, 8, 10, 12]),
+      snare: pattern([4, 12]),
+      hat: pattern([2, 6, 10, 14]),
+      crash: pattern([0]),
+      tone: pattern([])
+    },
+    {
+      name: "Drip Bounce (NBA 2K)",
+      bpm: 130,
+      desc: "Modern melodic trap bounce — syncopated kick and triplet hat flavor under a catchy hook.",
+      kick: pattern([0, 3, 6, 10, 11]),
+      snare: pattern([8]),
+      hat: pattern([0, 2, 4, 5, 8, 10, 12, 14]),
+      crash: pattern([0]),
+      tone: pattern([0, 12])
+    },
+    {
+      name: "West Coast Roll (NBA 2K)",
+      bpm: 96,
+      desc: "G-funk lean — laid-back bounce with a swung backbeat, the kind of ride-out groove between quarters.",
+      kick: pattern([0, 6, 8, 14]),
+      snare: pattern([4, 12]),
+      hat: pattern([0, 3, 4, 6, 8, 11, 12, 14]),
+      crash: pattern([]),
+      tone: pattern([2, 10])
+    },
+    {
+      name: "Pump Up Rock (NBA 2K)",
+      bpm: 128,
+      desc: "Arena rock-rap crossover — four-on-the-floor drive and crashes for the highlight-reel montage energy.",
+      kick: pattern([0, 4, 8, 12]),
+      snare: pattern([4, 12]),
+      hat: pattern([0, 2, 4, 6, 8, 10, 12, 14]),
+      crash: pattern([0, 8]),
+      tone: pattern([])
+    },
+    {
+      name: "Lofi Focus",
+      bpm: 78,
+      desc: "Dusty boom-bap swing with a lazy late kick and constant soft hats to hold a smooth flow state, ultimate focus lofi hip hop.",
+      kick: pattern([0, 6, 10]),
+      snare: pattern([4, 12]),
+      hat: pattern([0, 2, 4, 6, 8, 10, 12, 14]),
+      crash: pattern([]),
+      tone: pattern([2, 11])
+    },
+    {
+      name: "Neon Outrun",
+      bpm: 116,
+      desc: "Driving 80s synthwave pulse — relentless downbeat kick and offbeat hats pushing forward like a neon highway.",
+      kick: pattern([0, 4, 8, 12]),
+      snare: pattern([4, 12]),
+      hat: pattern([2, 6, 10, 14]),
+      crash: pattern([]),
+      tone: pattern([0, 3, 6, 8, 11, 14])
+    },
+    {
+      name: "Chillwave Haze",
+      bpm: 92,
+      desc: "Dreamy half-time chillwave — soft backbeat and sparse hats for a hazy, unhurried background.",
+      kick: pattern([0, 10]),
+      snare: pattern([4, 12]),
+      hat: pattern([0, 4, 8, 12]),
+      crash: pattern([]),
+      tone: pattern([2, 6, 10, 14])
+    },
+    {
+      name: "Netrunner Drone",
+      bpm: 100,
+      desc: "Minimalist sci-fi ambience — one deep pulse, no backbeat, glitchy metallic hats over a dark sub drone.",
+      kick: pattern([0]),
+      snare: pattern([]),
+      hat: pattern([2, 7, 10, 15]),
+      crash: pattern([]),
+      tone: pattern([0, 5, 8])
+    },
+    {
+      name: "Deep House Flow",
+      bpm: 123,
+      desc: "Hypnotic four-on-the-floor with offbeat open hats — the classic house signature to lock into a fast typing rhythm.",
+      kick: pattern([0, 4, 8, 12]),
+      snare: pattern([4, 12]),
+      hat: pattern([2, 6, 10, 14]),
+      crash: pattern([]),
+      tone: pattern([0, 3, 6, 10, 13])
+    },
+    {
+      name: "Liquid Roller",
+      bpm: 174,
+      desc: "Real liquid drum & bass — the signature two-step break (kick, snare, kick, snare) rolling fast and smooth.",
+      kick: pattern([0, 10]),
+      snare: pattern([4, 12]),
+      hat: pattern([2, 6, 8, 10, 14, 15]),
+      crash: pattern([]),
+      tone: pattern([0, 8])
+    },
   ];
 
   let grid = {};
@@ -692,6 +812,15 @@
   const scheduleAheadTime = 0.15;
   const lookahead = 25;
   let stepDuration = 0.125; // seconds, set from bpm
+  const swing = 0.25;      // 0 = straight, ~0.2–0.3 = lofi swing
+  const humanize = 0.004;  // ± seconds of random drift
+
+  function stepTime(step, stepDur) {
+    const isOffBeat = step % 2 === 1;
+    const swingOffset = isOffBeat ? stepDur * swing : 0;
+    const jitter = (Math.random() * 2 - 1) * humanize;
+    return step * stepDur + swingOffset + jitter;
+  }
 
   const presetSelect = document.getElementById('presetSelect');
   const presetDesc = document.getElementById('presetDesc');
@@ -930,7 +1059,8 @@
   function scheduler(){
     stepDuration = (60 / bpm) / 4; // 16th notes
     while(nextNoteTime < audioCtx.currentTime + scheduleAheadTime){
-      scheduleStep(currentStep, nextNoteTime);
+      const offset = stepTime(currentStep, stepDuration) - currentStep * stepDuration;
+      scheduleStep(currentStep, nextNoteTime + offset);
       nextNoteTime += stepDuration;
       currentStep = (currentStep + 1) % STEPS;
     }
