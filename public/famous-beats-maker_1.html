@@ -346,13 +346,9 @@
   }
 
   // ── Presets source ─────────────────────────────────────────────────────────
-  // Leave null to load from the local famous-beats-presets.js file.
-  // To load from Dropbox without committing:
-  //   1. Run: python upload_presets.py  (writes JSON, prints rclone commands)
-  //   2. Run the rclone commands to upload
-  //   3. Set BEATS_DROPBOX_URL in Vercel env vars with the shareable link (&raw=1)
-  //   4. Paste that URL below once, then just re-run the script after edits.
-  const PRESETS_DROPBOX_URL = 'https://www.dropbox.com/scl/fi/h6gverxjttuwj3gb032bc/famous-beats-presets.json?rlkey=nknshmkbbm8ix6a05p7gah1kf&dl=1';
+  // Loads from /api/presets which reads PRESETS_DROPBOX_URL from Vercel env vars.
+  // Update the env var in Vercel dashboard when the Dropbox link changes — no commit needed.
+  const PRESETS_API_URL = '/api/presets';
 
   let presets = [];
 
@@ -912,15 +908,11 @@ ${lines.join(',\n')}
     });
   });
 
-  // ── Boot: load presets from Dropbox URL or fall back to local script ────────
-  if (PRESETS_DROPBOX_URL) {
-    fetch(PRESETS_DROPBOX_URL)
-      .then(r => r.json())
-      .then(data => initPresets(data))
-      .catch(() => initPresets(window.FAMOUS_BEATS_PRESETS || []));
-  } else {
-    initPresets(window.FAMOUS_BEATS_PRESETS || []);
-  }
+  // ── Boot: load presets via API (reads PRESETS_DROPBOX_URL env var server-side) ──
+  fetch(PRESETS_API_URL)
+    .then(r => r.json())
+    .then(data => initPresets(data))
+    .catch(() => initPresets(window.FAMOUS_BEATS_PRESETS || []));
 })();
 </script>
 
