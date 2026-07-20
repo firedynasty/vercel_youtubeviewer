@@ -53,10 +53,30 @@
       tone: pattern([])
     },
     {
+      name: "son clave (2) head nod",
+      bpm: 100,
+      desc: "Describe the feel…",
+      kick: pattern([0,3,6,10,12]),
+      snare: pattern([]),
+      hat: pattern([2,4,6,8,10]),
+      crash: pattern([]),
+      tone: pattern([])
+    },
+    {
       name: "Habanera / tresillo",
       bpm: 96,
       desc: "Long-short-short-long grouping — the tresillo feel behind habanera, tango, and countless Latin styles.",
       kick: pattern([0,3,6,8,11,14]),
+      snare: pattern([]),
+      hat: pattern([0,2,4,6,8,10,12,14]),
+      crash: pattern([]),
+      tone: pattern([])
+    },
+    {
+      name: "Habanera (mix)",
+      bpm: 96,
+      desc: "had to adjust this",
+      kick: pattern([0,3,6,8,11]),
       snare: pattern([]),
       hat: pattern([0,2,4,6,8,10,12,14]),
       crash: pattern([]),
@@ -143,6 +163,16 @@
       tone: pattern([])
     },
     {
+      name: "Lo-Fi four-and-pause remixed",
+      bpm: 80,
+      desc: "Describe the feel…",
+      kick: pattern([0,10]),
+      snare: pattern([4,12]),
+      hat: pattern([0,1,2,3,6,7,8,9,14]),
+      crash: pattern([]),
+      tone: pattern([])
+    },
+    {
       name: "Lo-fi dusty (sparse & swung)",
       bpm: 76,
       desc: "Minimal and unhurried — just kick, snare, and a light hat accent, leaving lots of open space for vocals.",
@@ -211,6 +241,16 @@
       hat: pattern([]),
       crash: pattern([]),
       tone: pattern([0,2,4,8])
+    },
+        {
+      name: "Beethoven 5th change",
+      bpm: 108,
+      desc: "Describe the feel…",
+      kick: pattern([]),
+      snare: pattern([]),
+      hat: pattern([8]),
+      crash: pattern([]),
+      tone: pattern([0,2,4,12])
     },
     {
       name: '"Winter" (Vivaldi, modern drums)',
@@ -493,7 +533,7 @@
       tone: pattern([2,11])
     },
     {
-      name: "Lofi Hip Remix",
+      name: "Lofi Hip Remix (focus)",
       bpm: 53,
       desc: "Dusty boom-bap swing with a lazy late kick and constant soft hats to hold a smooth flow state, ultimate focus lofi hip hop.",
       kick: pattern([0,11,13,15]),
@@ -562,6 +602,67 @@
       crash: pattern([]),
       tone: pattern([0,8])
     },
+  {
+    name: "Glitch Hop Micro(ADHD)",
+    bpm: 110,
+    desc: "A fractured half-time groove — fat glitch-hop kick and snare with tone accents as melodic micro-percussion.",
+    kick: pattern([0, 3, 8, 11]),
+    snare: pattern([4, 12]),
+    hat: pattern([0, 2, 4, 6, 8, 10, 12, 14, 15]),   // the 15 is the glitch stutter into the loop
+    crash: pattern([]),
+    tone: pattern([3, 5, 9, 11, 14])
+  },
+  {
+    name: "IDM Brain Melt",
+    bpm: 140,
+    desc: "Hyper-active broken beat — irregular kick, ghost-note snares, and rapidly alternating hats.",
+    kick: pattern([0, 6, 11]),
+    snare: pattern([4, 10, 12]),   // 10 is the ghost note breaking the grid
+    hat: pattern([0, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15]),   // dense, deliberately uneven
+    crash: pattern([]),
+    tone: pattern([2, 6, 10, 13])
+  },
+  {
+    name: "Synthwave Cruise",
+    bpm: 116,
+    desc: "Driving 80s neon energy — rigid four-on-the-floor kick with offbeat hats and pulsing tone work.",
+    kick: pattern([0, 4, 8, 12]),
+    snare: pattern([4, 12]),
+    hat: pattern([2, 6, 10, 14]),
+    crash: pattern([]),
+    tone: pattern([0, 2, 4, 6, 8, 10, 12, 14])
+  },
+  {
+    name: "Garage Skank",
+    bpm: 132,
+    desc: "Skippy UK 2-step garage — syncopated kick and offbeat open hats with quick tone stabs.",
+    kick: pattern([0, 3, 10]),
+    snare: pattern([4, 12]),
+    hat: pattern([2, 6, 10, 14]),   // offbeat open hats — the garage signature
+    crash: pattern([]),
+    tone: pattern([3, 7, 11])
+  },
+  {
+    name: "Hyperpop Surge",
+    bpm: 155,
+    desc: "Maximalist chaos — driving kick under rapid-fire snare rushes and dense tone sequences.",
+    kick: pattern([0, 4, 8, 12]),
+    snare: pattern([4, 12, 14, 15]),   // 14/15 are the snare-rush fill into the next bar
+    hat: pattern([0, 2, 4, 6, 8, 10, 12, 13, 14, 15]),
+    crash: pattern([0]),
+    tone: pattern([1, 3, 5, 7, 9, 13])
+  },
+  {
+    name: "Liquid Drum & Bass",
+    bpm: 174,
+    desc: "High-speed liquid break — the signature two-step snare pocket over a rolling hi-hat stream.",
+    kick: pattern([0, 10]),
+    snare: pattern([4, 12]),
+    hat: pattern([0, 2, 4, 6, 8, 10, 12, 13, 14, 15]),   // rolling stream with a late-16th push
+    crash: pattern([]),
+    tone: pattern([2, 6, 10])
+  }
+
 
     // ── Paste exported presets below this line ────────────────────────────────
 
