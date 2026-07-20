@@ -493,6 +493,16 @@
       tone: pattern([2,11])
     },
     {
+      name: "Lofi Hip Remix",
+      bpm: 53,
+      desc: "Dusty boom-bap swing with a lazy late kick and constant soft hats to hold a smooth flow state, ultimate focus lofi hip hop.",
+      kick: pattern([0,11,13,15]),
+      snare: pattern([4,8]),
+      hat: pattern([0,3,4,7,8,11]),
+      crash: pattern([]),
+      tone: pattern([2,6,10])
+    },
+    {
       name: "Neon Outrun",
       bpm: 116,
       desc: "Driving 80s synthwave pulse — relentless downbeat kick and offbeat hats pushing forward like a neon highway.",
@@ -501,6 +511,16 @@
       hat: pattern([2,6,10,14]),
       crash: pattern([]),
       tone: pattern([0,3,6,8,11,14])
+    },
+      {
+      name: "Neon Outrun Remix",
+      bpm: 53,
+      desc: "Driving 80s synthwave pulse — relentless downbeat kick and offbeat hats pushing forward like a neon highway.",
+      kick: pattern([0,4,6,10,12]),
+      snare: pattern([4,10]),
+      hat: pattern([2,8,14]),
+      crash: pattern([]),
+      tone: pattern([3,6,9,12])
     },
     {
       name: "Chillwave Haze",
