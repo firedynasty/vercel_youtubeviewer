@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Convert famous-beats-presets.js to JSON and print rclone upload commands.
+"""Convert famous-beats-presets.js to JSON, upload to Dropbox, and patch the HTML.
 
 Workflow
 --------
 1. Edit famous-beats-presets.js (paste exported presets, tweak values, etc.)
 2. Run:  python upload_presets.py
-3. Copy and run the printed rclone commands to upload to Dropbox.
-4. Go to Vercel dashboard → Project Settings → Environment Variables
-   and update BEATS_DROPBOX_URL with the shareable link (append &raw=1).
+   - Converts JS → JSON
+   - Uploads JSON to Dropbox via rclone
+   - Gets the shareable link and patches PRESETS_DROPBOX_URL in the HTML
 
 Requirements
 ------------
@@ -22,6 +22,7 @@ Usage
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -31,6 +32,8 @@ DROPBOX_DIR   = 'dropbox:/vercel'
 REMOTE_NAME   = 'famous-beats-presets.json'
 DEFAULT_INPUT = 'famous-beats-presets.js'
 OUTPUT_JSON   = 'famous-beats-presets.json'
+HTML_FILE     = 'famous-beats-maker_1.html'
+URL_PATTERN   = re.compile(r"(const PRESETS_DROPBOX_URL\s*=\s*')[^']*(';)")
 
 
 def js_to_json(js_path: Path) -> list:
@@ -47,9 +50,44 @@ def js_to_json(js_path: Path) -> list:
     return json.loads(result.stdout)
 
 
+def run(cmd: list[str], desc: str) -> str:
+    """Run a command, print it, exit on failure, return stdout."""
+    print(f'\n$ {" ".join(cmd)}')
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f'{desc} failed:\n{result.stderr}', file=sys.stderr)
+        sys.exit(1)
+    return result.stdout.strip()
+
+
+def make_raw_url(link: str) -> str:
+    """Convert a Dropbox shareable link to a direct-download URL."""
+    # Replace dl=0 with dl=1, or append dl=1 if not present
+    if 'dl=0' in link:
+        return link.replace('dl=0', 'dl=1')
+    if 'dl=' not in link:
+        sep = '&' if '?' in link else '?'
+        return link + sep + 'dl=1'
+    return link  # already has dl=1 or raw=1
+
+
+def patch_html(html_path: Path, raw_url: str) -> bool:
+    """Replace PRESETS_DROPBOX_URL value in the HTML file. Returns True if changed."""
+    src = html_path.read_text(encoding='utf-8')
+    new_src, count = URL_PATTERN.subn(lambda m: m.group(1) + raw_url + m.group(2), src)
+    if count == 0:
+        print(f'  Warning: PRESETS_DROPBOX_URL not found in {html_path}', file=sys.stderr)
+        return False
+    if new_src == src:
+        print(f'  URL unchanged in {html_path}')
+        return False
+    html_path.write_text(new_src, encoding='utf-8')
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description='Convert beat maker presets JS to JSON and print rclone commands'
+        description='Convert beat maker presets JS to JSON, upload to Dropbox, patch HTML'
     )
     parser.add_argument('-i', '--input', default=DEFAULT_INPUT,
                         help=f'Source JS file (default: {DEFAULT_INPUT})')
@@ -67,19 +105,33 @@ def main():
     presets = js_to_json(js_path)
     print(f'  {len(presets)} preset(s) found')
 
-    # 2. Write JSON next to the JS file
+    # 2. Write JSON
     out_path = js_path.parent / OUTPUT_JSON
     with open(out_path, 'w', encoding='utf-8') as f:
         json.dump(presets, f, indent=2, ensure_ascii=False)
-    print(f'\n-> Wrote {out_path}')
+    print(f'-> Wrote {out_path}')
 
-    # 3. Print rclone commands
+    # 3. Upload to Dropbox
     remote_path = f'{args.dropbox_dir}/{REMOTE_NAME}'
-    print(f'\nrclone copyto {out_path.resolve()} {remote_path}')
-    print(f'rclone link {remote_path}')
-    print(f'\n# Then update Vercel with the link (append &raw=1):')
-    print(f'vercel env rm BEATS_DROPBOX_URL production -y')
-    print(f'echo "<LINK>&raw=1" | vercel env add BEATS_DROPBOX_URL production')
+    run(['rclone', 'copyto', str(out_path.resolve()), remote_path], 'rclone copyto')
+    print('-> Uploaded to Dropbox')
+
+    # 4. Get shareable link
+    link = run(['rclone', 'link', remote_path], 'rclone link')
+    raw_url = make_raw_url(link)
+    print(f'-> Raw URL: {raw_url}')
+
+    # 5. Patch HTML
+    html_path = js_path.parent / HTML_FILE
+    if html_path.exists():
+        changed = patch_html(html_path, raw_url)
+        if changed:
+            print(f'-> Patched {html_path}')
+        else:
+            print(f'-> {html_path} already up to date')
+    else:
+        print(f'  Warning: {html_path} not found — update PRESETS_DROPBOX_URL manually')
+        print(f'  URL: {raw_url}')
 
     return 0
 
