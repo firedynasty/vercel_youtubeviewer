@@ -317,6 +317,21 @@
   </div>
 </div>
 
+<!-- Export modal -->
+<div class="export-modal" id="exportModal">
+  <div class="export-box">
+    <h3>Export preset <button class="export-close" id="exportClose">&times;</button></h3>
+    <div class="export-fields">
+      <label>Name</label>
+      <input id="exportName" type="text" placeholder="e.g. My groove" autocomplete="off">
+      <label>Description</label>
+      <textarea id="exportDesc" rows="2" placeholder="Describe the feel…"></textarea>
+    </div>
+    <div class="export-code" id="exportCode"></div>
+    <button class="export-copy-btn" id="exportCopyBtn">Copy to clipboard</button>
+  </div>
+</div>
+
 <script src="famous-beats-presets.js"></script>
 <script>
 (function(){
@@ -887,21 +902,6 @@ ${lines.join(',\n')}
   });
 })();
 </script>
-
-<!-- Export modal -->
-<div class="export-modal" id="exportModal">
-  <div class="export-box">
-    <h3>Export preset <button class="export-close" id="exportClose">&times;</button></h3>
-    <div class="export-fields">
-      <label>Name</label>
-      <input id="exportName" type="text" placeholder="e.g. My groove" autocomplete="off">
-      <label>Description</label>
-      <textarea id="exportDesc" rows="2" placeholder="Describe the feel…"></textarea>
-    </div>
-    <div class="export-code" id="exportCode"></div>
-    <button class="export-copy-btn" id="exportCopyBtn">Copy to clipboard</button>
-  </div>
-</div>
 
 <!-- YouTube modal -->
 <div class="yt-modal" id="ytModal">
