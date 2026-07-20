@@ -22,7 +22,6 @@ Usage
 
 import argparse
 import json
-import re
 import subprocess
 import sys
 from pathlib import Path
@@ -32,8 +31,7 @@ DROPBOX_DIR   = 'dropbox:/vercel'
 REMOTE_NAME   = 'famous-beats-presets.json'
 DEFAULT_INPUT = 'famous-beats-presets.js'
 OUTPUT_JSON   = 'famous-beats-presets.json'
-HTML_FILE     = 'famous-beats-maker_1.html'
-URL_PATTERN   = re.compile(r"(const PRESETS_DROPBOX_URL\s*=\s*')[^']*(';)")
+VERCEL_ENV_VAR = 'PRESETS_DROPBOX_URL'
 
 
 def js_to_json(js_path: Path) -> list:
@@ -71,18 +69,11 @@ def make_raw_url(link: str) -> str:
     return link  # already has dl=1 or raw=1
 
 
-def patch_html(html_path: Path, raw_url: str) -> bool:
-    """Replace PRESETS_DROPBOX_URL value in the HTML file. Returns True if changed."""
-    src = html_path.read_text(encoding='utf-8')
-    new_src, count = URL_PATTERN.subn(lambda m: m.group(1) + raw_url + m.group(2), src)
-    if count == 0:
-        print(f'  Warning: PRESETS_DROPBOX_URL not found in {html_path}', file=sys.stderr)
-        return False
-    if new_src == src:
-        print(f'  URL unchanged in {html_path}')
-        return False
-    html_path.write_text(new_src, encoding='utf-8')
-    return True
+def print_vercel_commands(raw_url: str) -> None:
+    """Print the vercel CLI commands to update PRESETS_DROPBOX_URL."""
+    print(f'\n# Then update Vercel with the new link:')
+    print(f'vercel env rm {VERCEL_ENV_VAR} production -y')
+    print(f'echo "{raw_url}" | vercel env add {VERCEL_ENV_VAR} production')
 
 
 def main():
@@ -121,17 +112,8 @@ def main():
     raw_url = make_raw_url(link)
     print(f'-> Raw URL: {raw_url}')
 
-    # 5. Patch HTML
-    html_path = js_path.parent / HTML_FILE
-    if html_path.exists():
-        changed = patch_html(html_path, raw_url)
-        if changed:
-            print(f'-> Patched {html_path}')
-        else:
-            print(f'-> {html_path} already up to date')
-    else:
-        print(f'  Warning: {html_path} not found — update PRESETS_DROPBOX_URL manually')
-        print(f'  URL: {raw_url}')
+    # 5. Print vercel commands to update the env var
+    print_vercel_commands(raw_url)
 
     return 0
 
