@@ -279,7 +279,8 @@
     <span style="opacity:.9;"><kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">← →</kbd> Previous / Next preset &nbsp;&nbsp;
     <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">[ ]</kbd> BPM −2 / +2 (both)</span><br>
     <span style="opacity:.9;"><kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">- +</kbd> Volume −5 / +5 (both) &nbsp;&nbsp;
-    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">q–i</kbd> Tempo preset (Largo → Prestissimo)</span>
+    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">q–i</kbd> Tempo preset (Largo → Prestissimo) &nbsp;&nbsp;
+    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">, .</kbd> Tempo step slower / faster</span>
   </div>
 
   <!-- Metronome -->
@@ -675,6 +676,14 @@
       e.preventDefault();
       bpm = Math.max(40, bpm-2); bpmVal.textContent = bpm; updateTempoHighlight();
       metBpm = Math.max(40, metBpm-2); document.getElementById('metBpmVal').textContent = metBpm;
+    } else if(e.key === '.'){
+      e.preventDefault();
+      const next = TEMPOS.find(t => t.bpm > bpm);
+      if(next) applyTempo(next);
+    } else if(e.key === ','){
+      e.preventDefault();
+      const prev = [...TEMPOS].reverse().find(t => t.bpm < bpm);
+      if(prev) applyTempo(prev);
     } else if(e.key === '+' || e.key === '='){
       e.preventDefault();
       const newVol = Math.min(100, +volSlider.value + 5);
