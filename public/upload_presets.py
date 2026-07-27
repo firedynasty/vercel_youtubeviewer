@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
-"""Convert famous-beats-presets.js to JSON, upload to Dropbox, and patch the HTML.
+"""Convert famous-beats-presets.js to JSON and upload it to Dropbox.
 
 Workflow
 --------
 1. Edit famous-beats-presets.js (paste exported presets, tweak values, etc.)
 2. Run:  python upload_presets.py
    - Converts JS → JSON
-   - Uploads JSON to Dropbox via rclone
-   - Gets the shareable link and patches PRESETS_DROPBOX_URL in the HTML
+   - Uploads JSON to Dropbox via rclone, overwriting
+     dropbox:/vercel/famous-beats-presets.json
+
+NOTE: This OVERWRITES the Dropbox JSON with the local .js contents. Run
+download_presets.py first if the browser may have appended beats you want
+to keep. The Dropbox share link is per-file and survives overwrites, so
+PRESETS_DROPBOX_URL never needs updating.
 
 Requirements
 ------------
@@ -31,7 +36,6 @@ DROPBOX_DIR   = 'dropbox:/vercel'
 REMOTE_NAME   = 'famous-beats-presets.json'
 DEFAULT_INPUT = 'famous-beats-presets.js'
 OUTPUT_JSON   = 'famous-beats-presets.json'
-VERCEL_ENV_VAR = 'PRESETS_DROPBOX_URL'
 
 
 def js_to_json(js_path: Path) -> list:
@@ -56,24 +60,6 @@ def run(cmd: list[str], desc: str) -> str:
         print(f'{desc} failed:\n{result.stderr}', file=sys.stderr)
         sys.exit(1)
     return result.stdout.strip()
-
-
-def make_raw_url(link: str) -> str:
-    """Convert a Dropbox shareable link to a direct-download URL."""
-    # Replace dl=0 with dl=1, or append dl=1 if not present
-    if 'dl=0' in link:
-        return link.replace('dl=0', 'dl=1')
-    if 'dl=' not in link:
-        sep = '&' if '?' in link else '?'
-        return link + sep + 'dl=1'
-    return link  # already has dl=1 or raw=1
-
-
-def print_vercel_commands(raw_url: str) -> None:
-    """Print the vercel CLI commands to update PRESETS_DROPBOX_URL."""
-    print(f'\n# Then update Vercel with the new link:')
-    print(f'vercel env rm {VERCEL_ENV_VAR} production -y')
-    print(f'echo "{raw_url}" | vercel env add {VERCEL_ENV_VAR} production')
 
 
 def main():
@@ -102,18 +88,10 @@ def main():
         json.dump(presets, f, indent=2, ensure_ascii=False)
     print(f'-> Wrote {out_path}')
 
-    # 3. Upload to Dropbox
+    # 3. Upload to Dropbox (overwrites; share link is per-file so it never changes)
     remote_path = f'{args.dropbox_dir}/{REMOTE_NAME}'
     run(['rclone', 'copyto', str(out_path.resolve()), remote_path], 'rclone copyto')
-    print('-> Uploaded to Dropbox')
-
-    # 4. Get shareable link
-    link = run(['rclone', 'link', remote_path], 'rclone link')
-    raw_url = make_raw_url(link)
-    print(f'-> Raw URL: {raw_url}')
-
-    # 5. Print vercel commands to update the env var
-    print_vercel_commands(raw_url)
+    print(f'-> {out_path.name} has been copied over to {remote_path}')
 
     return 0
 

@@ -210,6 +210,17 @@
     transition:opacity .1s;
   }
   .export-copy-btn:active{opacity:.8;}
+  .export-save-btn{margin-top:8px;background:var(--led-hat);}
+
+  /* Dropbox auth button */
+  .dbx-auth-btn{
+    background:var(--panel);border:1px solid var(--line);color:var(--parchment-dim);
+    font-family:'Source Sans 3',sans-serif;font-size:11px;font-weight:600;
+    padding:5px 12px;border-radius:8px;cursor:pointer;letter-spacing:.04em;
+    transition:background .12s,color .12s,border-color .12s;
+  }
+  .dbx-auth-btn:hover{background:var(--panel-hi);color:var(--parchment);}
+  .dbx-auth-btn.connected{color:var(--led-hat);border-color:var(--led-hat);}
 
   /* YouTube modal */
   .yt-modal{
@@ -234,7 +245,10 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="eyebrow">Rhythm machine</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;">
+    <div class="eyebrow">Rhythm machine</div>
+    <button class="dbx-auth-btn" id="dbxAuthBtn" title="Sign in to Dropbox to save presets">Dropbox</button>
+  </div>
   <h1>Famous Beats</h1>
   <div class="sub">Pick an iconic rhythmic pattern, dial in the tempo, and loop it. Tap any cell to remix the pattern yourself — it's your beat maker underneath the presets.</div>
 
@@ -263,7 +277,8 @@
   <div class="transport">
     <button class="btn-play" id="playBtn">▶ Play</button>
     <button class="btn-clear" id="clearBtn">Clear</button>
-    <button class="btn-clear" id="exportBtn" title="Export current pattern as preset code" style="border-color:var(--brass);color:var(--brass);">Export</button>
+    <button class="btn-clear" id="exportBtn" title="Save / export current pattern" style="border-color:var(--brass);color:var(--brass);">Save / Export</button>
+    <button class="btn-clear" id="loadBtn" title="Reload presets from the Dropbox file (signs in if needed) — replaces all dropdown items; unsaved board edits are lost">Load</button>
     <button title="YouTube music" onclick="toggleYtModal()" style="width:32px;height:32px;border:none;border-radius:8px;cursor:pointer;background:rgb(224,224,224);display:flex;align-items:center;justify-content:center;padding:0"><svg width="20" height="14" viewBox="0 0 68 48"><path d="M66.5 7.7s-.7-4.7-2.7-6.8C61-1.7 58-1.7 56.6-1.9 47.3-2.6 34-2.6 34-2.6s-13.3 0-22.6.7C10-1.7 7-1.7 4.2.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.8v5.2c0 5.5.7 11.1.7 11.1s.7 4.7 2.7 6.8c2.8 2.6 6.4 2.5 8 2.8 5.8.5 24.8.7 24.8.7s13.3 0 22.6-.7c1.4-.2 4.4-.2 7.2-2.8 2-2.1 2.7-6.8 2.7-6.8s.7-5.5.7-11.1v-5.2c0-5.6-.7-11.1-.7-11.1z" fill="red"/><path d="M27 33V13l18.2 10L27 33z" fill="white"/></svg></button>
   </div>
 
@@ -321,7 +336,7 @@
 <!-- Export modal -->
 <div class="export-modal" id="exportModal">
   <div class="export-box">
-    <h3>Export preset <button class="export-close" id="exportClose">&times;</button></h3>
+    <h3>Save / export preset <button class="export-close" id="exportClose">&times;</button></h3>
     <div class="export-fields">
       <label>Name</label>
       <input id="exportName" type="text" placeholder="e.g. My groove" autocomplete="off">
@@ -330,6 +345,8 @@
     </div>
     <div class="export-code" id="exportCode"></div>
     <button class="export-copy-btn" id="exportCopyBtn">Copy to clipboard</button>
+    <button class="export-copy-btn export-save-btn" id="exportSaveDbxBtn">Append to Dropbox</button>
+    <div id="exportSaveStatus" style="font-size:12px;color:var(--led-hat);min-height:16px;margin-top:6px;text-align:center;"></div>
   </div>
 </div>
 
@@ -350,6 +367,205 @@
   // Loads from /api/presets which reads PRESETS_DROPBOX_URL from Vercel env vars.
   // Update the env var in Vercel dashboard when the Dropbox link changes — no commit needed.
   const PRESETS_API_URL = '/api/presets';
+
+  // ── Dropbox preset sync (OAuth PKCE, ported from index.html) ─────────────
+  const DROPBOX_PRESETS_PATH = '/vercel/famous-beats-presets.json';
+  const dbxIsLocalhost = ['localhost','127.0.0.1'].includes(window.location.hostname);
+  let dropboxAccessToken = null;
+
+  function generateCodeVerifier(){
+    const array = new Uint8Array(64);
+    crypto.getRandomValues(array);
+    return btoa(String.fromCharCode(...array))
+      .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  async function generateCodeChallenge(verifier){
+    const data = new TextEncoder().encode(verifier);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return btoa(String.fromCharCode(...new Uint8Array(digest)))
+      .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  async function fetchDropboxAppKey(){
+    if(dbxIsLocalhost){
+      let key = localStorage.getItem('dropbox-app-key') || '';
+      if(!key){
+        key = prompt('Enter your Dropbox App Key (saved to localStorage for localhost):') || '';
+        if(key) localStorage.setItem('dropbox-app-key', key);
+      }
+      return key;
+    }
+    try{
+      const res = await fetch('/api/dropbox-key');
+      const data = await res.json();
+      return data.key || '';
+    }catch{ return ''; }
+  }
+
+  const dbxAuthBtn = document.getElementById('dbxAuthBtn');
+  function updateDbxAuthBtn(){
+    if(dropboxAccessToken){
+      dbxAuthBtn.textContent = '● Dropbox';
+      dbxAuthBtn.classList.add('connected');
+      dbxAuthBtn.title = 'Connected — click to sign out';
+    } else {
+      dbxAuthBtn.textContent = 'Dropbox';
+      dbxAuthBtn.classList.remove('connected');
+      dbxAuthBtn.title = 'Sign in to Dropbox to save presets';
+    }
+  }
+
+  async function dbxSignIn(){
+    const appKey = await fetchDropboxAppKey();
+    if(!appKey){ alert('Dropbox App Key not configured'); return; }
+    // Stash the working grid so the OAuth redirect doesn't lose an unsaved remix
+    sessionStorage.setItem('famous_beats_pending', JSON.stringify({
+      grid: grid, bpm: bpm,
+      name: exportName.value.trim(), desc: exportDesc.value.trim(),
+      reopenSaveModal: exportModal.classList.contains('open'),
+    }));
+    const verifier = generateCodeVerifier();
+    const challenge = await generateCodeChallenge(verifier);
+    sessionStorage.setItem('dropbox_code_verifier', verifier);
+    const redirectUri = window.location.origin + window.location.pathname;
+    window.location.href = 'https://www.dropbox.com/oauth2/authorize?client_id=' + appKey +
+      '&response_type=code&code_challenge=' + challenge +
+      '&code_challenge_method=S256&redirect_uri=' + encodeURIComponent(redirectUri) +
+      '&token_access_type=online';
+  }
+
+  async function dbxHandleOAuthRedirect(){
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if(!code) return;
+    const verifier = sessionStorage.getItem('dropbox_code_verifier');
+    const appKey = await fetchDropboxAppKey();
+    if(!verifier || !appKey) return;
+    const redirectUri = window.location.origin + window.location.pathname;
+    try{
+      const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          code: code, grant_type: 'authorization_code', client_id: appKey,
+          redirect_uri: redirectUri, code_verifier: verifier,
+        }).toString(),
+      });
+      const data = await res.json();
+      if(data.access_token){
+        dropboxAccessToken = data.access_token;
+        sessionStorage.removeItem('dropbox_code_verifier');
+      } else {
+        console.error('Dropbox auth failed:', data);
+      }
+    }catch(err){ console.error('Dropbox auth error:', err); }
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  async function dbxSignOut(){
+    if(dropboxAccessToken){
+      try{
+        await fetch('https://api.dropboxapi.com/2/auth/token/revoke', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + dropboxAccessToken },
+        });
+      }catch{ /* ignore */ }
+    }
+    dropboxAccessToken = null;
+    updateDbxAuthBtn();
+  }
+
+  function dbxHandle401(){
+    dropboxAccessToken = null;
+    updateDbxAuthBtn();
+  }
+
+  async function dropboxDownloadFile(path){
+    if(!dropboxAccessToken) throw new Error('Not signed into Dropbox');
+    const response = await fetch('https://content.dropboxapi.com/2/files/download', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + dropboxAccessToken,
+        'Dropbox-API-Arg': JSON.stringify({ path: path }),
+      },
+    });
+    if(response.status === 401){ dbxHandle401(); throw new Error('Dropbox session expired — sign in again'); }
+    if(!response.ok) throw new Error('Download failed (' + response.status + ')');
+    return await response.text();
+  }
+
+  async function dropboxUploadFile(path, content){
+    if(!dropboxAccessToken) throw new Error('Not signed into Dropbox');
+    const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + dropboxAccessToken,
+        'Dropbox-API-Arg': JSON.stringify({ path: path, mode: { '.tag': 'overwrite' }, mute: true }),
+        'Content-Type': 'application/octet-stream',
+      },
+      body: content,
+    });
+    if(response.status === 401){ dbxHandle401(); throw new Error('Dropbox session expired — sign in again'); }
+    if(!response.ok) throw new Error('Upload failed (' + response.status + ')');
+    return true;
+  }
+
+  // ── Save / load beats ────────────────────────────────────────────────────
+  // loadBeats: freshest source first — Dropbox file (when signed in), then the
+  // /api/presets shared-link proxy, then the bundled famous-beats-presets.js.
+  // Returns { data, source } so the UI can show where the presets came from.
+  async function loadBeats(){
+    if(dropboxAccessToken){
+      try{
+        return { data: JSON.parse(await dropboxDownloadFile(DROPBOX_PRESETS_PATH)), source: 'Dropbox' };
+      }catch(e){ console.warn('Dropbox load failed, trying shared link:', e.message); }
+    }
+    try{
+      const r = await fetch(PRESETS_API_URL);
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return { data: await r.json(), source: 'shared link' };
+    }catch(e){
+      console.warn('Shared link load failed, using bundled file:', e.message);
+      return { data: window.FAMOUS_BEATS_PRESETS || [], source: 'bundled .js' };
+    }
+  }
+
+  // saveBeatToDropbox: always APPEND the current pattern to the Dropbox presets
+  // JSON (never overwrites existing entries), then add it to the dropdown.
+  async function saveBeatToDropbox(name, desc){
+    const preset = {
+      name: name, bpm: bpm, desc: desc,
+      kick: [...grid.kick], snare: [...grid.snare], hat: [...grid.hat],
+      crash: [...grid.crash], tone: [...grid.tone],
+    };
+    // Base off the freshest Dropbox copy so appends from elsewhere aren't lost
+    let arr;
+    try{ arr = JSON.parse(await dropboxDownloadFile(DROPBOX_PRESETS_PATH)); }
+    catch(e){ arr = presets.slice(); }
+    if(!Array.isArray(arr)) arr = [];
+    arr.push(preset);
+    await dropboxUploadFile(DROPBOX_PRESETS_PATH, JSON.stringify(arr, null, 2));
+
+    presets.push(preset);
+    const opt = document.createElement('option');
+    opt.value = presets.length - 1;
+    opt.textContent = name;
+    presetSelect.appendChild(opt);
+    presetSelect.value = presets.length - 1;
+  }
+
+  function restorePendingWork(){
+    let pending = null;
+    try{ pending = JSON.parse(sessionStorage.getItem('famous_beats_pending')); }catch(e){}
+    sessionStorage.removeItem('famous_beats_pending');
+    if(!pending || !pending.grid) return null;
+    grid = pending.grid;
+    TRACKS.forEach(t => { if(!grid[t]) grid[t] = new Array(STEPS).fill(0); });
+    bpm = pending.bpm || bpm;
+    bpmVal.textContent = bpm;
+    updateTempoHighlight();
+    renderGrid();
+    return pending;
+  }
 
   let presets = [];
 
@@ -418,14 +634,14 @@
   }
 
   function initPresets(loaded) {
-    presets = loaded;
+    presets = (loaded && loaded.length) ? loaded : (window.FAMOUS_BEATS_PRESETS || []);
     presets.forEach((p, i) => {
       const opt = document.createElement('option');
       opt.value = i;
       opt.textContent = p.name;
       presetSelect.appendChild(opt);
     });
-    loadPreset(0);
+    if(presets.length) loadPreset(0);
   }
 
   function loadPreset(i){
@@ -862,6 +1078,12 @@
   const exportDesc   = document.getElementById('exportDesc');
   const exportCode   = document.getElementById('exportCode');
   const exportCopyBtn= document.getElementById('exportCopyBtn');
+  const exportSaveDbxBtn = document.getElementById('exportSaveDbxBtn');
+  const exportSaveStatus = document.getElementById('exportSaveStatus');
+
+  dbxAuthBtn.addEventListener('click', () => {
+    dropboxAccessToken ? dbxSignOut() : dbxSignIn();
+  });
 
   function activeSteps(track){
     return (grid[track] || [])
@@ -892,11 +1114,46 @@ ${lines.join(',\n')}
   }
 
   document.getElementById('exportBtn').addEventListener('click', () => {
-    exportName.value = '';
-    exportDesc.value = '';
+    const cur = presets[+presetSelect.value];
+    exportName.value = (cur ? cur.name : 'My preset') + ' -- edited';
+    exportDesc.value = cur ? (cur.desc || '') : '';
     refreshExportCode();
     exportModal.classList.add('open');
     exportName.focus();
+    exportName.select();
+  });
+
+  // ── Load: sign in if needed, then rebuild the dropdown from the Dropbox file ──
+  document.getElementById('loadBtn').addEventListener('click', async () => {
+    const loadBtn = document.getElementById('loadBtn');
+    if(!dropboxAccessToken){
+      // Chess-app style: DB Login first — boot completes the load after redirect
+      sessionStorage.setItem('famous_beats_pending_load', '1');
+      loadBtn.textContent = 'Sign in…';
+      await dbxSignIn(); // navigates away; board is stashed in sessionStorage
+      return;
+    }
+    const cur = presets[+presetSelect.value];
+    const prevName = cur ? cur.name : null;
+    loadBtn.disabled = true;
+    loadBtn.textContent = 'Loading…';
+    try{
+      const result = await loadBeats();
+      presetSelect.innerHTML = ''; // wipe current dropdown items
+      initPresets(result.data);    // repopulates presets[] + options, loads preset 0
+      // keep the same preset selected if it still exists under its name
+      if(prevName){
+        const idx = presets.findIndex(p => p.name === prevName);
+        if(idx >= 0){ presetSelect.value = idx; loadPreset(idx); }
+      }
+      loadBtn.textContent = 'Loaded ✓ ' + result.source;
+    }catch(e){
+      console.error('Load failed:', e);
+      loadBtn.textContent = 'Failed';
+    }finally{
+      loadBtn.disabled = false;
+      setTimeout(() => { loadBtn.textContent = 'Load'; }, 2500);
+    }
   });
 
   document.getElementById('exportClose').addEventListener('click', () => {
@@ -917,11 +1174,54 @@ ${lines.join(',\n')}
     });
   });
 
-  // ── Boot: load presets via API (reads PRESETS_DROPBOX_URL env var server-side) ──
-  fetch(PRESETS_API_URL)
-    .then(r => r.json())
-    .then(data => initPresets(data))
-    .catch(() => initPresets(window.FAMOUS_BEATS_PRESETS || []));
+  exportSaveDbxBtn.addEventListener('click', async () => {
+    if(!dropboxAccessToken){
+      exportSaveStatus.textContent = 'Redirecting to Dropbox sign-in…';
+      await dbxSignIn(); // navigates away; work is stashed in sessionStorage
+      return;
+    }
+    const name = exportName.value.trim() || 'My preset';
+    const desc = exportDesc.value.trim() || 'Saved beat';
+    exportSaveDbxBtn.disabled = true;
+    exportSaveStatus.textContent = 'Saving…';
+    try{
+      await saveBeatToDropbox(name, desc);
+      exportSaveStatus.textContent = 'Saved to Dropbox ✓';
+      setTimeout(() => {
+        exportModal.classList.remove('open');
+        exportSaveStatus.textContent = '';
+      }, 1200);
+    }catch(e){
+      exportSaveStatus.textContent = 'Save failed: ' + e.message;
+    }finally{
+      exportSaveDbxBtn.disabled = false;
+    }
+  });
+
+  // ── Boot: OAuth redirect → load (Dropbox when signed in → /api/presets → bundled) ──
+  (async function boot(){
+    await dbxHandleOAuthRedirect();
+    updateDbxAuthBtn();
+    const result = await loadBeats();
+    console.log('Presets loaded from:', result.source, '(' + result.data.length + ' presets)');
+    initPresets(result.data);
+    // Restore work stashed before an OAuth redirect; auto-finish a pending save
+    const pending = restorePendingWork();
+    if(pending && pending.reopenSaveModal){
+      exportName.value = pending.name || '';
+      exportDesc.value = pending.desc || '';
+      refreshExportCode();
+      exportModal.classList.add('open');
+      if(dropboxAccessToken) exportSaveDbxBtn.click();
+    }
+    // A Load click sent us through sign-in — boot already loaded via Dropbox
+    if(sessionStorage.getItem('famous_beats_pending_load')){
+      sessionStorage.removeItem('famous_beats_pending_load');
+      const loadBtn = document.getElementById('loadBtn');
+      loadBtn.textContent = 'Loaded ✓ ' + result.source;
+      setTimeout(() => { loadBtn.textContent = 'Load'; }, 2500);
+    }
+  })();
 })();
 </script>
 

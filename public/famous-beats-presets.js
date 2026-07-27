@@ -1,6 +1,8 @@
 // famous-beats-presets.js
-// Edit this file to add, remove, or tweak presets.
-// Paste exported objects from the beat maker directly into the array below.
+// GENERATED from the Dropbox JSON by download_presets.py.
+// Add beats via the beat maker (Save / Export -> Append to Dropbox), then re-run
+// download_presets.py to re-sync this file. Hand edits are fine too, but run
+// upload_presets.py afterwards to push them back to Dropbox.
 // ─────────────────────────────────────────────────────────────────────────────
 (function () {
   var STEPS = 16;
@@ -33,7 +35,7 @@
       tone: pattern([])
     },
     {
-      name: '"We Will Rock You" stomp',
+      name: "\"We Will Rock You\" stomp",
       bpm: 81,
       desc: "Stomp-stomp-clap, repeated — two kicks then a snare hit, in groups of four steps.",
       kick: pattern([0,1,4,5,8,9,12,13]),
@@ -203,7 +205,7 @@
       tone: pattern([])
     },
     {
-      name: '"Billie Jean"-style groove',
+      name: "\"Billie Jean\"-style groove",
       bpm: 117,
       desc: "An early-'80s disco-pop pocket — kick on the 1 and the '&' of 2, snare locked on 2 & 4, steady 8th-note hats. Captures the general feel, not a transcription of the actual recording.",
       kick: pattern([0,6]),
@@ -223,7 +225,7 @@
       tone: pattern([])
     },
     {
-      name: '"Air on the G String" (rock drums)',
+      name: "\"Air on the G String\" (rock drums)",
       bpm: 66,
       desc: "A rock-drum treatment of Bach's famously steady, walking-bass pulse — kick and a 'doot doot doot doot' quarter-note tone line hold down the beat, snare adds a rock backbeat, hi-hats fill in 8ths. Just the pulse, not the actual melody.",
       kick: pattern([0,4,8,12]),
@@ -242,7 +244,7 @@
       crash: pattern([]),
       tone: pattern([0,2,4,8])
     },
-        {
+    {
       name: "Beethoven 5th change",
       bpm: 108,
       desc: "Describe the feel…",
@@ -253,7 +255,7 @@
       tone: pattern([0,2,4,12])
     },
     {
-      name: '"Winter" (Vivaldi, modern drums)',
+      name: "\"Winter\" (Vivaldi, modern drums)",
       bpm: 116,
       desc: "A modern-drum take on Vivaldi's Winter — steady 'bomp bomp bomp bomp' kick quarter-notes and sparse hats for the first half, then the hats roll into a fast, shivering 16th-note texture and the snare crashes in for the second half as it 'gets more serious.'",
       kick: pattern([0,4,8,12]),
@@ -263,7 +265,7 @@
       tone: pattern([])
     },
     {
-      name: '"Smooth Criminal"-style groove',
+      name: "\"Smooth Criminal\"-style groove",
       bpm: 118,
       desc: "Jonathan Moffett's driving pocket for Michael Jackson's 'Smooth Criminal' — syncopated kick, tight snare backbeat, fast 16th-note hats, and a steady 8th-note 'da da dun dun da da dun dun' bass-riff pulse on the tone track. Captures the drive, not a transcription of the actual recording.",
       kick: pattern([0,6,8,14]),
@@ -273,7 +275,7 @@
       tone: pattern([0,2,4,6,8,10,12,14])
     },
     {
-      name: '"Ride of the Valkyries" (Wagner) — the gallop enters',
+      name: "\"Ride of the Valkyries\" (Wagner) — the gallop enters",
       bpm: 108,
       desc: "A sparse opening build — echoing the few stanzas before the famous motif arrives — then the galloping 'ba ba ba BUM, ba ba ba BUM' kicks in: hi-hats gallop in fast 16ths, kick/snare land the accented BUM, crash marks the full entrance.",
       kick: pattern([0,4,11,15]),
@@ -283,7 +285,7 @@
       tone: pattern([0,4])
     },
     {
-      name: '"Ride of the Valkyries" (Wagner) — the entrance explodes',
+      name: "\"Ride of the Valkyries\" (Wagner) — the entrance explodes",
       bpm: 112,
       desc: "Captures the shift: a sparse, atmospheric first half with almost nothing playing, then a crash marks the turn and the drums explode in — building kick/snare hits filling out the second half of the bar, echoing that famous entrance.",
       kick: pattern([8,10,12,13,14,15]),
@@ -293,7 +295,7 @@
       tone: pattern([0])
     },
     {
-      name: '"Another One Bites the Dust" (Queen)-style groove',
+      name: "\"Another One Bites the Dust\" (Queen)-style groove",
       bpm: 110,
       desc: "The iconic bass-riff rhythm — 'da da dun dun dun, da da dun dun dun' on the tone track, over a steady kick pulse, backbeat snare, and straight 8th-note hats.",
       kick: pattern([0,4,8,12]),
@@ -303,7 +305,7 @@
       tone: pattern([0,2,4,5,6,8,10,12,13,14])
     },
     {
-      name: '"Also Sprach Zarathustra" (Strauss) opening',
+      name: "\"Also Sprach Zarathustra\" (Strauss) opening",
       bpm: 60,
       desc: "The famous sunrise fanfare's anticipation build — a long sustained low tone, then three ascending notes spaced further apart as tension builds, resolving into a massive hit with a rolling timpani tail. Captures the rhythmic shape of the build and payoff, not the actual melody.",
       kick: pattern([12,13,14,15]),
@@ -313,7 +315,7 @@
       tone: pattern([0,6,8,10])
     },
     {
-      name: '"Boléro" (Ravel) walking snare',
+      name: "\"Boléro\" (Ravel) walking snare",
       bpm: 72,
       desc: "The hypnotic snare ostinato that repeats, unchanged, underneath the entire piece — a steady walking pulse anchored by the kick, building tension through repetition rather than rhythmic variation. Approximated for this 4/4 grid, not an exact transcription of the original 3/4 pattern.",
       kick: pattern([0,8]),
@@ -323,7 +325,7 @@
       tone: pattern([])
     },
     {
-      name: '"Toccata and Fugue in D minor" (Bach)',
+      name: "\"Toccata and Fugue in D minor\" (Bach)",
       bpm: 76,
       desc: "The dramatic opening flourish, rhythm-only — a rapid descending run followed by a held, weighty landing note, then space before it happens again.",
       kick: pattern([]),
@@ -552,7 +554,7 @@
       crash: pattern([]),
       tone: pattern([0,3,6,8,11,14])
     },
-      {
+    {
       name: "Neon Outrun Remix",
       bpm: 53,
       desc: "Driving 80s synthwave pulse — relentless downbeat kick and offbeat hats pushing forward like a neon highway.",
@@ -602,69 +604,85 @@
       crash: pattern([]),
       tone: pattern([0,8])
     },
-  {
-    name: "Glitch Hop Micro(ADHD)",
-    bpm: 110,
-    desc: "A fractured half-time groove — fat glitch-hop kick and snare with tone accents as melodic micro-percussion.",
-    kick: pattern([0, 3, 8, 11]),
-    snare: pattern([4, 12]),
-    hat: pattern([0, 2, 4, 6, 8, 10, 12, 14, 15]),   // the 15 is the glitch stutter into the loop
-    crash: pattern([]),
-    tone: pattern([3, 5, 9, 11, 14])
-  },
-  {
-    name: "IDM Brain Melt",
-    bpm: 140,
-    desc: "Hyper-active broken beat — irregular kick, ghost-note snares, and rapidly alternating hats.",
-    kick: pattern([0, 6, 11]),
-    snare: pattern([4, 10, 12]),   // 10 is the ghost note breaking the grid
-    hat: pattern([0, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15]),   // dense, deliberately uneven
-    crash: pattern([]),
-    tone: pattern([2, 6, 10, 13])
-  },
-  {
-    name: "Synthwave Cruise",
-    bpm: 116,
-    desc: "Driving 80s neon energy — rigid four-on-the-floor kick with offbeat hats and pulsing tone work.",
-    kick: pattern([0, 4, 8, 12]),
-    snare: pattern([4, 12]),
-    hat: pattern([2, 6, 10, 14]),
-    crash: pattern([]),
-    tone: pattern([0, 2, 4, 6, 8, 10, 12, 14])
-  },
-  {
-    name: "Garage Skank",
-    bpm: 132,
-    desc: "Skippy UK 2-step garage — syncopated kick and offbeat open hats with quick tone stabs.",
-    kick: pattern([0, 3, 10]),
-    snare: pattern([4, 12]),
-    hat: pattern([2, 6, 10, 14]),   // offbeat open hats — the garage signature
-    crash: pattern([]),
-    tone: pattern([3, 7, 11])
-  },
-  {
-    name: "Hyperpop Surge",
-    bpm: 155,
-    desc: "Maximalist chaos — driving kick under rapid-fire snare rushes and dense tone sequences.",
-    kick: pattern([0, 4, 8, 12]),
-    snare: pattern([4, 12, 14, 15]),   // 14/15 are the snare-rush fill into the next bar
-    hat: pattern([0, 2, 4, 6, 8, 10, 12, 13, 14, 15]),
-    crash: pattern([0]),
-    tone: pattern([1, 3, 5, 7, 9, 13])
-  },
-  {
-    name: "Liquid Drum & Bass",
-    bpm: 174,
-    desc: "High-speed liquid break — the signature two-step snare pocket over a rolling hi-hat stream.",
-    kick: pattern([0, 10]),
-    snare: pattern([4, 12]),
-    hat: pattern([0, 2, 4, 6, 8, 10, 12, 13, 14, 15]),   // rolling stream with a late-16th push
-    crash: pattern([]),
-    tone: pattern([2, 6, 10])
-  }
-
-
-    // ── Paste exported presets below this line ────────────────────────────────
-
+    {
+      name: "Glitch Hop Micro(ADHD)",
+      bpm: 110,
+      desc: "A fractured half-time groove — fat glitch-hop kick and snare with tone accents as melodic micro-percussion.",
+      kick: pattern([0,3,8,11]),
+      snare: pattern([4,12]),
+      hat: pattern([0,2,4,6,8,10,12,14,15]),
+      crash: pattern([]),
+      tone: pattern([3,5,9,11,14])
+    },
+    {
+      name: "Glitch Hop (2)",
+      bpm: 71,
+      desc: "Describe the feel…",
+      kick: pattern([0,3,7,11]),
+      snare: pattern([4,12]),
+      hat: pattern([0,4,7,12,14]),
+      crash: pattern([]),
+      tone: pattern([3,5,8,10,14])
+    },
+    {
+      name: "IDM Brain Melt",
+      bpm: 140,
+      desc: "Hyper-active broken beat — irregular kick, ghost-note snares, and rapidly alternating hats.",
+      kick: pattern([0,6,11]),
+      snare: pattern([4,10,12]),
+      hat: pattern([0,2,3,5,6,8,9,11,12,14,15]),
+      crash: pattern([]),
+      tone: pattern([2,6,10,13])
+    },
+    {
+      name: "Synthwave Cruise",
+      bpm: 116,
+      desc: "Driving 80s neon energy — rigid four-on-the-floor kick with offbeat hats and pulsing tone work.",
+      kick: pattern([0,4,8,12]),
+      snare: pattern([4,12]),
+      hat: pattern([2,6,10,14]),
+      crash: pattern([]),
+      tone: pattern([0,2,4,6,8,10,12,14])
+    },
+    {
+      name: "Garage Skank",
+      bpm: 132,
+      desc: "Skippy UK 2-step garage — syncopated kick and offbeat open hats with quick tone stabs.",
+      kick: pattern([0,3,10]),
+      snare: pattern([4,12]),
+      hat: pattern([2,6,10,14]),
+      crash: pattern([]),
+      tone: pattern([3,7,11])
+    },
+    {
+      name: "Hyperpop Surge",
+      bpm: 155,
+      desc: "Maximalist chaos — driving kick under rapid-fire snare rushes and dense tone sequences.",
+      kick: pattern([0,4,8,12]),
+      snare: pattern([4,12,14,15]),
+      hat: pattern([0,2,4,6,8,10,12,13,14,15]),
+      crash: pattern([0]),
+      tone: pattern([1,3,5,7,9,13])
+    },
+    {
+      name: "Liquid Drum & Bass",
+      bpm: 174,
+      desc: "High-speed liquid break — the signature two-step snare pocket over a rolling hi-hat stream.",
+      kick: pattern([0,10]),
+      snare: pattern([4,12]),
+      hat: pattern([0,2,4,6,8,10,12,13,14,15]),
+      crash: pattern([]),
+      tone: pattern([2,6,10])
+    },
+    {
+      name: "Four-on-the-floor (house) -- edited",
+      bpm: 124,
+      desc: "Steady kick on every beat with off-beat hi-hats — the backbone of house and disco.",
+      kick: pattern([0,4,6,10]),
+      snare: pattern([4,10]),
+      hat: pattern([2,8,12,13,14,15]),
+      crash: pattern([]),
+      tone: pattern([])
+    }
   ];
 })();
