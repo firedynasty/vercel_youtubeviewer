@@ -1630,6 +1630,22 @@
         <button class="link-close-btn" onclick="closePagination()">✕</button>
     </div>
 
+    <!-- Paste Media + Times Modal -->
+    <div id="pasteTimesModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:10001; justify-content:center; align-items:flex-start; padding-top:80px; overflow-y:auto;">
+        <div style="background:#1e1e1e; border:2px solid #FF9800; border-radius:12px; width:92%; max-width:560px; padding:20px; margin:0 auto; position:relative; box-shadow:0 12px 40px rgba(0,0,0,0.7);">
+            <button onclick="closePasteTimesModal()" style="position:absolute; top:10px; right:14px; background:none; border:none; color:#aaa; font-size:22px; cursor:pointer; line-height:1; padding:0 4px;">✕</button>
+            <div style="font-weight:700; font-size:15px; color:#FF9800; margin-bottom:12px;">📋 Paste Media + Times</div>
+            <textarea id="pasteTimesTextarea" placeholder="Paste URL then times on separate lines, e.g.:
+https://youtube.com/watch?v=...
+16:25, good slow step
+20:00, blew by defender" style="width:100%; min-height:130px; padding:10px; font-size:13px; background:#2a2a2a; color:#fff; border:1px solid #555; border-radius:6px; resize:vertical; font-family:inherit; line-height:1.5; box-sizing:border-box; outline:none;"></textarea>
+            <div style="display:flex; gap:8px; margin-top:10px; justify-content:flex-end; flex-wrap:wrap;">
+                <button onclick="pmtPasteClipboard()" style="padding:8px 16px; background:linear-gradient(45deg,#607D8B,#455A64); color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:700;">Paste Clipboard</button>
+                <button onclick="processPasteTimesModal()" style="padding:8px 20px; background:linear-gradient(45deg,#FF9800,#F57C00); color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:700;">Load ▶</button>
+            </div>
+        </div>
+    </div>
+
     <div class="paste-media-modal" id="pasteMediaModal">
         <div class="paste-media-modal-inner">
             <div class="paste-media-input-area">
@@ -4053,9 +4069,9 @@
                 loadDefaultVideo();
             });
 
-            // YouTube clipboard button
+            // YouTube clipboard button — open the paste modal
             document.getElementById('loadYouTubeClipboardBtn').addEventListener('click', function() {
-                loadYouTubeFromClipboard();
+                openPasteTimesModal();
             });
 
             // Add custom times button
@@ -5071,6 +5087,44 @@
             showStatus(`${mediaType === 'audio' ? 'Audio' : 'Video'} loaded!`, 'success');
         }
 
+        // Paste Times Modal helpers
+        function openPasteTimesModal() {
+            const modal = document.getElementById('pasteTimesModal');
+            modal.style.display = 'flex';
+            setTimeout(() => document.getElementById('pasteTimesTextarea').focus(), 50);
+        }
+        function closePasteTimesModal() {
+            document.getElementById('pasteTimesModal').style.display = 'none';
+        }
+        async function pmtPasteClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('pasteTimesTextarea').value = text;
+            } catch(e) {
+                showStatus('Clipboard read failed: ' + e.message, 'error');
+            }
+        }
+        function processPasteTimesModal() {
+            const text = document.getElementById('pasteTimesTextarea').value.trim();
+            if (!text) { showStatus('Nothing to load', 'error'); return; }
+            const success = processClipboardText(text);
+            if (success) {
+                closePasteTimesModal();
+                const btn = document.getElementById('loadYouTubeClipboardBtn');
+                const orig = btn.textContent;
+                btn.textContent = '✅ Loaded!';
+                btn.style.transform = 'scale(1.05)';
+                setTimeout(() => { btn.textContent = orig; btn.style.transform = ''; }, 2000);
+            }
+        }
+        // Escape closes the modal; Ctrl+Enter submits it
+        document.addEventListener('keydown', function(e) {
+            const modal = document.getElementById('pasteTimesModal');
+            if (!modal || modal.style.display === 'none') return;
+            if (e.key === 'Escape') { closePasteTimesModal(); }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { processPasteTimesModal(); }
+        });
+
         // Shared processing logic for clipboard/cloud paste media text
         // Returns true on success, false on failure
         function processClipboardText(text) {
@@ -5080,6 +5134,8 @@
                 showStatus('Text is empty', 'error');
                 return false;
             }
+
+            const originalText = text;
 
             // Check for multi-link clipboard (2+ media links across lines)
             const clipboardLinks = parseClipboardLinks(text);
@@ -5111,6 +5167,24 @@
                 text = link.url;
                 if (link.inlineTimes && link.inlineTimes.length > 0) {
                     text += ',' + link.inlineTimes.join(',');
+                } else {
+                    // Support multi-line format: URL on one line, then "MM:SS, note" lines below
+                    // Each time line is detected by starting with a timestamp pattern
+                    const timeLineRe = /^\d{1,2}:\d{2}(:\d{2})?/;
+                    const allLines = originalText.split('\n').map(l => l.trim()).filter(l => l);
+                    const timeLines = allLines.filter(l => !l.startsWith('http') && timeLineRe.test(l));
+                    if (timeLines.length > 0) {
+                        const inlineTimes = timeLines.map(l => {
+                            const commaIdx = l.indexOf(',');
+                            if (commaIdx !== -1) {
+                                const t = l.substring(0, commaIdx).trim();
+                                const note = l.substring(commaIdx + 1).trim();
+                                return note ? `${t}(${note})` : t;
+                            }
+                            return l.trim();
+                        });
+                        text += ',' + inlineTimes.join(',');
+                    }
                 }
             }
 
@@ -5670,6 +5744,12 @@
                     button.textContent = (index + 1) + '_' + item.time;
                     button.style.background = colors[index % colors.length];
                     btnContainer.appendChild(button);
+                    if (item.name) {
+                        const noteSpan = document.createElement('span');
+                        noteSpan.textContent = item.name;
+                        noteSpan.style.cssText = 'font-size:14px; color:#e8e8e8; align-self:center; max-width:160px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:500;';
+                        btnContainer.appendChild(noteSpan);
+                    }
                 }
             });
 
