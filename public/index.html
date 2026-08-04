@@ -2162,6 +2162,26 @@ https://youtube.com/watch?v=...
             return { name: name, url: rawUrl, inlineTimes: [] };
         }
 
+        // Split a comma-separated times string, but ignore commas that are inside parentheses
+        // e.g. "6:30(going back, drive),8:43(hesi)" → ["6:30(going back, drive)", "8:43(hesi)"]
+        function splitTimesString(str) {
+            const result = [];
+            let depth = 0;
+            let current = '';
+            for (const ch of str) {
+                if (ch === '(') depth++;
+                else if (ch === ')') depth--;
+                if (ch === ',' && depth === 0) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += ch;
+                }
+            }
+            result.push(current);
+            return result.map(s => s.trim()).filter(s => s);
+        }
+
         // Parse a single inline time entry like "1:00(cool_retro)" into { time: "1:00", name: "cool_retro" }
         function parseInlineTimeEntry(entry) {
             const match = entry.trim().match(/^([^(]+)\(([^)]*)\)$/);
@@ -5178,7 +5198,7 @@ https://youtube.com/watch?v=...
                             const commaIdx = l.indexOf(',');
                             if (commaIdx !== -1) {
                                 const t = l.substring(0, commaIdx).trim();
-                                const note = l.substring(commaIdx + 1).trim();
+                                const note = l.substring(commaIdx + 1).trim().replace(/,+$/, '');
                                 return note ? `${t}(${note})` : t;
                             }
                             return l.trim();
@@ -5188,8 +5208,8 @@ https://youtube.com/watch?v=...
                 }
             }
 
-            // Split by comma to check if there are times included
-            const entries = text.split(',').map(t => t.trim()).filter(t => t);
+            // Split by comma to check if there are times included (paren-aware: ignore commas inside notes)
+            const entries = splitTimesString(text);
             const firstEntry = entries[0];
 
             // Detect media type
