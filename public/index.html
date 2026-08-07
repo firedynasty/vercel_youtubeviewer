@@ -4608,18 +4608,7 @@ https://youtube.com/watch?v=...
                     return;
                 }
 
-                // Number keys 1-9: click corresponding saved time button
-                if (e.key >= '1' && e.key <= '9') {
-                    const activeEl = document.activeElement;
-                    const timeInput = document.getElementById('savedTimeInput');
-                    const commentInput = document.getElementById('savedTimeComment');
-                    if (activeEl === timeInput || activeEl === commentInput) return;
-                    e.preventDefault();
-                    const idx = parseInt(e.key) - 1;
-                    const btns = document.querySelectorAll('#savedTimesButtons .saved-time-btn');
-                    if (btns[idx]) btns[idx].click();
-                    return;
-                }
+
             });
         });
 
