@@ -1646,6 +1646,24 @@ https://youtube.com/watch?v=...
         </div>
     </div>
 
+    <!-- Loop Mix Modal — mimics the "Start, End, [Loops]" AppleScript dialog for mix_mp3.py -->
+    <div id="loopMixModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:10001; justify-content:center; align-items:flex-start; padding-top:80px; overflow-y:auto;">
+        <div style="background:#1e1e1e; border:2px solid #26C6DA; border-radius:12px; width:92%; max-width:560px; padding:20px; margin:0 auto; position:relative; box-shadow:0 12px 40px rgba(0,0,0,0.7);">
+            <button onclick="closeLoopMixModal()" style="position:absolute; top:10px; right:14px; background:none; border:none; color:#aaa; font-size:22px; cursor:pointer; line-height:1; padding:0 4px;">✕</button>
+            <div style="font-weight:700; font-size:15px; color:#26C6DA; margin-bottom:6px;">🔁 Loop Mix — Segment Looper</div>
+            <div id="loopMixMediaInfo" style="font-size:12px; color:#888; margin-bottom:12px;"></div>
+            <label for="loopMixTextarea" style="font-size:12px; color:#bbb; display:block; margin-bottom:6px;">One segment per line: Start time, End time, [Times to loop — optional, default 1]</label>
+            <textarea id="loopMixTextarea" placeholder="1:30, 1:44
+2:00, 2:10, 5
+3:00, 15, 3   (end without a colon = duration in seconds)" style="width:100%; min-height:110px; padding:10px; font-size:13px; background:#2a2a2a; color:#fff; border:1px solid #555; border-radius:6px; resize:vertical; font-family:inherit; line-height:1.5; box-sizing:border-box; outline:none;"></textarea>
+            <div style="display:flex; gap:8px; margin-top:10px; justify-content:flex-end; flex-wrap:wrap;">
+                <button onclick="closeLoopMixModal()" style="padding:8px 16px; background:linear-gradient(45deg,#607D8B,#455A64); color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:700;">Cancel</button>
+                <button onclick="generateLoopMixTable()" style="padding:8px 20px; background:linear-gradient(45deg,#26C6DA,#0097A7); color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:700;">Generate Table ▶</button>
+            </div>
+            <div id="loopMixTableContainer" style="margin-top:12px;"></div>
+        </div>
+    </div>
+
     <div class="paste-media-modal" id="pasteMediaModal">
         <div class="paste-media-modal-inner">
             <div class="paste-media-input-area">
@@ -1800,6 +1818,7 @@ https://youtube.com/watch?v=...
             <button id="loadDefaultBtn" class="jump-btn" style="display: none; background: linear-gradient(45deg, #4CAF50, #45a049); font-size: 13px; padding: 10px 19px;">🎬 Load Default</button>
             <input type="text" id="accessCodeInput" placeholder="123" autocomplete="off" value="" style="width: 80px; padding: 8px 12px; font-size: 14px; border: 2px solid rgb(255, 152, 0); border-radius: 6px; background: rgb(42, 42, 42); color: white; outline: none;">
             <button id="loadYouTubeClipboardBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); font-size: 13px; padding: 10px 19px;">📋 Paste Media + Times</button>
+            <button id="loopMixBtn" class="jump-btn" style="background: linear-gradient(45deg, #26C6DA, #0097A7); font-size: 13px; padding: 10px 19px;">🔁 Loop Mix</button>
             <a id="textProcessorLink" href="https://cdpn.io/pen/debug/KwVxmKR" class="jump-btn" style="background: linear-gradient(45deg, #E91E63, #C2185B); font-size: 13px; padding: 10px 19px; text-decoration: none; color: white;">📖 Bible Audio</a>
             <button id="cloudNotesToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #607D8B, #455A64); font-size: 13px; padding: 10px 19px;">☁️ Cloud Notes</button>
             <button id="recordBtn" class="record-btn" title="Start Recording">🎙️</button>
@@ -1890,6 +1909,26 @@ https://youtube.com/watch?v=...
                     Your browser does not support the audio tag.
                 </audio>
             </div>
+
+            <!-- Quick Notes toggle + textarea -->
+            <div style="margin-top: 8px;">
+                <button id="quickNotesToggleBtn" onclick="var w=document.getElementById('quickNotesWrap');var h=w.style.display==='none';w.style.display=h?'block':'none';this.textContent=h?'📝 Notes ▲':'📝 Notes ▼';" style="padding: 4px 12px; border: none; border-radius: 6px; background: linear-gradient(45deg, #607D8B, #455A64); color: white; cursor: pointer; font-size: 11px; font-weight: 700;">📝 Notes ▼</button>
+                <div id="quickNotesWrap" style="display: none; margin-top: 6px;">
+                    <textarea id="quickNotesTextarea" rows="10" placeholder="Take some notes..." style="width: 100%; padding: 10px; font-size: 13px; background: #2a2a2a; color: #fff; border: 1px solid #555; border-radius: 6px; resize: vertical; font-family: inherit; line-height: 1.5; box-sizing: border-box; outline: none;"></textarea>
+                </div>
+            </div>
+            <script>
+                (function() {
+                    var ta = document.getElementById('quickNotesTextarea');
+                    try {
+                        var saved = localStorage.getItem('quickNotes');
+                        if (saved) ta.value = saved;
+                    } catch(e) {}
+                    ta.addEventListener('input', function() {
+                        try { localStorage.setItem('quickNotes', ta.value); } catch(e) {}
+                    });
+                })();
+            </script>
 
             <!-- Current Time Display (below video players) -->
             <div class="current-time-display" id="currentTimeDisplay" style="display: none; flex-wrap: wrap;">
@@ -2565,6 +2604,7 @@ https://youtube.com/watch?v=...
             timerButtonRef = buttonElement;
             timerAdvanceEvery = 0;
             timerAdvanceSeconds = 0;
+            timerUseBoundaryNoise = false;  // ⏱️ timers keep chimes
 
             // Get start time from loopStartTime input
             const loopStartTimeInput = document.getElementById('loopStartTime');
@@ -5145,6 +5185,245 @@ https://youtube.com/watch?v=...
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { processPasteTimesModal(); }
         });
 
+        // ============================================
+        // LOOP MIX MODAL — mimics the "Start, End, [Loops]" AppleScript
+        // dialog that pipes into mix_mp3.py, but playback-only on the
+        // currently loaded media (reuses the timer-loop engine)
+        // ============================================
+        let loopMixRows = []; // parsed rows backing the generated table
+
+        function openLoopMixModal() {
+            const modal = document.getElementById('loopMixModal');
+            const info = document.getElementById('loopMixMediaInfo');
+            if (playerType === 'youtube' && currentVideoId) {
+                info.textContent = 'Loaded: YouTube video ' + currentVideoId;
+            } else if ((playerType === 'video' || playerType === 'audio') && currentMediaUrl) {
+                info.textContent = 'Loaded: ' + currentMediaUrl;
+            } else {
+                info.textContent = 'No media loaded — load something first.';
+            }
+            modal.style.display = 'flex';
+            setTimeout(() => document.getElementById('loopMixTextarea').focus(), 50);
+        }
+        function closeLoopMixModal() {
+            document.getElementById('loopMixModal').style.display = 'none';
+        }
+
+        // Parse one "start, end, [loops]" line with mix_mp3.py semantics:
+        // end with ":" = absolute timestamp (duration = end - start);
+        // plain-number end = duration in seconds. Loops defaults to 1.
+        // Quiet — returns { start, duration, loops, endLabel } or { error }.
+        function parseLoopMixLine(raw) {
+            const parts = raw.split(',').map(p => p.trim()).filter(p => p);
+            if (parts.length < 2 || parts.length > 3) {
+                return { error: 'need 2 or 3 comma-separated values' };
+            }
+
+            // Like parseTimeToSeconds but also accepts decimal seconds (mix_mp3.py parity)
+            const parseMixTime = (t) => {
+                const dec = t.match(/^(\d+):(\d+(?:\.\d+)?)$/);
+                if (dec) {
+                    const secs = parseFloat(dec[2]);
+                    return secs < 60 ? parseInt(dec[1]) * 60 + secs : null;
+                }
+                if (/^\d+(?:\.\d+)?$/.test(t)) return parseFloat(t);
+                return parseTimeToSeconds(t);
+            };
+
+            const start = parseMixTime(parts[0]);
+            if (start === null || isNaN(start)) {
+                return { error: 'bad start time "' + parts[0] + '"' };
+            }
+
+            let duration, endLabel;
+            if (parts[1].includes(':')) {
+                const endSec = parseMixTime(parts[1]);
+                if (endSec === null || isNaN(endSec)) {
+                    return { error: 'bad end time "' + parts[1] + '"' };
+                }
+                duration = endSec - start;
+                if (duration <= 0) {
+                    return { error: 'end must be after start' };
+                }
+                endLabel = formatSecondsToTime(endSec);
+            } else {
+                duration = parseFloat(parts[1]);
+                if (isNaN(duration) || duration <= 0) {
+                    return { error: 'duration must be positive seconds' };
+                }
+                endLabel = duration + 's → ' + formatSecondsToTime(start + duration);
+            }
+
+            let loops = 1;
+            if (parts.length === 3) {
+                loops = parseInt(parts[2]);
+                if (isNaN(loops) || loops < 1) loops = 1;
+            }
+
+            return { start, duration, loops, endLabel };
+        }
+
+        // Parse the textarea, render numbered rows with a per-row loop button
+        function generateLoopMixTable() {
+            const raw = document.getElementById('loopMixTextarea').value;
+            const container = document.getElementById('loopMixTableContainer');
+            const lines = raw.split('\n').map(l => l.trim()).filter(l => l);
+            if (!lines.length) {
+                container.innerHTML = '';
+                showStatus('Nothing entered', 'error');
+                return;
+            }
+
+            loopMixRows = [];
+            let html = '<table style="width:100%; border-collapse:collapse; font-size:13px; color:#e0e0e0;">';
+            html += '<tr style="color:#26C6DA; text-align:left;">'
+                  + '<th style="padding:4px 6px; border-bottom:1px solid #444;">#</th>'
+                  + '<th style="padding:4px 6px; border-bottom:1px solid #444;">Start</th>'
+                  + '<th style="padding:4px 6px; border-bottom:1px solid #444;">End</th>'
+                  + '<th style="padding:4px 6px; border-bottom:1px solid #444;">Loops</th>'
+                  + '<th style="padding:4px 6px; border-bottom:1px solid #444;"></th></tr>';
+
+            lines.forEach((line, i) => {
+                const parsed = parseLoopMixLine(line);
+                const rowStyle = 'border-bottom:1px solid #333;';
+                if (parsed.error) {
+                    loopMixRows.push(null);
+                    html += '<tr style="' + rowStyle + ' color:#ef5350;">'
+                          + '<td style="padding:4px 6px;">' + (i + 1) + '</td>'
+                          + '<td style="padding:4px 6px;" colspan="3">' + escapeHtml(parsed.error) + ' — <span style="color:#888;">' + escapeHtml(line) + '</span></td>'
+                          + '<td style="padding:4px 6px;"></td></tr>';
+                } else {
+                    loopMixRows.push(parsed);
+                    html += '<tr style="' + rowStyle + '">'
+                          + '<td style="padding:4px 6px;">' + (i + 1) + '</td>'
+                          + '<td style="padding:4px 6px;">' + formatSecondsToTime(parsed.start) + '</td>'
+                          + '<td style="padding:4px 6px;">' + escapeHtml(parsed.endLabel) + '</td>'
+                          + '<td style="padding:4px 6px;">' + parsed.loops + '</td>'
+                          + '<td style="padding:4px 6px;"><button onclick="runLoopMixRow(' + i + ')" style="padding:4px 14px; background:linear-gradient(45deg,#26C6DA,#0097A7); color:#fff; border:none; border-radius:5px; cursor:pointer; font-size:12px; font-weight:700;">▶</button></td></tr>';
+                }
+            });
+            html += '</table>';
+            container.innerHTML = html;
+
+            const okCount = loopMixRows.filter(r => r).length;
+            showStatus('Table generated: ' + okCount + ' of ' + lines.length + ' segments ready', okCount ? 'success' : 'error');
+        }
+
+        // Row ▶ — loop that segment, then close the modal so playback is visible
+        function runLoopMixRow(i) {
+            const row = loopMixRows[i];
+            if (!row) return;
+            if (startLoopMix(row.start, row.duration, row.loops)) {
+                closeLoopMixModal();
+            }
+        }
+
+        // White-noise burst at a loop boundary — the playback equivalent of
+        // mix_mp3.py's add_boundary_noise (0.15s white noise, amp 0.032,
+        // 30% fade in / 30% fade out) masking the seek seam between loops.
+        let loopMixNoiseCtx = null;
+        function playBoundaryNoise(durSec = 0.15, amp = 0.032) {
+            try {
+                if (!loopMixNoiseCtx) loopMixNoiseCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const ctx = loopMixNoiseCtx;
+                if (ctx.state === 'suspended') ctx.resume();
+                const len = Math.max(1, Math.floor(ctx.sampleRate * durSec));
+                const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+                const data = buf.getChannelData(0);
+                for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+                const src = ctx.createBufferSource();
+                src.buffer = buf;
+                const gain = ctx.createGain();
+                const now = ctx.currentTime;
+                const fadeInD = durSec * 0.3;
+                const fadeOutS = durSec * 0.7;
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(amp, now + fadeInD);
+                gain.gain.setValueAtTime(amp, now + fadeOutS);
+                gain.gain.linearRampToValueAtTime(0, now + durSec);
+                src.connect(gain);
+                gain.connect(ctx.destination);
+                src.start(now);
+                src.stop(now + durSec);
+            } catch(e) {}
+        }
+
+        // Modeled on playCustomThenRewind: configures the shared timer-loop
+        // globals with duration = end - start and loops = repeat count.
+        function startLoopMix(startSec, durationSec, loops) {
+            const btn = document.getElementById('loopMixBtn');
+
+            // Guard: need loaded media
+            if (playerType === 'youtube' && !currentVideoId) {
+                showStatus('No video loaded', 'error');
+                return false;
+            }
+            if ((playerType === 'video' || playerType === 'audio') && !currentMediaUrl) {
+                showStatus('No media loaded', 'error');
+                return false;
+            }
+
+            // If other timer is running, cancel it first
+            if (timerTimeout) {
+                clearTimeout(timerTimeout);
+                resetTimerButton();
+            }
+
+            // Setup timer
+            timerLabel = '🔁 ' + formatSecondsToTime(startSec) + '→' + formatSecondsToTime(startSec + durationSec);
+            timerDefaultBg = 'linear-gradient(45deg, #26C6DA, #0097A7)';
+            timerDurationMs = durationSec * 1000;
+            timerTotalLoops = loops;
+            timerLoopsRemaining = loops;
+            timerButtonRef = btn;
+            timerAdvanceEvery = 0;   // exact segment repeat — no auto-advance
+            timerAdvanceSeconds = 0;
+            timerUseBoundaryNoise = true;  // white noise at seams, no chime
+
+            // Put the start time in loopStartTime so the per-loop rewind
+            // re-read picks it up (and it stays editable mid-loop)
+            timerStartTime = startSec;
+            document.getElementById('loopStartTime').value = formatSecondsToTime(startSec);
+
+            // Jump to the start time immediately
+            jumpToYouTubeTime(startSec);
+
+            // Ensure playing (same as the soaking modes) — starting a row
+            // implies playback begins even if media was paused
+            if (playerType === 'youtube' && player && playerReady && typeof player.playVideo === 'function') {
+                player.playVideo();
+            } else if (playerType === 'video' && html5Player) {
+                html5Player.play();
+            } else if (playerType === 'audio' && audioPlayer) {
+                audioPlayer.play();
+            }
+
+            startTimerLoop();
+            return true;
+        }
+
+        // Escape closes the modal; Ctrl+Enter generates the table
+        document.addEventListener('keydown', function(e) {
+            const modal = document.getElementById('loopMixModal');
+            if (!modal || modal.style.display === 'none') return;
+            if (e.key === 'Escape') { closeLoopMixModal(); }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { generateLoopMixTable(); }
+        });
+
+        // Button toggles: cancel if a loop-mix run is active, else open modal
+        document.getElementById('loopMixBtn').addEventListener('click', function() {
+            if (timerTimeout && timerButtonRef === this) {
+                clearTimeout(timerTimeout);
+                timerTimeout = null;
+                timerLoopsRemaining = 0;
+                resetTimerButton(); // restores segment label + teal gradient, same as natural completion
+                setPlayerVolume(originalVolume || 100); // undo any in-flight fade out
+                showStatus('Loop Mix cancelled', 'info');
+                return;
+            }
+            openLoopMixModal();
+        });
+
         // Shared processing logic for clipboard/cloud paste media text
         // Returns true on success, false on failure
         function processClipboardText(text) {
@@ -6049,6 +6328,7 @@ https://youtube.com/watch?v=...
         let timerDefaultBg = '';
         let timerAdvanceEvery = 0;    // auto-advance every N loops (0 = disabled)
         let timerAdvanceSeconds = 0;  // seconds to advance by
+        let timerUseBoundaryNoise = false;  // Loop Mix: white noise at seams instead of chimes
 
         // Fade state variables
         const FADE_OUT_DURATION_MS = 1500;  // 1.5 second fade out
@@ -6060,23 +6340,36 @@ https://youtube.com/watch?v=...
         let originalVolume = 100;  // YouTube uses 0-100
 
         // Get current volume from active player
+        // (check playerType first — a YouTube player instance can still
+        // exist after switching to the audio/video player)
         function getCurrentVolume() {
-            if (player && typeof player.getVolume === 'function') {
+            if (playerType === 'youtube' && player && typeof player.getVolume === 'function') {
                 return player.getVolume();  // YouTube: 0-100
-            } else if (html5Player) {
+            } else if (playerType === 'video' && html5Player) {
                 return html5Player.volume * 100;  // HTML5: 0-1 -> 0-100
-            } else if (audioPlayer) {
+            } else if (playerType === 'audio' && audioPlayer) {
                 return audioPlayer.volume * 100;
             }
+            // Fallback for any transitional state
+            if (player && typeof player.getVolume === 'function') return player.getVolume();
+            if (html5Player) return html5Player.volume * 100;
+            if (audioPlayer) return audioPlayer.volume * 100;
             return 100;
         }
 
         // Set volume on active player
+        // (check playerType first — same reasoning as getCurrentVolume)
         function setPlayerVolume(vol) {
-            if (player && typeof player.setVolume === 'function') {
+            if (playerType === 'youtube' && player && typeof player.setVolume === 'function') {
                 player.setVolume(vol);  // YouTube: 0-100
-            } else if (html5Player) {
+            } else if (playerType === 'video' && html5Player) {
                 html5Player.volume = vol / 100;  // HTML5: 0-1
+            } else if (playerType === 'audio' && audioPlayer) {
+                audioPlayer.volume = vol / 100;
+            } else if (player && typeof player.setVolume === 'function') {
+                player.setVolume(vol);
+            } else if (html5Player) {
+                html5Player.volume = vol / 100;
             } else if (audioPlayer) {
                 audioPlayer.volume = vol / 100;
             }
@@ -6305,8 +6598,11 @@ https://youtube.com/watch?v=...
                     jumpToYouTubeTime(rewindTime);
 
                     if (timerLoopsRemaining > 0) {
-                        // Chime pattern: escalating chimes 1x, 2x, 3x then special chime on advance
-                        if (isAdvance) {
+                        // Boundary sound: Loop Mix uses a white-noise burst (mix_mp3.py
+                        // seam-masking style); timers keep their chime pattern
+                        if (timerUseBoundaryNoise) {
+                            playBoundaryNoise();
+                        } else if (isAdvance) {
                             playAdvanceChimeSpecial();
                         } else if (timerAdvanceEvery > 0) {
                             const posInCycle = completedLoops % timerAdvanceEvery;
@@ -6322,11 +6618,13 @@ https://youtube.com/watch?v=...
                         startTimerLoop();
                     } else {
                         // All done - pause (volume already at 0 from fade out)
-                        if (player && typeof player.pauseVideo === 'function') {
+                        // Check playerType, not just object existence: a YouTube player
+                        // instance can still exist after switching to audio/video
+                        if (playerType === 'youtube' && player && typeof player.pauseVideo === 'function') {
                             player.pauseVideo();
-                        } else if (html5Player) {
+                        } else if (playerType === 'video' && html5Player) {
                             html5Player.pause();
-                        } else if (audioPlayer) {
+                        } else if (playerType === 'audio' && audioPlayer) {
                             audioPlayer.pause();
                         }
 
@@ -6881,6 +7179,7 @@ https://youtube.com/watch?v=...
             timerButtonRef = buttonElement;
             timerAdvanceEvery = 0;
             timerAdvanceSeconds = 0;
+            timerUseBoundaryNoise = false;  // ⏱️ timers keep chimes
 
             // Get start time from loopStartTime input
             const loopStartTimeInput = document.getElementById('loopStartTime');
@@ -6924,6 +7223,7 @@ https://youtube.com/watch?v=...
             timerButtonRef = buttonElement;
             timerAdvanceEvery = 4;   // advance every 4 loops (1x, 2x, 3x chimes then special advance chime)
             timerAdvanceSeconds = 30; // advance by 30s
+            timerUseBoundaryNoise = false;  // ⏱️ timers keep chimes
 
             // Get start time from loopStartTime input
             const loopStartTimeInput = document.getElementById('loopStartTime');
@@ -6972,6 +7272,7 @@ https://youtube.com/watch?v=...
             timerButtonRef = buttonElement;
             timerAdvanceEvery = 0;
             timerAdvanceSeconds = 0;
+            timerUseBoundaryNoise = false;  // ⏱️ timers keep chimes
 
             // Get start time from loopStartTime input
             const loopStartTimeInput = document.getElementById('loopStartTime');
@@ -7015,6 +7316,7 @@ https://youtube.com/watch?v=...
             timerButtonRef = buttonElement;
             timerAdvanceEvery = 0;
             timerAdvanceSeconds = 0;
+            timerUseBoundaryNoise = false;  // ⏱️ timers keep chimes
 
             // Get start time from loopStartTime input
             const loopStartTimeInput = document.getElementById('loopStartTime');
@@ -7061,6 +7363,7 @@ https://youtube.com/watch?v=...
             timerButtonRef = selectElement;
             timerAdvanceEvery = 0;
             timerAdvanceSeconds = 0;
+            timerUseBoundaryNoise = false;  // ⏱️ timers keep chimes
 
             // Get start time from loopStartTime input
             const loopStartTimeInput = document.getElementById('loopStartTime');
