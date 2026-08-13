@@ -1850,6 +1850,7 @@ https://youtube.com/watch?v=...
             <input type="text" id="accessCodeInput" placeholder="123" autocomplete="off" value="" style="width: 80px; padding: 8px 12px; font-size: 14px; border: 2px solid rgb(255, 152, 0); border-radius: 6px; background: rgb(42, 42, 42); color: white; outline: none;">
             <button id="loadYouTubeClipboardBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); font-size: 13px; padding: 10px 19px;">📋 Paste Media + Times</button>
             <button id="notesBtn" class="jump-btn" style="background: linear-gradient(45deg, #455A64, #37474F); font-size: 13px; padding: 10px 19px;" onclick="toggleNotesPanel()">📝 Notes</button>
+            <button id="loadFromDbBtn" class="jump-btn" style="background: linear-gradient(45deg, #0061FF, #004BB5); font-size: 13px; padding: 10px 19px;" onclick="loadFromDropboxClipboard()">📥 Load from DB</button>
             <button id="loopMixBtn" class="jump-btn" style="background: linear-gradient(45deg, #26C6DA, #0097A7); font-size: 13px; padding: 10px 19px;">🔁 Loop Mix</button>
             <a id="textProcessorLink" href="https://cdpn.io/pen/debug/KwVxmKR" class="jump-btn" style="background: linear-gradient(45deg, #E91E63, #C2185B); font-size: 13px; padding: 10px 19px; text-decoration: none; color: white;">📖 Bible Audio</a>
             <button id="cloudNotesToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #607D8B, #455A64); font-size: 13px; padding: 10px 19px;">☁️ Cloud Notes</button>
@@ -5323,6 +5324,44 @@ https://youtube.com/watch?v=...
                 audioPlayer.currentTime = secs;
             }
         }
+
+        var DBX_CLIPBOARD_PATH = '/blob_vercel_replacement/blob_clipboard_content.txt';
+
+        async function loadFromDropboxClipboard() {
+            var btn = document.getElementById('loadFromDbBtn');
+            var origText = btn.textContent;
+
+            async function doLoad() {
+                btn.textContent = '⏳ Loading…';
+                btn.disabled = true;
+                try {
+                    var content = await window.dropboxDownloadFile(DBX_CLIPBOARD_PATH);
+                    if (!content || !content.trim()) {
+                        showStatus('Clipboard file is empty', 'error');
+                        return;
+                    }
+                    // Populate the paste modal textarea and auto-process
+                    document.getElementById('pasteTimesTextarea').value = content.trim();
+                    processPasteTimesModal();
+                } catch (e) {
+                    showStatus('DB load failed: ' + e.message, 'error');
+                } finally {
+                    btn.textContent = origText;
+                    btn.disabled = false;
+                }
+            }
+
+            if (window.getDropboxAccessToken && window.getDropboxAccessToken()) {
+                doLoad();
+            } else {
+                // Trigger popup auth, then load after success
+                if (typeof dropboxSignInPopup === 'function') {
+                    dropboxSignInPopup(doLoad);
+                } else {
+                    showStatus('Dropbox not available', 'error');
+                }
+            }
+        }
         // Escape closes the modal; Ctrl+Enter submits it
         document.addEventListener('keydown', function(e) {
             const modal = document.getElementById('pasteTimesModal');
@@ -8496,7 +8535,9 @@ https://youtube.com/watch?v=...
             const code = params.get('code');
             if (!code) return;
 
-            const verifier = sessionStorage.getItem('dropbox_code_verifier');
+            // Try sessionStorage first (redirect flow), then localStorage (popup flow)
+            const verifier = sessionStorage.getItem('dropbox_code_verifier')
+                          || localStorage.getItem('dropbox_code_verifier');
             const appKey = await fetchDropboxAppKey();
             if (!verifier || !appKey) return;
             dropboxAppKey = appKey;
@@ -8518,10 +8559,22 @@ https://youtube.com/watch?v=...
                 });
                 const data = await res.json();
                 if (data.access_token) {
-                    dropboxAccessToken = data.access_token;
                     sessionStorage.removeItem('dropbox_code_verifier');
+                    localStorage.removeItem('dropbox_code_verifier');
+
+                    if (window.opener && !window.opener.closed) {
+                        // Popup mode — send token back to parent and close
+                        window.opener.postMessage(
+                            { type: 'dropbox-token', token: data.access_token },
+                            window.location.origin
+                        );
+                        window.close();
+                        return;
+                    }
+
+                    // Redirect mode — set token and continue normally
+                    dropboxAccessToken = data.access_token;
                     window.history.replaceState({}, document.title, window.location.pathname);
-                    // Close sidebar after sign-in and load DB Links dropdown
                     closeDropboxSidebar();
                     if (window._loadDbxLinksDropdown) window._loadDbxLinksDropdown();
                     if (typeof updateDbxNavLoadBtnLabel === 'function') updateDbxNavLoadBtnLabel();
@@ -8530,7 +8583,47 @@ https://youtube.com/watch?v=...
                 }
             } catch (err) {
                 console.error('Dropbox auth error:', err);
+                if (window.opener && !window.opener.closed) window.close();
             }
+        }
+
+        // Popup-based sign-in — opens a small auth window, receives token via postMessage
+        async function dropboxSignInPopup(onSuccess) {
+            let appKey;
+            if (dbxIsLocalhost) {
+                appKey = prompt('Enter your Dropbox App Key:');
+                if (!appKey) return;
+                localStorage.setItem('dropbox-app-key', appKey);
+            } else {
+                appKey = await fetchDropboxAppKey();
+                if (!appKey) { alert('Dropbox App Key not configured on server'); return; }
+            }
+            dropboxAppKey = appKey;
+
+            const verifier = generateCodeVerifier();
+            const challenge = await generateCodeChallenge(verifier);
+            localStorage.setItem('dropbox_code_verifier', verifier);
+
+            const redirectUri = window.location.origin + window.location.pathname;
+            const authUrl = 'https://www.dropbox.com/oauth2/authorize?client_id=' + appKey
+                + '&response_type=code&code_challenge=' + challenge
+                + '&code_challenge_method=S256&redirect_uri=' + encodeURIComponent(redirectUri)
+                + '&token_access_type=online';
+
+            const w = 600, h = 700;
+            const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
+            const top  = Math.round(window.screenY + (window.outerHeight - h) / 2);
+            window.open(authUrl, 'dropbox-auth', `width=${w},height=${h},left=${left},top=${top}`);
+
+            function handler(e) {
+                if (e.origin !== window.location.origin) return;
+                if (!e.data || e.data.type !== 'dropbox-token') return;
+                dropboxAccessToken = e.data.token;
+                window.removeEventListener('message', handler);
+                if (window._loadDbxLinksDropdown) window._loadDbxLinksDropdown();
+                if (onSuccess) onSuccess();
+            }
+            window.addEventListener('message', handler);
         }
 
         async function handleDropboxSignOut() {
@@ -9003,6 +9096,7 @@ https://youtube.com/watch?v=...
             // Expose Dropbox helpers for cloud-section and Cloud Notes
             window.getDropboxAccessToken = function() { return dropboxAccessToken; };
             window.handleDropboxSignIn = handleDropboxSignIn;
+            window.dropboxSignInPopup = dropboxSignInPopup;
 
             window.dropboxDownloadFile = async function(path) {
                 if (!dropboxAccessToken) return null;
