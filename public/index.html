@@ -1349,6 +1349,37 @@
         #gdrive-audio-section .audio-playlist .ap-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         #gdrive-audio-section .ap-keycode { font-size: 11px; color: #666; text-align: center; padding: 6px; background: #0d1b2e; }
 
+        /* Notes Panel */
+        #notesPanelSection {
+            display: none;
+            margin-bottom: 16px;
+            background: #111a27;
+            border: 1px solid #FF9800;
+            border-radius: 10px;
+            padding: 14px 18px;
+            max-height: 340px;
+            overflow-y: auto;
+            font-size: 13.5px;
+            line-height: 1.7;
+            color: #e0e0e0;
+        }
+        #notesPanelSection.show { display: block; }
+        .notes-ts-link {
+            color: #FF9800;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+        .notes-ts-link:hover { background: rgba(255,152,0,0.18); }
+        #notesBtn.has-notes {
+            background: linear-gradient(45deg, #FF9800, #F57C00) !important;
+            border-color: #FF9800 !important;
+            box-shadow: 0 0 8px rgba(255,152,0,0.5);
+        }
+
         /* Paste Media Modal */
         .pm-toggle-btn {
             color: #fff;
@@ -1818,6 +1849,7 @@ https://youtube.com/watch?v=...
             <button id="loadDefaultBtn" class="jump-btn" style="display: none; background: linear-gradient(45deg, #4CAF50, #45a049); font-size: 13px; padding: 10px 19px;">🎬 Load Default</button>
             <input type="text" id="accessCodeInput" placeholder="123" autocomplete="off" value="" style="width: 80px; padding: 8px 12px; font-size: 14px; border: 2px solid rgb(255, 152, 0); border-radius: 6px; background: rgb(42, 42, 42); color: white; outline: none;">
             <button id="loadYouTubeClipboardBtn" class="jump-btn" style="background: linear-gradient(45deg, #FF9800, #F57C00); font-size: 13px; padding: 10px 19px;">📋 Paste Media + Times</button>
+            <button id="notesBtn" class="jump-btn" style="background: linear-gradient(45deg, #455A64, #37474F); font-size: 13px; padding: 10px 19px;" onclick="toggleNotesPanel()">📝 Notes</button>
             <button id="loopMixBtn" class="jump-btn" style="background: linear-gradient(45deg, #26C6DA, #0097A7); font-size: 13px; padding: 10px 19px;">🔁 Loop Mix</button>
             <a id="textProcessorLink" href="https://cdpn.io/pen/debug/KwVxmKR" class="jump-btn" style="background: linear-gradient(45deg, #E91E63, #C2185B); font-size: 13px; padding: 10px 19px; text-decoration: none; color: white;">📖 Bible Audio</a>
             <button id="cloudNotesToggleBtn" class="jump-btn" style="background: linear-gradient(45deg, #607D8B, #455A64); font-size: 13px; padding: 10px 19px;">☁️ Cloud Notes</button>
@@ -1833,6 +1865,9 @@ https://youtube.com/watch?v=...
             <span id="recordingIndicator" class="recording-indicator" style="display:none;">REC</span>
             <span id="processingIndicator" class="processing-indicator" style="display:none;">Saving...</span>
         </div>
+
+        <!-- Notes Panel -->
+        <div id="notesPanelSection"></div>
 
         <!-- Inline Cloud Notes Section -->
         <div id="cloudNotesSection" style="display:none; margin-bottom: 20px; padding: 15px; background: #1a1a2e; border-radius: 8px; border: 1px solid #333;">
@@ -5156,7 +5191,49 @@ https://youtube.com/watch?v=...
         function processPasteTimesModal() {
             const text = document.getElementById('pasteTimesTextarea').value.trim();
             if (!text) { showStatus('Nothing to load', 'error'); return; }
-            const success = processClipboardText(text);
+
+            // Always load only the FIRST URL found, with its immediately-following
+            // timestamp lines. Everything else goes into the notes panel intact.
+            const lines = text.split('\n');
+            const urlInLineRe = /https?:\/\/\S+/;
+            const tsLineRe = /^\d{1,2}:\d{2}/;
+
+            // Find first URL (may be embedded mid-line, e.g. "compare to https://...")
+            let firstUrl = null;
+            let firstUrlLineIdx = -1;
+            for (let i = 0; i < lines.length; i++) {
+                const m = lines[i].match(urlInLineRe);
+                if (m) { firstUrl = m[0]; firstUrlLineIdx = i; break; }
+            }
+
+            if (!firstUrl) { showStatus('No URL found', 'error'); return; }
+
+            // Collect timestamp lines immediately after the first URL line
+            // (skip blank lines, stop at first non-timestamp non-blank line)
+            const tsParts = [];
+            let i = firstUrlLineIdx + 1;
+            while (i < lines.length) {
+                const trimmed = lines[i].trim();
+                if (!trimmed) { i++; continue; }
+                if (tsLineRe.test(trimmed)) {
+                    // "MM:SS, note text" → "MM:SS(note text)"
+                    const commaIdx = trimmed.indexOf(',');
+                    if (commaIdx !== -1) {
+                        const t = trimmed.slice(0, commaIdx).trim();
+                        const note = trimmed.slice(commaIdx + 1).trim();
+                        tsParts.push(note ? t + '(' + note + ')' : t);
+                    } else {
+                        tsParts.push(trimmed);
+                    }
+                    i++;
+                } else {
+                    break;
+                }
+            }
+
+            // Build single-link load string and process it
+            const loadText = tsParts.length ? firstUrl + ',' + tsParts.join(',') : firstUrl;
+            const success = processClipboardText(loadText);
             if (success) {
                 closePasteTimesModal();
                 const btn = document.getElementById('loadYouTubeClipboardBtn');
@@ -5164,6 +5241,86 @@ https://youtube.com/watch?v=...
                 btn.textContent = '✅ Loaded!';
                 btn.style.transform = 'scale(1.05)';
                 setTimeout(() => { btn.textContent = orig; btn.style.transform = ''; }, 2000);
+                loadNotesFromText(text); // full original text — nothing cut off
+            }
+        }
+
+        // ---- Notes Panel ----
+        var notesPanelOpen = false;
+
+        function loadNotesFromText(rawText) {
+            const lines = rawText.split('\n');
+            const fragments = [];
+
+            lines.forEach(function(line) {
+                const trimmed = line.trim();
+                if (!trimmed) {
+                    fragments.push({ type: 'blank' });
+                    return;
+                }
+                // Tokenise: URLs and MM:SS timestamps become interactive; rest is plain text
+                const tokenRe = /(https?:\/\/\S+)|(\b\d{1,2}:\d{2}(?::\d{2})?)\b/g;
+                let last = 0, parts = [], m;
+                while ((m = tokenRe.exec(trimmed)) !== null) {
+                    if (m.index > last) parts.push({ t: 'text', v: trimmed.slice(last, m.index) });
+                    if (m[1]) parts.push({ t: 'url', v: m[1] });
+                    else       parts.push({ t: 'ts',  v: m[2] });
+                    last = m.index + m[0].length;
+                }
+                if (last < trimmed.length) parts.push({ t: 'text', v: trimmed.slice(last) });
+                fragments.push({ type: 'line', parts: parts });
+            });
+
+            // Build HTML
+            var html = '';
+            fragments.forEach(function(frag) {
+                if (frag.type === 'blank') {
+                    html += '<div style="height:6px"></div>';
+                } else {
+                    html += '<div>';
+                    frag.parts.forEach(function(p) {
+                        if (p.t === 'ts') {
+                            html += '<span class="notes-ts-link" onclick="seekFromNotesTs(\'' + p.v + '\')" title="Jump to ' + p.v + '">' + p.v + '</span>';
+                        } else if (p.t === 'url') {
+                            var disp = p.v.length > 55 ? p.v.slice(0, 55) + '…' : p.v;
+                            html += '<a href="' + p.v.replace(/"/g,'&quot;') + '" target="_blank" rel="noopener" style="color:#64B5F6;word-break:break-all;">' + disp.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</a>';
+                        } else {
+                            html += '<span>' + p.v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>';
+                        }
+                    });
+                    html += '</div>';
+                }
+            });
+
+            var panel = document.getElementById('notesPanelSection');
+            var notesBtn = document.getElementById('notesBtn');
+            if (html) {
+                panel.innerHTML = html;
+                notesBtn.classList.add('has-notes');
+                notesPanelOpen = false;
+                toggleNotesPanel();
+            } else {
+                panel.innerHTML = '';
+                notesBtn.classList.remove('has-notes');
+                panel.classList.remove('show');
+                notesPanelOpen = false;
+            }
+        }
+
+        function toggleNotesPanel() {
+            notesPanelOpen = !notesPanelOpen;
+            document.getElementById('notesPanelSection').classList.toggle('show', notesPanelOpen);
+        }
+
+        function seekFromNotesTs(tsStr) {
+            var secs = parseTimeToSeconds(tsStr);
+            if (secs === null) return;
+            if (playerType === 'youtube' && player && playerReady) {
+                player.seekTo(secs, true);
+            } else if (playerType === 'video' && html5Player) {
+                html5Player.currentTime = secs;
+            } else if (playerType === 'audio' && audioPlayer) {
+                audioPlayer.currentTime = secs;
             }
         }
         // Escape closes the modal; Ctrl+Enter submits it
