@@ -1867,6 +1867,25 @@ https://youtube.com/watch?v=...
             <span id="processingIndicator" class="processing-indicator" style="display:none;">Saving...</span>
         </div>
 
+        <!-- Keycode hint -->
+        <div style="text-align:center; font-size:11px; color:#666; margin-bottom:8px; letter-spacing:0.02em;">
+            <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">1</kbd>–<kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">7</kbd> jump saved times &nbsp;·&nbsp;
+            <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">8</kbd> audio −10s &nbsp;·&nbsp;
+            <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">9</kbd> play/pause YouTube &nbsp;·&nbsp;
+            <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">0</kbd> play/pause audio
+        </div>
+
+        <!-- Drop Zone: text file → Paste Media+Times, audio file → audio-player -->
+        <div id="dropZone" style="margin: 0 auto 16px; max-width: 480px; border: 2px dashed #555; border-radius: 10px; padding: 14px 20px; text-align: center; color: #aaa; font-size: 13px; cursor: pointer; transition: border-color .2s, background .2s;"
+             ondragover="event.preventDefault(); this.style.borderColor='#FF9800'; this.style.background='rgba(255,152,0,0.08)';"
+             ondragleave="this.style.borderColor='#555'; this.style.background='';"
+             ondrop="handleDropZone(event);"
+             onclick="document.getElementById('dropZoneInput').click()">
+            📂 Drop or click — <strong style="color:#FF9800;">text file</strong> loads media+times · <strong style="color:#3ea6ff;">audio file</strong> loads player
+            <input type="file" id="dropZoneInput" accept=".txt,.mp3,.m4a,.wav,.ogg,.flac,.aac,.opus" style="display:none"
+                   onchange="handleDropZoneFiles(this.files); this.value='';">
+        </div>
+
         <!-- Notes Panel -->
         <div id="notesPanelControls" style="display:none; text-align:left; margin-bottom:4px;">
             <button onclick="changeNotesFontSize(-1)" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:4px; padding:2px 10px; font-size:15px; cursor:pointer; margin-right:4px;">−</button>
@@ -1929,6 +1948,19 @@ https://youtube.com/watch?v=...
             <div id="savedTimesButtons" style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
                 <!-- Color buttons rendered dynamically -->
             </div>
+        </div>
+
+        <!-- Always-visible local audio drop zone -->
+        <div id="localAudioZone" style="margin: 8px auto 10px; max-width: 560px; display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: #1a1a1a; border: 2px dashed #444; border-radius: 10px; cursor: pointer;"
+             ondragover="event.preventDefault(); this.style.borderColor='#3ea6ff';"
+             ondragleave="this.style.borderColor='#444';"
+             ondrop="handleLocalAudioDrop(event);"
+             onclick="document.getElementById('localAudioFileInput').click()">
+            <span style="font-size: 20px;">🎵</span>
+            <span id="localAudioLabel" style="color: #888; font-size: 13px; flex: 1;">Drop or click to load an audio file</span>
+            <audio id="localAudioPlayer" controls controlsList="nodownload" style="flex: 2; min-width: 0; height: 36px; display: none;"></audio>
+            <input type="file" id="localAudioFileInput" accept=".mp3,.m4a,.wav,.ogg,.flac,.aac,.opus" style="display:none"
+                   onchange="loadLocalAudioFile(this.files); this.value='';">
         </div>
 
         <!-- YouTube Video Section -->
@@ -4648,6 +4680,62 @@ https://youtube.com/watch?v=...
                     return;
                 }
 
+                // Number keys 1-7: jump to saved time by index
+                const numKey = parseInt(e.key);
+                if (numKey >= 1 && numKey <= 7) {
+                    const btn = document.querySelector(`.saved-time-btn[data-index="${numKey - 1}"]`);
+                    if (btn) {
+                        e.preventDefault();
+                        btn.click();
+                    }
+                    return;
+                }
+
+                // - / + keys: decrease/increase YouTube volume by 10
+                if (e.key === '-' || e.key === '=' || e.key === '+') {
+                    e.preventDefault();
+                    if (player && typeof player.getVolume === 'function') {
+                        const vol = player.getVolume();
+                        const newVol = e.key === '-' ? Math.max(0, vol - 10) : Math.min(100, vol + 10);
+                        player.setVolume(newVol);
+                        showStatus('Volume: ' + newVol + '%', 'success');
+                    }
+                    return;
+                }
+
+                // Key 8: rewind local audio -10s
+                if (e.key === '8') {
+                    e.preventDefault();
+                    const lap = document.getElementById('localAudioPlayer');
+                    if (lap && lap.src) {
+                        lap.currentTime = Math.max(0, lap.currentTime - 10);
+                    }
+                    return;
+                }
+
+                // Key 9: play/pause YouTube player
+                if (e.key === '9') {
+                    e.preventDefault();
+                    if (player && typeof player.getPlayerState === 'function') {
+                        const state = player.getPlayerState();
+                        if (state === 1) { // playing
+                            player.pauseVideo();
+                        } else {
+                            player.playVideo();
+                        }
+                    }
+                    return;
+                }
+
+                // Key 0: play/pause local audio player
+                if (e.key === '0') {
+                    e.preventDefault();
+                    const lap = document.getElementById('localAudioPlayer');
+                    if (lap && lap.src) {
+                        if (lap.paused) { lap.play(); } else { lap.pause(); }
+                    }
+                    return;
+                }
 
             });
         });
@@ -5174,6 +5262,54 @@ https://youtube.com/watch?v=...
 
             console.log('🎬 DEBUG: Loaded media directly:', url, 'type:', mediaType);
             showStatus(`${mediaType === 'audio' ? 'Audio' : 'Video'} loaded!`, 'success');
+        }
+
+        // Local audio zone handlers
+        function handleLocalAudioDrop(e) {
+            e.preventDefault();
+            document.getElementById('localAudioZone').style.borderColor = '#444';
+            loadLocalAudioFile(e.dataTransfer.files);
+        }
+
+        function loadLocalAudioFile(files) {
+            if (!files || files.length === 0) return;
+            const file = files[0];
+            const url = URL.createObjectURL(file);
+            const ap = document.getElementById('localAudioPlayer');
+            ap.src = url;
+            ap.style.display = 'block';
+            ap.play();
+            document.getElementById('localAudioLabel').textContent = file.name;
+            document.getElementById('localAudioZone').style.borderColor = '#3ea6ff';
+        }
+
+        // Drop zone handlers (text → media+times, audio → main player)
+        function handleDropZone(e) {
+            e.preventDefault();
+            const dz = document.getElementById('dropZone');
+            dz.style.borderColor = '#555';
+            dz.style.background = '';
+            handleDropZoneFiles(e.dataTransfer.files);
+        }
+
+        function handleDropZoneFiles(files) {
+            if (!files || files.length === 0) return;
+            const file = files[0];
+            // Treat as text file → feed into processClipboardText + notes panel
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const text = ev.target.result;
+                const success = processClipboardText(text);
+                if (success) {
+                    loadNotesFromText(text);
+                    const btn = document.getElementById('loadYouTubeClipboardBtn');
+                    const orig = btn.textContent;
+                    btn.textContent = '✅ Loaded!';
+                    btn.style.transform = 'scale(1.05)';
+                    setTimeout(() => { btn.textContent = orig; btn.style.transform = ''; }, 2000);
+                }
+            };
+            reader.readAsText(file);
         }
 
         // Paste Times Modal helpers
