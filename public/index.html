@@ -1578,6 +1578,150 @@
             cursor: pointer;
             margin-left: 4px;
         }
+
+        /* Dropbox Song Browser Modal */
+        #dbxSongOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+        #dbxSongOverlay.open { display: flex; }
+        #dbxSongModal {
+            background: #1c1c1c;
+            border: 1px solid #333;
+            border-radius: 12px;
+            width: 92%;
+            max-width: 520px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+        }
+        #dbxSongModal .dsm-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid #2a2a2a;
+            gap: 10px;
+        }
+        #dbxSongModal .dsm-header h3 {
+            margin: 0;
+            font-size: 15px;
+            color: #fff;
+            flex: 1;
+        }
+        #dbxSongModal .dsm-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 22px;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0 4px;
+        }
+        #dbxSongModal .dsm-close:hover { color: #fff; }
+        #dbxSongModal .dsm-search-row {
+            display: flex;
+            gap: 8px;
+            padding: 12px 16px 8px;
+        }
+        #dbxSongPathInput {
+            flex: 1;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 13px;
+            padding: 7px 10px;
+            outline: none;
+        }
+        #dbxSongPathInput:focus { border-color: #0061FF; }
+        #dbxSongBrowseBtn {
+            background: linear-gradient(45deg, #0061FF, #004BB5);
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 7px 14px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        #dbxSongBrowseBtn:disabled { opacity: 0.5; cursor: default; }
+        #dbxSongStatus {
+            padding: 0 16px 6px;
+            font-size: 12px;
+            color: #666;
+            min-height: 18px;
+        }
+        #dbxSongBreadcrumb {
+            padding: 0 16px 6px;
+            font-size: 12px;
+            color: #888;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            align-items: center;
+        }
+        .dsm-crumb {
+            background: none;
+            border: none;
+            color: #3ea6ff;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 1px 3px;
+            border-radius: 3px;
+        }
+        .dsm-crumb:hover { background: #2a2a2a; }
+        #dbxSongList {
+            flex: 1;
+            overflow-y: auto;
+            padding: 4px 8px 12px;
+        }
+        .dsm-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #ccc;
+            transition: background .15s;
+        }
+        .dsm-item:hover { background: #2a2a2a; }
+        .dsm-item.folder { color: #aaa; }
+        .dsm-item.audio { color: #3ea6ff; }
+        .dsm-item.text  { color: #FF9800; }
+        .dsm-item .dsm-icon { font-size: 16px; flex-shrink: 0; }
+        .dsm-item .dsm-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dsm-item .dsm-action {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .dsm-item.audio .dsm-action { background: #1565C0; color: #fff; }
+        .dsm-item.text  .dsm-action { background: #E65100; color: #fff; }
+        .dsm-signin-btn {
+            display: block;
+            margin: 20px auto;
+            background: linear-gradient(45deg, #0061FF, #004BB5);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            padding: 12px 28px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -1961,6 +2105,29 @@ https://youtube.com/watch?v=...
             <audio id="localAudioPlayer" controls controlsList="nodownload" style="flex: 2; min-width: 0; height: 36px; display: none;"></audio>
             <input type="file" id="localAudioFileInput" accept=".mp3,.m4a,.wav,.ogg,.flac,.aac,.opus" style="display:none"
                    onchange="loadLocalAudioFile(this.files); this.value='';">
+        </div>
+
+        <!-- Dropbox Song Browser trigger -->
+        <div style="text-align:center; margin: 4px 0 10px;">
+            <button onclick="openDbxSongModal()" style="background: linear-gradient(45deg, #0061FF, #004BB5); border: none; border-radius: 7px; color: #fff; font-size: 12px; font-weight: 700; padding: 6px 16px; cursor: pointer;">📂 Dropbox Songs</button>
+        </div>
+
+        <!-- Dropbox Song Browser Modal -->
+        <div id="dbxSongOverlay" onclick="if(event.target===this)closeDbxSongModal()">
+            <div id="dbxSongModal">
+                <div class="dsm-header">
+                    <h3>📂 Dropbox Song Browser</h3>
+                    <button class="dsm-close" onclick="closeDbxSongModal()">&times;</button>
+                </div>
+                <div class="dsm-search-row">
+                    <input id="dbxSongPathInput" type="text" placeholder="/songs/" value="/songs/"
+                           onkeydown="if(event.key==='Enter')dbxSongBrowse(document.getElementById('dbxSongPathInput').value.trim())">
+                    <button id="dbxSongBrowseBtn" onclick="dbxSongBrowse(document.getElementById('dbxSongPathInput').value.trim())">Browse</button>
+                </div>
+                <div id="dbxSongStatus"></div>
+                <div id="dbxSongBreadcrumb"></div>
+                <div id="dbxSongList"></div>
+            </div>
         </div>
 
         <!-- YouTube Video Section -->
@@ -9324,6 +9491,190 @@ https://youtube.com/watch?v=...
             if (dropboxAccessToken) window._loadDbxLinksDropdown();
         });
     })();
+    </script>
+
+    <script>
+    // ── Dropbox Song Browser Modal ──────────────────────────────────────────
+    const DSM_AUDIO_EXT = new Set(['.mp3','.m4a','.wav','.ogg','.flac','.aac','.opus','.weba','.webm']);
+    const DSM_TEXT_EXT  = new Set(['.txt','.md']);
+
+    function openDbxSongModal() {
+        const token = window.getDropboxAccessToken && window.getDropboxAccessToken();
+        document.getElementById('dbxSongOverlay').classList.add('open');
+        if (!token) {
+            document.getElementById('dbxSongList').innerHTML =
+                '<button class="dsm-signin-btn" onclick="dbxSongSignIn()">Sign in with Dropbox</button>';
+            document.getElementById('dbxSongStatus').textContent = 'Not signed in';
+            return;
+        }
+        // Auto-browse the current path value on open
+        const path = document.getElementById('dbxSongPathInput').value.trim();
+        if (path) dbxSongBrowse(path);
+    }
+
+    function closeDbxSongModal() {
+        document.getElementById('dbxSongOverlay').classList.remove('open');
+    }
+
+    async function dbxSongSignIn() {
+        closeDbxSongModal();
+        if (window.handleDropboxSignIn) await window.handleDropboxSignIn();
+    }
+
+    async function dbxSongBrowse(path) {
+        const token = window.getDropboxAccessToken && window.getDropboxAccessToken();
+        if (!token) { openDbxSongModal(); return; }
+
+        const btn = document.getElementById('dbxSongBrowseBtn');
+        btn.disabled = true;
+        document.getElementById('dbxSongStatus').textContent = 'Loading…';
+        document.getElementById('dbxSongList').innerHTML = '';
+
+        // Normalise path
+        const normPath = (path === '/' || path === '') ? '' : ('/' + path.replace(/^\/+|\/+$/g, ''));
+        document.getElementById('dbxSongPathInput').value = normPath || '/';
+
+        try {
+            const res = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+                method: 'POST',
+                headers: {
+                    Authorization: 'Bearer ' + token,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ path: normPath }),
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+
+            const entries = (data.entries || [])
+                .map(e => ({
+                    name: e.name,
+                    path: e.path_lower || e.path_display,
+                    isFolder: e['.tag'] === 'folder',
+                }))
+                .filter(e => {
+                    if (e.isFolder) return true;
+                    const ext = e.name.slice(e.name.lastIndexOf('.')).toLowerCase();
+                    return DSM_AUDIO_EXT.has(ext) || DSM_TEXT_EXT.has(ext);
+                })
+                .sort((a, b) => {
+                    if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
+                    return a.name.localeCompare(b.name, undefined, { numeric: true });
+                });
+
+            const fileCount = entries.filter(e => !e.isFolder).length;
+            document.getElementById('dbxSongStatus').textContent =
+                `${entries.filter(e=>e.isFolder).length} folders · ${fileCount} files`;
+
+            dbxSongRenderBreadcrumb(normPath);
+            dbxSongRenderList(entries);
+        } catch (err) {
+            document.getElementById('dbxSongStatus').textContent = 'Error: ' + err.message;
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function dbxSongRenderBreadcrumb(path) {
+        const el = document.getElementById('dbxSongBreadcrumb');
+        if (!path) { el.innerHTML = ''; return; }
+        const parts = path.replace(/^\//, '').split('/').filter(Boolean);
+        let html = '<span style="color:#555;">▸</span> ';
+        parts.forEach((part, i) => {
+            const crumbPath = '/' + parts.slice(0, i + 1).join('/');
+            if (i > 0) html += '<span style="color:#555;"> / </span>';
+            html += `<button class="dsm-crumb" onclick="dbxSongBrowse('${crumbPath}')">${part}</button>`;
+        });
+        el.innerHTML = html;
+    }
+
+    function dbxSongRenderList(entries) {
+        const list = document.getElementById('dbxSongList');
+        if (entries.length === 0) {
+            list.innerHTML = '<div style="color:#555;padding:20px;text-align:center;">No audio or text files found</div>';
+            return;
+        }
+        list.innerHTML = entries.map(e => {
+            if (e.isFolder) {
+                return `<div class="dsm-item folder" onclick="dbxSongBrowse('${e.path}')">
+                    <span class="dsm-icon">📁</span>
+                    <span class="dsm-name">${e.name}</span>
+                </div>`;
+            }
+            const ext = e.name.slice(e.name.lastIndexOf('.')).toLowerCase();
+            const isAudio = DSM_AUDIO_EXT.has(ext);
+            const cls   = isAudio ? 'audio' : 'text';
+            const icon  = isAudio ? '🎵' : '📄';
+            const label = isAudio ? 'Play' : 'Load';
+            const fn    = isAudio
+                ? `dbxSongPlayAudio('${e.path}','${e.name.replace(/'/g,"\\'")}' )`
+                : `dbxSongLoadText('${e.path}','${e.name.replace(/'/g,"\\'")}')`;
+            return `<div class="dsm-item ${cls}">
+                <span class="dsm-icon">${icon}</span>
+                <span class="dsm-name">${e.name}</span>
+                <button class="dsm-action" onclick="${fn}">${label}</button>
+            </div>`;
+        }).join('');
+    }
+
+    async function dbxSongPlayAudio(path, name) {
+        const token = window.getDropboxAccessToken && window.getDropboxAccessToken();
+        if (!token) return;
+        document.getElementById('dbxSongStatus').textContent = 'Fetching ' + name + '…';
+        try {
+            const res = await fetch('https://content.dropboxapi.com/2/files/download', {
+                method: 'POST',
+                headers: {
+                    Authorization: 'Bearer ' + token,
+                    'Dropbox-API-Arg': JSON.stringify({ path }),
+                },
+            });
+            if (!res.ok) throw new Error('Download failed');
+            const blob = await res.blob();
+            const url  = URL.createObjectURL(blob);
+            const ap   = document.getElementById('localAudioPlayer');
+            ap.src = url;
+            ap.style.display = 'block';
+            ap.play();
+            document.getElementById('localAudioLabel').textContent = name;
+            document.getElementById('localAudioZone').style.borderColor = '#3ea6ff';
+            document.getElementById('dbxSongStatus').textContent = '▶ ' + name;
+            closeDbxSongModal();
+        } catch (err) {
+            document.getElementById('dbxSongStatus').textContent = 'Error: ' + err.message;
+        }
+    }
+
+    async function dbxSongLoadText(path, name) {
+        const token = window.getDropboxAccessToken && window.getDropboxAccessToken();
+        if (!token) return;
+        document.getElementById('dbxSongStatus').textContent = 'Loading ' + name + '…';
+        try {
+            const res = await fetch('https://content.dropboxapi.com/2/files/download', {
+                method: 'POST',
+                headers: {
+                    Authorization: 'Bearer ' + token,
+                    'Dropbox-API-Arg': JSON.stringify({ path }),
+                },
+            });
+            if (!res.ok) throw new Error('Download failed');
+            const text = await res.text();
+            const success = processClipboardText(text);
+            if (success) {
+                loadNotesFromText(text);
+                const btn = document.getElementById('loadYouTubeClipboardBtn');
+                const orig = btn.textContent;
+                btn.textContent = '✅ Loaded!';
+                btn.style.transform = 'scale(1.05)';
+                setTimeout(() => { btn.textContent = orig; btn.style.transform = ''; }, 2000);
+            }
+            document.getElementById('dbxSongStatus').textContent = '✅ ' + name;
+            closeDbxSongModal();
+        } catch (err) {
+            document.getElementById('dbxSongStatus').textContent = 'Error: ' + err.message;
+        }
+    }
+    // ── End Dropbox Song Browser Modal ──────────────────────────────────────
     </script>
 
     <script>
