@@ -2020,7 +2020,9 @@ https://youtube.com/watch?v=...
             <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">r</kbd> vol− &nbsp;·&nbsp;
             <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">t</kbd> vol+ &nbsp;·&nbsp;
             <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">s</kbd> YouTube −10s &nbsp;·&nbsp;
-            <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">0</kbd> / <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">a</kbd> play/pause YouTube
+            <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">0</kbd> / <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">a</kbd> play/pause YouTube &nbsp;·&nbsp;
+            <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">z</kbd>–<kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">m</kbd> audio seek 0s–60s &nbsp;·&nbsp;
+            <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">,</kbd> play/pause audio
         </div>
 
         <!-- Drop Zone: text file → Paste Media+Times, audio file → audio-player -->
@@ -4921,6 +4923,27 @@ https://youtube.com/watch?v=...
                     e.preventDefault();
                     if (player && typeof player.getCurrentTime === 'function') {
                         player.seekTo(Math.max(0, player.getCurrentTime() - 10), true);
+                    }
+                    return;
+                }
+
+                // Keys z/x/c/v/b/n/m: seek local audio to 0s/10s/20s/30s/40s/50s/60s
+                const audioSeekMap = { z: 0, x: 10, c: 20, v: 30, b: 40, n: 50, m: 60 };
+                if (e.key in audioSeekMap) {
+                    e.preventDefault();
+                    const lap = document.getElementById('localAudioPlayer');
+                    if (lap && lap.src) {
+                        lap.currentTime = audioSeekMap[e.key];
+                    }
+                    return;
+                }
+
+                // Key ,: play/pause local audio
+                if (e.key === ',') {
+                    e.preventDefault();
+                    const lap = document.getElementById('localAudioPlayer');
+                    if (lap && lap.src) {
+                        if (lap.paused) { lap.play(); } else { lap.pause(); }
                     }
                     return;
                 }
