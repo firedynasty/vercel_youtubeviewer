@@ -2014,9 +2014,13 @@ https://youtube.com/watch?v=...
         <!-- Keycode hint -->
         <div style="text-align:center; font-size:11px; color:#666; margin-bottom:8px; letter-spacing:0.02em;">
             <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">1</kbd>–<kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">7</kbd> jump saved times &nbsp;·&nbsp;
-            <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">8</kbd> audio −10s &nbsp;·&nbsp;
-            <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">9</kbd> play/pause YouTube &nbsp;·&nbsp;
-            <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">0</kbd> play/pause audio
+            <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">q</kbd> audio −5s &nbsp;·&nbsp;
+            <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">w</kbd> audio −10s &nbsp;·&nbsp;
+            <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">e</kbd> play/pause audio &nbsp;·&nbsp;
+            <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">r</kbd> vol− &nbsp;·&nbsp;
+            <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">t</kbd> vol+ &nbsp;·&nbsp;
+            <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">s</kbd> YouTube −10s &nbsp;·&nbsp;
+            <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">0</kbd> / <kbd style="background:#2a2a2a;border:1px solid #444;border-radius:3px;padding:1px 5px;color:#aaa;">a</kbd> play/pause YouTube
         </div>
 
         <!-- Drop Zone: text file → Paste Media+Times, audio file → audio-player -->
@@ -2107,9 +2111,11 @@ https://youtube.com/watch?v=...
                    onchange="loadLocalAudioFile(this.files); this.value='';">
         </div>
 
+        <!-- Waveform visualizer -->
         <!-- Dropbox Song Browser trigger -->
-        <div style="text-align:center; margin: 4px 0 10px;">
+        <div style="text-align:center; margin: 4px 0 10px; display:flex; align-items:center; justify-content:center; gap:10px;">
             <button onclick="openDbxSongModal()" style="background: linear-gradient(45deg, #0061FF, #004BB5); border: none; border-radius: 7px; color: #fff; font-size: 12px; font-weight: 700; padding: 6px 16px; cursor: pointer;">📂 Dropbox Songs</button>
+            <span id="playbackTimeValueTop" style="color: #FFC107; font-weight: 700; font-size: 14px;">0:01</span>
         </div>
 
         <!-- Dropbox Song Browser Modal -->
@@ -3011,6 +3017,17 @@ https://youtube.com/watch?v=...
                 startAutoPlayTimer();
             }
         }
+
+        // Mirror currentTimeValue → playbackTimeValueTop
+        (function() {
+            var src = document.getElementById('currentTimeValue');
+            var dst = document.getElementById('playbackTimeValueTop');
+            if (src && dst) {
+                dst.textContent = src.textContent;
+                new MutationObserver(function() { dst.textContent = src.textContent; })
+                    .observe(src, { childList: true, characterData: true, subtree: true });
+            }
+        })();
 
         // Auto-play toggle event listener
         document.addEventListener('DOMContentLoaded', function() {
@@ -4806,15 +4823,13 @@ https://youtube.com/watch?v=...
             // Keyboard shortcuts for timer controls and navigation
             // ALL shortcuts work EVERYWHERE (even in inputs)
             document.addEventListener('keydown', function(e) {
-                // Timer shortcut: q=15s
+                // Key q: rewind local audio -5s
                 if (e.key === 'q') {
                     e.preventDefault();
-                    const btn15s = document.getElementById('timer15sBtn');
-                    // Only click the button if it's not already the active timer
-                    if (!(timerTimeout && timerButtonRef === btn15s)) {
-                        btn15s?.click();
+                    const lap = document.getElementById('localAudioPlayer');
+                    if (lap && lap.src) {
+                        lap.currentTime = Math.max(0, lap.currentTime - 5);
                     }
-                    document.getElementById('loopStartTime')?.focus();
                     return;
                 }
 
@@ -4870,8 +4885,19 @@ https://youtube.com/watch?v=...
                     return;
                 }
 
-                // Key 8: rewind local audio -10s
-                if (e.key === '8') {
+                // Keys r/t: decrease/increase local audio volume by 0.1
+                if (e.key === 'r' || e.key === 't') {
+                    e.preventDefault();
+                    const lap = document.getElementById('localAudioPlayer');
+                    if (lap && lap.src) {
+                        lap.volume = e.key === 'r' ? Math.max(0, lap.volume - 0.1) : Math.min(1, lap.volume + 0.1);
+                        showStatus('Audio volume: ' + Math.round(lap.volume * 100) + '%', 'success');
+                    }
+                    return;
+                }
+
+                // Key w: rewind local audio -10s
+                if (e.key === 'w') {
                     e.preventDefault();
                     const lap = document.getElementById('localAudioPlayer');
                     if (lap && lap.src) {
@@ -4880,26 +4906,31 @@ https://youtube.com/watch?v=...
                     return;
                 }
 
-                // Key 9: play/pause YouTube player
-                if (e.key === '9') {
-                    e.preventDefault();
-                    if (player && typeof player.getPlayerState === 'function') {
-                        const state = player.getPlayerState();
-                        if (state === 1) { // playing
-                            player.pauseVideo();
-                        } else {
-                            player.playVideo();
-                        }
-                    }
-                    return;
-                }
-
-                // Key 0: play/pause local audio player
-                if (e.key === '0') {
+                // Key e: play/pause local audio
+                if (e.key === 'e') {
                     e.preventDefault();
                     const lap = document.getElementById('localAudioPlayer');
                     if (lap && lap.src) {
                         if (lap.paused) { lap.play(); } else { lap.pause(); }
+                    }
+                    return;
+                }
+
+                // Key s: rewind YouTube -10s
+                if (e.key === 's') {
+                    e.preventDefault();
+                    if (player && typeof player.getCurrentTime === 'function') {
+                        player.seekTo(Math.max(0, player.getCurrentTime() - 10), true);
+                    }
+                    return;
+                }
+
+                // Keys 0 / a: play/pause YouTube player
+                if (e.key === '0' || e.key === 'a') {
+                    e.preventDefault();
+                    if (player && typeof player.getPlayerState === 'function') {
+                        const state = player.getPlayerState();
+                        if (state === 1) { player.pauseVideo(); } else { player.playVideo(); }
                     }
                     return;
                 }
