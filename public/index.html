@@ -2404,6 +2404,14 @@ https://youtube.com/watch?v=...
     <!-- Template data loaded from external file for easy editing -->
     <script src="template_data.js"></script>
     <script>
+        // Capture hash param immediately — before any async callbacks or redirects can clear it
+        const _initialHashParam = (function() {
+            const hash = window.location.hash;
+            if (!hash || !hash.startsWith('#?')) return null;
+            try { return decodeURIComponent(hash.substring(2)).trim() || null; }
+            catch(e) { return hash.substring(2).trim() || null; }
+        })();
+
         // ============================================
         // LINK PAGINATION SYSTEM
         // ============================================
@@ -4002,13 +4010,10 @@ https://youtube.com/watch?v=...
         }
 
         // Check for hash-based URL parameter: #?URL,time1,time2(note),...
-        // Example: #?https://www.youtube.com/watch?v=xxx,1:00,2:00(jump_shot)
+        // Uses value captured at script-load time so async callbacks can't miss it
         function checkHashParameters() {
-            const hash = window.location.hash;
-            if (!hash || !hash.startsWith('#?')) return null;
-            const param = decodeURIComponent(hash.substring(2)).trim();
-            console.log('🎬 Hash parameter found:', param);
-            return param || null;
+            if (_initialHashParam) console.log('🎬 Hash parameter found:', _initialHashParam);
+            return _initialHashParam;
         }
 
         // Check for timer parameter in URL (e.g., &timer=25)
