@@ -2071,6 +2071,7 @@ https://youtube.com/watch?v=...
                 <button id="addTimesBtn" class="jump-btn" style="background: linear-gradient(45deg, #2196F3, #1976D2);">➕ Add</button>
                 <button id="clearTimesBtn" class="jump-btn" style="display: none; background: linear-gradient(45deg, #f44336, #d32f2f); font-size: 12px; padding: 8px 16px;">🗑️ Clear All</button>
                 <button id="copyCurrentStateBtn" class="jump-btn" style="background: linear-gradient(45deg, #8BC34A, #689F38); font-size: 12px; padding: 8px 16px;">📋 Copy URL+Times</button>
+                <button id="qrShareBtn" class="jump-btn" onclick="showQRModal()" style="background: linear-gradient(45deg, #7B1FA2, #4A148C); font-size: 12px; padding: 8px 14px;">📱 QR Share</button>
             </div>
         </div>
 
@@ -2276,6 +2277,7 @@ https://youtube.com/watch?v=...
                     <button class="config-btn" id="tsMakeSheetBtn" onclick="tsMakeNewSheet()" style="display:none; background:linear-gradient(45deg,#1565C0,#0D47A1); border-color:transparent; color:white;">📊 New Sheet</button>
                     <button class="config-btn" onclick="tsCopy()" style="background:#8e44ad; border-color:transparent; color:white;">Copy</button>
                     <button class="config-btn" onclick="tsSaveTxt()" style="background:#27ae60; border-color:transparent; color:white;">Save .txt</button>
+                    <button class="config-btn" onclick="tsRetrieveLink()" style="background:linear-gradient(45deg,#7B1FA2,#4A148C); border-color:transparent; color:white;">📋 Link</button>
                     <button class="config-btn" onclick="tsClear()" style="background:#e74c3c; border-color:transparent; color:white;">Clear</button>
                 </div>
                 <div id="tsEntries" style="max-height:200px; overflow-y:auto; font-family:'Courier New',monospace; font-size:12px; margin-top:6px;"></div>
@@ -2396,6 +2398,7 @@ https://youtube.com/watch?v=...
     <!-- Google OAuth + XLSX for Sheets integration -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- YouTube IFrame Player API -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <!-- Template data loaded from external file for easy editing -->
@@ -3998,6 +4001,16 @@ https://youtube.com/watch?v=...
             return cleanParam;
         }
 
+        // Check for hash-based URL parameter: #?URL,time1,time2(note),...
+        // Example: #?https://www.youtube.com/watch?v=xxx,1:00,2:00(jump_shot)
+        function checkHashParameters() {
+            const hash = window.location.hash;
+            if (!hash || !hash.startsWith('#?')) return null;
+            const param = decodeURIComponent(hash.substring(2)).trim();
+            console.log('🎬 Hash parameter found:', param);
+            return param || null;
+        }
+
         // Check for timer parameter in URL (e.g., &timer=25)
         function checkTimerParameter() {
             const queryString = window.location.search;
@@ -4114,8 +4127,8 @@ https://youtube.com/watch?v=...
         function onYouTubeIframeAPIReady() {
             console.log('🎬 YouTube IFrame API ready');
 
-            // Check if URL parameter exists
-            const urlParam = checkUrlParameters();
+            // Check hash first (#?URL,times), then fall back to query param (?URL,times)
+            const urlParam = checkHashParameters() || checkUrlParameters();
 
             if (urlParam) {
                 // Load from URL parameter with a delay to ensure API is ready
@@ -5032,36 +5045,35 @@ https://youtube.com/watch?v=...
             showStatus('All times cleared', 'info');
         }
 
-        // Copy current URL + saved times to clipboard
-        async function copyCurrentStateToClipboard() {
-            // Get current URL
+        // Build a shareable #?URL,time1(note),time2,... hash URL for the current video + saved times
+        function buildShareUrl() {
             let currentUrl = '';
-
             if (playerType === 'youtube' && currentVideoId) {
-                // Reconstruct YouTube URL
                 currentUrl = `https://www.youtube.com/watch?v=${currentVideoId}`;
             } else if ((playerType === 'video' || playerType === 'audio') && currentMediaUrl) {
-                // Use the direct media URL
                 currentUrl = currentMediaUrl;
             } else {
-                showStatus('No media loaded', 'error');
+                return null;
+            }
+            if (!savedTimesData || savedTimesData.length === 0) return null;
+            const timeParts = savedTimesData
+                .filter(item => !item.isNote)
+                .map(item => item.name ? `${item.time}(${item.name})` : item.time);
+            const content = `${currentUrl},${timeParts.join(',')}`;
+            return `${location.origin}${location.pathname}#?${content}`;
+        }
+
+        // Copy current URL + saved times to clipboard as a shareable #? hash URL
+        async function copyCurrentStateToClipboard() {
+            const shareUrl = buildShareUrl();
+            if (!shareUrl) {
+                showStatus(savedTimesData && savedTimesData.length === 0 ? 'No saved times available' : 'No media loaded', 'error');
                 return;
             }
 
-            // Get all saved times from savedTimesData
-            if (!savedTimesData || savedTimesData.length === 0) {
-                showStatus('No saved times available', 'error');
-                return;
-            }
-
-            // Build the format: URL?time1,time2,time3
-            const times = savedTimesData.filter(item => !item.isNote).map(item => item.time);
-            const formattedString = `${currentUrl}?${times.join(',')}`;
-
-            // Copy to clipboard
             try {
-                await navigator.clipboard.writeText(formattedString);
-                showStatus('Copied to clipboard!', 'success');
+                await navigator.clipboard.writeText(shareUrl);
+                showStatus('Share URL copied!', 'success');
 
                 // Visual feedback on button
                 const btn = document.getElementById('copyCurrentStateBtn');
@@ -12073,12 +12085,130 @@ renderPmSections();
         document.getElementById('tsStatus').style.color = '#888';
     };
 
+    window.tsRetrieveLink = function() {
+        if (!tsEntries.length) {
+            document.getElementById('tsStatus').textContent = 'No timestamps to share';
+            document.getElementById('tsStatus').style.color = '#e74c3c';
+            return;
+        }
+        var url = '';
+        if (typeof currentVideoId !== 'undefined' && currentVideoId) {
+            url = 'https://www.youtube.com/watch?v=' + currentVideoId;
+        } else if (typeof currentMediaUrl !== 'undefined' && currentMediaUrl) {
+            url = currentMediaUrl;
+        }
+        if (!url) {
+            document.getElementById('tsStatus').textContent = 'No video loaded';
+            document.getElementById('tsStatus').style.color = '#e74c3c';
+            return;
+        }
+        var timeParts = tsEntries.map(function(e) {
+            if (e.note) {
+                // sanitize note: replace spaces/parens so the format stays parseable
+                var safeNote = e.note.replace(/\(/g,'[').replace(/\)/g,']').replace(/,/g,'_');
+                return e.ts + '(' + safeNote + ')';
+            }
+            return e.ts;
+        });
+        var shareUrl = location.origin + location.pathname + '#?' + url + ',' + timeParts.join(',');
+        navigator.clipboard.writeText(shareUrl).then(function() {
+            document.getElementById('tsStatus').textContent = 'Share link copied!';
+            document.getElementById('tsStatus').style.color = '#2ecc71';
+        }).catch(function() {
+            document.getElementById('tsStatus').textContent = 'Copy failed';
+            document.getElementById('tsStatus').style.color = '#e74c3c';
+        });
+    };
+
     // Auto-save notes as you type
     document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('tsNotesArea').addEventListener('input', tsSave);
         tsRestore();
     });
 })();
+</script>
+
+<!-- QR Share Modal -->
+<div id="qrShareOverlay" onclick="if(event.target===this)closeQRModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:#1e1e1e;border:1px solid #444;border-radius:12px;padding:28px 24px;max-width:360px;width:90%;text-align:center;position:relative;">
+        <button onclick="closeQRModal()" style="position:absolute;top:10px;right:14px;background:none;border:none;color:#aaa;font-size:22px;cursor:pointer;line-height:1;">✕</button>
+        <div style="font-weight:700;font-size:15px;color:#FFC107;margin-bottom:16px;">📱 Share URL as QR</div>
+        <div id="qrModalCode" style="display:flex;justify-content:center;margin-bottom:14px;"></div>
+        <div id="qrModalUrl" style="font-size:10px;color:#888;word-break:break-all;margin-bottom:16px;line-height:1.4;max-height:48px;overflow:hidden;"></div>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+            <button onclick="copyQRUrl()" style="padding:7px 16px;border:none;border-radius:6px;background:linear-gradient(45deg,#8BC34A,#689F38);color:#fff;font-size:12px;font-weight:700;cursor:pointer;" id="qrCopyBtn">📋 Copy URL</button>
+            <button onclick="downloadQRCode()" style="padding:7px 16px;border:none;border-radius:6px;background:linear-gradient(45deg,#7B1FA2,#4A148C);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">↓ Save PNG</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let _qrInstance = null;
+    let _qrShareUrl = '';
+
+    function showQRModal() {
+        const shareUrl = buildShareUrl();
+        if (!shareUrl) {
+            showStatus(savedTimesData && savedTimesData.length === 0 ? 'No saved times to share' : 'No media loaded', 'error');
+            return;
+        }
+        _qrShareUrl = shareUrl;
+
+        // Clear previous QR
+        const container = document.getElementById('qrModalCode');
+        container.innerHTML = '';
+        _qrInstance = null;
+
+        // Check QRCode lib loaded
+        if (typeof QRCode === 'undefined') {
+            showStatus('QR library not loaded yet', 'error');
+            return;
+        }
+
+        _qrInstance = new QRCode(container, {
+            text: shareUrl,
+            width: 220,
+            height: 220,
+            colorDark: '#1a1a18',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.M
+        });
+
+        document.getElementById('qrModalUrl').textContent = shareUrl;
+        const overlay = document.getElementById('qrShareOverlay');
+        overlay.style.display = 'flex';
+    }
+
+    function closeQRModal() {
+        document.getElementById('qrShareOverlay').style.display = 'none';
+    }
+
+    async function copyQRUrl() {
+        if (!_qrShareUrl) return;
+        try {
+            await navigator.clipboard.writeText(_qrShareUrl);
+            const btn = document.getElementById('qrCopyBtn');
+            btn.textContent = '✅ Copied!';
+            setTimeout(() => btn.textContent = '📋 Copy URL', 2000);
+        } catch(e) {
+            showStatus('Failed to copy', 'error');
+        }
+    }
+
+    function downloadQRCode() {
+        const canvas = document.querySelector('#qrModalCode canvas');
+        if (!canvas) return;
+        const link = document.createElement('a');
+        link.download = 'share-qr.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && document.getElementById('qrShareOverlay').style.display !== 'none') {
+            closeQRModal();
+        }
+    });
 </script>
 </body>
 </html>
