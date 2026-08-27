@@ -241,6 +241,46 @@
   .yt-track-btn.active{background:#c00;color:#fff;border-color:#f00;}
   .yt-iframe-wrap{width:100%;max-width:700px;}
   .yt-iframe-wrap iframe{width:100%;height:200px;border:none;border-radius:6px;}
+
+  /* JSON editor modal */
+  .json-modal{
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:1600;
+    align-items:flex-start;justify-content:center;padding:32px 10px 20px;overflow-y:auto;
+  }
+  .json-modal.open{display:flex;}
+  .json-box{
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:20px 20px 16px;width:min(700px,98vw);
+    display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,0.65);
+  }
+  .json-box h3{
+    font-family:'Fraunces',serif;font-size:17px;margin:0;color:var(--parchment);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .json-schema{
+    background:#0d0c09;border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;font-family:'Space Mono',monospace;font-size:11px;
+    color:#7fa695;line-height:1.8;white-space:pre;overflow-x:auto;
+  }
+  .json-textarea{
+    height:360px;background:#0d0c09;border:1px solid var(--line);
+    border-radius:8px;color:#c8d0b0;font-family:'Space Mono',monospace;
+    font-size:11.5px;padding:12px;resize:vertical;outline:none;line-height:1.6;
+  }
+  .json-textarea:focus{border-color:var(--brass);}
+  .json-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .json-btn{
+    flex:1;padding:10px;border-radius:10px;border:none;cursor:pointer;
+    font-family:'Source Sans 3',sans-serif;font-size:13px;font-weight:700;
+    letter-spacing:.02em;transition:opacity .1s;min-width:120px;
+  }
+  .json-btn:active{opacity:.8;}
+  .json-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .json-btn-validate{background:var(--panel-hi);color:var(--parchment);border:1px solid var(--line);}
+  .json-btn-reload{background:var(--panel-hi);color:var(--parchment-dim);border:1px solid var(--line);}
+  .json-btn-apply{background:var(--brass);color:var(--ink);}
+  .json-btn-save{background:var(--led-hat);color:var(--ink);}
+  .json-status{font-size:12px;min-height:16px;text-align:center;padding:2px 0;}
 </style>
 </head>
 <body>
@@ -279,6 +319,7 @@
     <button class="btn-clear" id="clearBtn">Clear</button>
     <button class="btn-clear" id="exportBtn" title="Save / export current pattern" style="border-color:var(--brass);color:var(--brass);">Save / Export</button>
     <button class="btn-clear" id="loadBtn" title="Reload presets from the Dropbox file (signs in if needed) — replaces all dropdown items; unsaved board edits are lost">Load</button>
+    <button class="btn-clear" id="editJsonBtn" title="Edit the full presets JSON and save to Dropbox" style="border-color:var(--led-tone);color:var(--led-tone);">Edit JSON</button>
     <button title="YouTube music" onclick="toggleYtModal()" style="width:32px;height:32px;border:none;border-radius:8px;cursor:pointer;background:rgb(224,224,224);display:flex;align-items:center;justify-content:center;padding:0"><svg width="20" height="14" viewBox="0 0 68 48"><path d="M66.5 7.7s-.7-4.7-2.7-6.8C61-1.7 58-1.7 56.6-1.9 47.3-2.6 34-2.6 34-2.6s-13.3 0-22.6.7C10-1.7 7-1.7 4.2.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.8v5.2c0 5.5.7 11.1.7 11.1s.7 4.7 2.7 6.8c2.8 2.6 6.4 2.5 8 2.8 5.8.5 24.8.7 24.8.7s13.3 0 22.6-.7c1.4-.2 4.4-.2 7.2-2.8 2-2.1 2.7-6.8 2.7-6.8s.7-5.5.7-11.1v-5.2c0-5.6-.7-11.1-.7-11.1z" fill="red"/><path d="M27 33V13l18.2 10L27 33z" fill="white"/></svg></button>
   </div>
 
@@ -330,6 +371,22 @@
       <button class="met-sig-btn" data-beats="3">3/4</button>
       <button class="met-sig-btn" data-beats="2">2/4</button>
     </div>
+  </div>
+</div>
+
+<!-- JSON editor modal -->
+<div class="json-modal" id="jsonModal">
+  <div class="json-box">
+    <h3>Edit Presets JSON <button class="export-close" id="jsonClose">&times;</button></h3>
+    <div class="json-schema" id="jsonSchemaEl">— open Edit JSON to see selected preset —</div>
+    <textarea class="json-textarea" id="jsonTextarea" spellcheck="false"></textarea>
+    <div class="json-actions">
+      <button class="json-btn json-btn-validate" id="jsonValidateBtn">Validate</button>
+      <button class="json-btn json-btn-reload" id="jsonReloadBtn">Reload from Dropbox</button>
+      <button class="json-btn json-btn-apply" id="jsonApplyBtn">Apply to dropdown</button>
+      <button class="json-btn json-btn-save" id="jsonSaveBtn">Save to Dropbox</button>
+    </div>
+    <div class="json-status" id="jsonStatus"></div>
   </div>
 </div>
 
@@ -690,6 +747,7 @@
       sequencerEl.appendChild(row);
     });
     markPlayhead();
+    refreshJsonSchema();
   }
 
   function markPlayhead(){
@@ -1196,6 +1254,149 @@ ${lines.join(',\n')}
     }finally{
       exportSaveDbxBtn.disabled = false;
     }
+  });
+
+  // ── JSON Editor ────────────────────────────────────────────────────────────
+  const jsonModal    = document.getElementById('jsonModal');
+  const jsonTextarea = document.getElementById('jsonTextarea');
+  const jsonStatus   = document.getElementById('jsonStatus');
+  const jsonSchemaEl = document.getElementById('jsonSchemaEl');
+
+  // Format a single preset object with compact arrays — for the schema preview
+  function formatPresetJson(p){
+    if(!p) return '(no preset selected)';
+    const tracks = ['kick','snare','hat','crash','tone'];
+    const lines = [
+      `  "name": ${JSON.stringify(p.name || '')}`,
+      `  "bpm": ${p.bpm || 120}`,
+      `  "desc": ${JSON.stringify(p.desc || '')}`,
+      ...tracks.map(t => `  "${t}": [${(p[t] || new Array(16).fill(0)).join(',')}]`),
+    ];
+    return '{\n' + lines.join(',\n') + '\n}';
+  }
+
+  // Format presets as compact JSON: arrays on one line, easy to read and copy
+  function formatPresetsJson(arr){
+    const tracks = ['kick','snare','hat','crash','tone'];
+    return '[\n' + arr.map(p => {
+      const lines = [
+        `    "name": ${JSON.stringify(p.name || '')}`,
+        `    "bpm": ${p.bpm || 120}`,
+        `    "desc": ${JSON.stringify(p.desc || '')}`,
+        ...tracks.map(t => `    "${t}": [${(p[t] || new Array(16).fill(0)).join(',')}]`),
+      ];
+      return '  {\n' + lines.join(',\n') + '\n  }';
+    }).join(',\n') + '\n]';
+  }
+
+  function setJsonStatus(msg, ok){
+    jsonStatus.textContent = msg;
+    jsonStatus.style.color = ok === true ? 'var(--led-hat)' : ok === false ? 'var(--led-snare)' : 'var(--parchment-dim)';
+  }
+
+  function refreshJsonSchema(){
+    if(!jsonModal.classList.contains('open')) return;
+    const cur = presets[+presetSelect.value] || {};
+    jsonSchemaEl.textContent = formatPresetJson({
+      name: cur.name || '(current)', bpm: bpm, desc: cur.desc || '',
+      kick: [...grid.kick], snare: [...grid.snare], hat: [...grid.hat],
+      crash: [...grid.crash], tone: [...grid.tone],
+    });
+  }
+
+  function openJsonEditor(){
+    jsonTextarea.value = formatPresetsJson(presets);
+    setJsonStatus('', null);
+    jsonModal.classList.add('open');
+    refreshJsonSchema();
+    jsonTextarea.focus();
+  }
+
+  function closeJsonEditor(){ jsonModal.classList.remove('open'); }
+
+  function parseJsonEditor(){
+    try{
+      const arr = JSON.parse(jsonTextarea.value);
+      if(!Array.isArray(arr)) throw new Error('Top level must be an array [ … ]');
+      return arr;
+    }catch(e){
+      setJsonStatus('✗ ' + e.message, false);
+      return null;
+    }
+  }
+
+  document.getElementById('editJsonBtn').addEventListener('click', openJsonEditor);
+  document.getElementById('jsonClose').addEventListener('click', closeJsonEditor);
+  jsonModal.addEventListener('click', e => { if(e.target === jsonModal) closeJsonEditor(); });
+
+  document.getElementById('jsonValidateBtn').addEventListener('click', () => {
+    const arr = parseJsonEditor();
+    if(arr) setJsonStatus(`✓ Valid — ${arr.length} preset${arr.length!==1?'s':''}`, true);
+  });
+
+  document.getElementById('jsonReloadBtn').addEventListener('click', async () => {
+    if(!dropboxAccessToken){
+      setJsonStatus('⚠ Sign in to Dropbox first (top-right button), then reopen Edit JSON', null);
+      return;
+    }
+    const btn = document.getElementById('jsonReloadBtn');
+    btn.disabled = true;
+    setJsonStatus('Loading from Dropbox…', null);
+    try{
+      const text = await dropboxDownloadFile(DROPBOX_PRESETS_PATH);
+      const arr  = JSON.parse(text);
+      jsonTextarea.value = formatPresetsJson(arr);
+      setJsonStatus(`✓ Reloaded ${arr.length} preset${arr.length!==1?'s':''} from Dropbox`, true);
+    }catch(e){
+      setJsonStatus('✗ ' + e.message, false);
+    }finally{ btn.disabled = false; }
+  });
+
+  document.getElementById('jsonApplyBtn').addEventListener('click', () => {
+    const arr = parseJsonEditor();
+    if(!arr) return;
+    stop();
+    presets = arr;
+    presetSelect.innerHTML = '';
+    arr.forEach((p, i) => {
+      const opt = document.createElement('option');
+      opt.value = i; opt.textContent = p.name || '(unnamed)';
+      presetSelect.appendChild(opt);
+    });
+    if(arr.length) loadPreset(0);
+    setJsonStatus(`✓ Applied ${arr.length} preset${arr.length!==1?'s':''} to dropdown`, true);
+  });
+
+  document.getElementById('jsonSaveBtn').addEventListener('click', async () => {
+    const arr = parseJsonEditor();
+    if(!arr) return;
+    if(!dropboxAccessToken){
+      setJsonStatus('⚠ Sign in to Dropbox first (top-right Dropbox button)', null);
+      return;
+    }
+    const btn = document.getElementById('jsonSaveBtn');
+    btn.disabled = true;
+    setJsonStatus('Saving…', null);
+    try{
+      // Save compact-array format (keeps readability in Dropbox) but valid JSON
+      const payload = '[\n' + arr.map(p => JSON.stringify(p)).join(',\n') + '\n]';
+      await dropboxUploadFile(DROPBOX_PRESETS_PATH, payload);
+      // Sync in-memory presets and rebuild dropdown
+      const curName = (presets[+presetSelect.value] || {}).name;
+      presets = arr;
+      presetSelect.innerHTML = '';
+      arr.forEach((p, i) => {
+        const opt = document.createElement('option');
+        opt.value = i; opt.textContent = p.name || '(unnamed)';
+        presetSelect.appendChild(opt);
+      });
+      const idx = curName ? arr.findIndex(p => p.name === curName) : 0;
+      presetSelect.value = Math.max(0, idx);
+      loadPreset(+presetSelect.value);
+      setJsonStatus(`✓ Saved ${arr.length} preset${arr.length!==1?'s':''} to Dropbox`, true);
+    }catch(e){
+      setJsonStatus('✗ ' + e.message, false);
+    }finally{ btn.disabled = false; }
   });
 
   // ── Boot: OAuth redirect → load (Dropbox when signed in → /api/presets → bundled) ──
