@@ -315,7 +315,7 @@
   <p class="preset-desc" id="presetDesc"></p>
 
   <div class="transport">
-    <button class="btn-play" id="playBtn">▶ Play</button>
+    <button class="btn-play" id="playBtn">▶ Play(/)</button>
     <button class="btn-clear" id="clearBtn">Clear</button>
     <button class="btn-clear" id="exportBtn" title="Save / export current pattern" style="border-color:var(--brass);color:var(--brass);">Save / Export</button>
     <button class="btn-clear" id="loadBtn" title="Reload presets from the Dropbox file (signs in if needed) — replaces all dropdown items; unsaved board edits are lost">Load</button>
@@ -330,7 +330,7 @@
   <div class="foot-note" style="margin-top:14px;text-align:left;line-height:2;">
     <span style="color:var(--brass);font-weight:700;letter-spacing:.08em;font-size:10.5px;text-transform:uppercase;">Keyboard shortcuts</span><br>
     <span style="opacity:.9;"><kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">Enter</kbd> Play / Stop beats &nbsp;&nbsp;
-    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">o</kbd> Play / Stop beats &nbsp;&nbsp;
+    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">o</kbd> <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">/</kbd> Play / Stop beats &nbsp;&nbsp;
     <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">p</kbd> Start / Stop metronome</span><br>
     <span style="opacity:.9;"><kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">← →</kbd> Previous / Next preset &nbsp;&nbsp;
     <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">[ ]</kbd> BPM −2 / +2 (both)</span><br>
@@ -904,14 +904,14 @@
     currentStep = 0;
     displayStep = 0;
     nextNoteTime = audioCtx.currentTime + 0.05;
-    playBtn.textContent = '⏸ Stop';
+    playBtn.textContent = '⏸ Stop(/)';
     playBtn.classList.add('playing');
     scheduler();
   }
   function stop(){
     playing = false;
     if(schedulerTimer) clearTimeout(schedulerTimer);
-    playBtn.textContent = '▶ Play';
+    playBtn.textContent = '▶ Play(/)';
     playBtn.classList.remove('playing');
     markPlayhead();
   }
@@ -976,7 +976,7 @@
       document.getElementById('metVolSlider').value = newMetVol;
       metVolume = newMetVol / 100;
       if(metGain) metGain.gain.value = metVolume;
-    } else if(e.key === 'o'){
+    } else if(e.key === 'o' || e.key === '/'){
       e.preventDefault();
       playing ? stop() : start();
     } else if(e.key === 'p'){
