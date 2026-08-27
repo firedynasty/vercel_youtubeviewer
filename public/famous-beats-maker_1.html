@@ -381,6 +381,7 @@
     <div class="json-schema" id="jsonSchemaEl">— open Edit JSON to see selected preset —</div>
     <textarea class="json-textarea" id="jsonTextarea" spellcheck="false"></textarea>
     <div class="json-actions">
+      <button class="dbx-auth-btn" id="jsonDbxAuthBtn" title="Sign in to Dropbox to save presets">Dropbox</button>
       <button class="json-btn json-btn-validate" id="jsonValidateBtn">Validate</button>
       <button class="json-btn json-btn-reload" id="jsonReloadBtn">Reload from Dropbox</button>
       <button class="json-btn json-btn-apply" id="jsonApplyBtn">Apply to dropdown</button>
@@ -459,17 +460,18 @@
   }
 
   const dbxAuthBtn = document.getElementById('dbxAuthBtn');
+  const jsonDbxAuthBtn = document.getElementById('jsonDbxAuthBtn');
   function updateDbxAuthBtn(){
+    const btns = [dbxAuthBtn, jsonDbxAuthBtn];
     if(dropboxAccessToken){
-      dbxAuthBtn.textContent = '● Dropbox';
-      dbxAuthBtn.classList.add('connected');
-      dbxAuthBtn.title = 'Connected — click to sign out';
+      btns.forEach(b => { b.textContent = '● Dropbox'; b.classList.add('connected'); b.title = 'Connected — click to sign out'; });
     } else {
-      dbxAuthBtn.textContent = 'Dropbox';
-      dbxAuthBtn.classList.remove('connected');
-      dbxAuthBtn.title = 'Sign in to Dropbox to save presets';
+      btns.forEach(b => { b.textContent = 'Dropbox'; b.classList.remove('connected'); b.title = 'Sign in to Dropbox to save presets'; });
     }
   }
+  jsonDbxAuthBtn.addEventListener('click', () => {
+    dropboxAccessToken ? dbxSignOut() : dbxSignIn();
+  });
 
   async function dbxSignIn(){
     const appKey = await fetchDropboxAppKey();
@@ -567,23 +569,15 @@
   }
 
   // ── Save / load beats ────────────────────────────────────────────────────
-  // loadBeats: freshest source first — Dropbox file (when signed in), then the
-  // /api/presets shared-link proxy, then the bundled famous-beats-presets.js.
+  // loadBeats: Dropbox file (when signed in), else bundled famous-beats-presets.js.
   // Returns { data, source } so the UI can show where the presets came from.
   async function loadBeats(){
     if(dropboxAccessToken){
       try{
         return { data: JSON.parse(await dropboxDownloadFile(DROPBOX_PRESETS_PATH)), source: 'Dropbox' };
-      }catch(e){ console.warn('Dropbox load failed, trying shared link:', e.message); }
+      }catch(e){ console.warn('Dropbox load failed, using bundled file:', e.message); }
     }
-    try{
-      const r = await fetch(PRESETS_API_URL);
-      if(!r.ok) throw new Error('HTTP ' + r.status);
-      return { data: await r.json(), source: 'shared link' };
-    }catch(e){
-      console.warn('Shared link load failed, using bundled file:', e.message);
-      return { data: window.FAMOUS_BEATS_PRESETS || [], source: 'bundled .js' };
-    }
+    return { data: window.FAMOUS_BEATS_PRESETS || [], source: 'bundled .js' };
   }
 
   // saveBeatToDropbox: always APPEND the current pattern to the Dropbox presets
