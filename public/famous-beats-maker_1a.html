@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Famous Beats — Rhythm Machine</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600&family=Space+Mono&display=swap');
+
+  :root{
+    --ink:#15130f;
+    --panel:#1e1b16;
+    --panel-hi:#282420;
+    --brass:#c8973d;
+    --led-off: rgba(238,230,214,0.06);
+    --led-kick:#c8973d;
+    --led-snare:#b5432f;
+    --led-hat:#7fa695;
+    --led-tone:#c9b25e;
+    --parchment:#eee6d6;
+    --parchment-dim:#9c9284;
+    --line: rgba(238,230,214,0.09);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;background:radial-gradient(ellipse at 50% -10%, #292319 0%, var(--ink) 55%);
+    color:var(--parchment);font-family:'Source Sans 3', sans-serif;
+    min-height:100vh;padding:20px 12px 50px;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:560px;margin:0 auto;}
+  .eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass);font-weight:600;margin-bottom:6px;}
+  h1{font-family:'Fraunces',serif;font-weight:700;font-size:clamp(26px,7vw,34px);margin:0 0 6px;letter-spacing:-0.01em;}
+  .sub{color:var(--parchment-dim);font-size:13.5px;line-height:1.55;max-width:48ch;margin-bottom:20px;}
+
+  .control-row{
+    display:flex;gap:10px;align-items:stretch;margin-bottom:14px;
+  }
+  select#presetSelect{
+    flex:1;background:var(--panel);border:1px solid var(--line);color:var(--parchment);
+    font-family:'Source Sans 3',sans-serif;font-size:14.5px;font-weight:600;
+    padding:12px 10px;border-radius:10px;
+  }
+  .bpm-box{
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:8px 14px;display:flex;align-items:center;gap:10px;min-width:118px;
+  }
+  .bpm-box button{
+    width:26px;height:26px;border-radius:50%;background:var(--panel-hi);
+    border:1px solid var(--line);color:var(--parchment);font-size:15px;cursor:pointer;flex-shrink:0;
+  }
+  .bpm-val{font-family:'Space Mono',monospace;font-size:16px;text-align:center;min-width:38px;}
+  .bpm-label{font-size:9px;color:var(--parchment-dim);text-transform:uppercase;letter-spacing:.08em;text-align:center;}
+
+  .preset-desc{
+    font-size:12.5px;color:var(--parchment-dim);line-height:1.5;
+    margin:0 0 18px;min-height:36px;border-left:2px solid var(--brass);
+    padding-left:10px;
+  }
+
+  .tempo-row{
+    display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;
+  }
+  .tempo-btn{
+    background:var(--panel);border:1px solid var(--line);color:var(--parchment-dim);
+    font-family:'Source Sans 3',sans-serif;font-size:11px;font-weight:600;
+    padding:7px 0;border-radius:8px;cursor:pointer;flex:1 1 0;min-width:0;
+    transition:background .12s, color .12s, border-color .12s;text-align:center;
+  }
+  .tempo-btn:hover{background:var(--panel-hi);color:var(--parchment);}
+  .tempo-btn.active{background:var(--brass);color:var(--ink);border-color:var(--brass);}
+
+  .transport{display:flex;gap:10px;margin-bottom:22px;}
+  .btn-play{
+    flex:1;background:var(--brass);color:#1a1710;font-weight:700;font-size:15px;
+    padding:13px;border-radius:12px;border:none;cursor:pointer;letter-spacing:.02em;
+    box-shadow:0 4px 14px rgba(200,151,61,0.22);transition:transform .1s;
+  }
+  .btn-play:active{transform:scale(.97);}
+  .btn-play.playing{background:var(--panel-hi);color:var(--parchment);border:1px solid var(--brass);}
+  .btn-clear{
+    background:transparent;border:1px solid var(--line);color:var(--parchment-dim);
+    padding:13px 18px;border-radius:12px;font-size:14px;cursor:pointer;
+  }
+
+  .sequencer{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 10px;}
+  .track{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .track:last-child{margin-bottom:0;}
+  .track-label{
+    width:52px;flex-shrink:0;font-size:10.5px;font-weight:700;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--parchment-dim);
+  }
+  .steps{display:flex;gap:4px;flex:1;}
+  .group{display:flex;gap:4px;}
+  .step{
+    width:100%;aspect-ratio:1;border-radius:5px;background:var(--led-off);
+    border:1px solid rgba(238,230,214,0.05);cursor:pointer;transition:background .06s, box-shadow .06s;
+  }
+  .step.on.kick{background:var(--led-kick);box-shadow:0 0 6px rgba(200,151,61,0.5);}
+  .step.on.snare{background:var(--led-snare);box-shadow:0 0 6px rgba(181,67,47,0.5);}
+  .step.on.hat{background:var(--led-hat);box-shadow:0 0 6px rgba(127,166,149,0.5);}
+  .step.on.tone{background:var(--led-tone);box-shadow:0 0 6px rgba(201,178,94,0.5);}
+  .step.on.crash{background:#8a8f9c;box-shadow:0 0 8px rgba(138,143,156,0.6);}
+  .step.playhead{outline:2px solid var(--parchment);outline-offset:1px;}
+  .steps-row{display:flex;gap:8px;flex:1;}
+
+  .beat-groups{display:flex;gap:8px;flex:1;}
+  .beat-group{display:flex;gap:4px;flex:1;}
+
+  .vol-row{
+    display:flex;align-items:center;gap:10px;margin-bottom:14px;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 14px;
+  }
+  .vol-row span{font-size:14px;color:var(--parchment-dim);}
+  .vol-row input[type="range"]{
+    flex:1;height:4px;-webkit-appearance:none;background:var(--panel-hi);
+    border-radius:2px;outline:none;
+  }
+  .vol-row input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--brass);cursor:pointer;
+  }
+
+  .foot-note{text-align:center;color:var(--parchment-dim);font-size:11.5px;margin-top:20px;line-height:1.6;opacity:.75;}
+
+  /* ── Metronome ── */
+  .met-section{margin-top:28px;border-top:1px solid var(--line);padding-top:22px;}
+  .met-controls{display:flex;gap:10px;align-items:stretch;margin-bottom:12px;}
+  .met-bpm-row{
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:8px 14px;display:flex;align-items:center;gap:10px;min-width:118px;
+  }
+  .met-bpm-row button{
+    width:26px;height:26px;border-radius:50%;background:var(--panel-hi);
+    border:1px solid var(--line);color:var(--parchment);font-size:15px;cursor:pointer;flex-shrink:0;
+  }
+  .met-btn-play{
+    flex:1;background:var(--panel-hi);border:1px solid var(--led-hat);color:var(--led-hat);
+    font-weight:700;font-size:14px;padding:10px;border-radius:12px;cursor:pointer;
+    transition:background .12s, color .12s;
+  }
+  .met-btn-play.active{background:var(--led-hat);color:var(--ink);}
+  .met-btn-tap{
+    background:var(--panel);border:1px solid var(--line);color:var(--parchment-dim);
+    font-size:14px;font-weight:600;padding:10px 16px;border-radius:12px;cursor:pointer;
+    transition:background .08s;
+  }
+  .met-btn-tap:active{background:var(--panel-hi);}
+  .met-vol-row{
+    display:flex;align-items:center;gap:10px;margin-bottom:12px;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 14px;
+  }
+  .met-vol-row span{font-size:14px;color:var(--parchment-dim);}
+  .met-vol-row input[type="range"]{
+    flex:1;height:4px;-webkit-appearance:none;background:var(--panel-hi);
+    border-radius:2px;outline:none;
+  }
+  .met-vol-row input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--led-hat);cursor:pointer;
+  }
+  .met-lights{display:flex;gap:8px;margin-bottom:12px;}
+  .met-light{
+    flex:1;height:18px;border-radius:5px;background:var(--led-off);
+    border:1px solid rgba(238,230,214,0.07);transition:background .05s, box-shadow .05s;
+  }
+  .met-light.inactive{opacity:.18;}
+  .met-light.on-accent{background:var(--led-hat);box-shadow:0 0 10px rgba(127,166,149,0.65);}
+  .met-light.on-tick{background:rgba(127,166,149,0.3);}
+  .met-sig-row{display:flex;align-items:center;gap:8px;}
+  .met-sig-label{font-size:11px;color:var(--parchment-dim);letter-spacing:.05em;text-transform:uppercase;}
+  .met-sig-btn{
+    background:var(--panel);border:1px solid var(--line);color:var(--parchment-dim);
+    font-family:'Source Sans 3',sans-serif;font-size:12px;font-weight:600;
+    padding:5px 13px;border-radius:8px;cursor:pointer;
+    transition:background .1s, color .1s, border-color .1s;
+  }
+  .met-sig-btn.active{background:var(--led-hat);color:var(--ink);border-color:var(--led-hat);}
+
+  /* Export modal */
+  .export-modal{
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:1500;
+    align-items:center;justify-content:center;
+  }
+  .export-modal.open{display:flex;}
+  .export-box{
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:22px 20px 18px;width:min(520px,94vw);box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  }
+  .export-box h3{
+    font-family:'Fraunces',serif;font-size:17px;margin:0 0 14px;color:var(--parchment);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .export-close{background:none;border:none;color:var(--parchment-dim);font-size:22px;cursor:pointer;line-height:1;}
+  .export-fields{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+  .export-fields input,.export-fields textarea{
+    background:var(--panel-hi);border:1px solid var(--line);color:var(--parchment);
+    font-family:'Source Sans 3',sans-serif;font-size:13px;padding:8px 10px;
+    border-radius:8px;outline:none;resize:vertical;
+  }
+  .export-fields input:focus,.export-fields textarea:focus{border-color:var(--brass);}
+  .export-fields label{font-size:11px;color:var(--parchment-dim);letter-spacing:.05em;text-transform:uppercase;margin-bottom:-4px;}
+  .export-code{
+    background:#0d0c09;border:1px solid var(--line);border-radius:8px;
+    padding:12px;font-family:'Space Mono',monospace;font-size:11.5px;
+    color:#c8d0b0;white-space:pre;overflow-x:auto;margin-bottom:10px;line-height:1.6;
+  }
+  .export-copy-btn{
+    width:100%;background:var(--brass);color:var(--ink);font-weight:700;font-size:14px;
+    padding:11px;border-radius:10px;border:none;cursor:pointer;letter-spacing:.02em;
+    transition:opacity .1s;
+  }
+  .export-copy-btn:active{opacity:.8;}
+  .export-save-btn{margin-top:8px;background:var(--led-hat);}
+
+  /* Dropbox auth button */
+  .dbx-auth-btn{
+    background:var(--panel);border:1px solid var(--line);color:var(--parchment-dim);
+    font-family:'Source Sans 3',sans-serif;font-size:11px;font-weight:600;
+    padding:5px 12px;border-radius:8px;cursor:pointer;letter-spacing:.04em;
+    transition:background .12s,color .12s,border-color .12s;
+  }
+  .dbx-auth-btn:hover{background:var(--panel-hi);color:var(--parchment);}
+  .dbx-auth-btn.connected{color:var(--led-hat);border-color:var(--led-hat);}
+
+  /* YouTube modal */
+  .yt-modal{
+    display:none;position:fixed;top:0;left:0;right:0;
+    background:#1a1a2e;z-index:1400;
+    flex-direction:column;align-items:center;
+    padding:12px 16px 16px;
+    box-shadow:0 4px 20px rgba(0,0,0,0.4);
+    border-bottom:2px solid #ff0000;
+  }
+  .yt-modal.open{display:flex;}
+  .yt-modal-header{display:flex;width:100%;max-width:700px;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .yt-modal-title{color:#eee;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin-right:10px;}
+  .yt-modal-close{background:none;border:none;color:#888;font-size:22px;cursor:pointer;padding:0 4px;}
+  .yt-modal-close:hover{color:#fff;}
+  .yt-track-list{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;justify-content:center;max-width:700px;width:100%;}
+  .yt-track-btn{padding:4px 10px;border-radius:6px;border:1px solid #555;background:#333;color:#ccc;cursor:pointer;font-size:11px;white-space:nowrap;}
+  .yt-track-btn.active{background:#c00;color:#fff;border-color:#f00;}
+  .yt-iframe-wrap{width:100%;max-width:700px;}
+  .yt-iframe-wrap iframe{width:100%;height:200px;border:none;border-radius:6px;}
+
+  /* JSON editor modal */
+  .json-modal{
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:1600;
+    align-items:flex-start;justify-content:center;padding:32px 10px 20px;overflow-y:auto;
+  }
+  .json-modal.open{display:flex;}
+  .json-box{
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:20px 20px 16px;width:min(700px,98vw);
+    display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,0.65);
+  }
+  .json-box h3{
+    font-family:'Fraunces',serif;font-size:17px;margin:0;color:var(--parchment);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .json-schema{
+    background:#0d0c09;border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;font-family:'Space Mono',monospace;font-size:11px;
+    color:#7fa695;line-height:1.8;white-space:pre;overflow-x:auto;
+  }
+  .json-replace-select{
+    background:#0d0c09;border:1px solid var(--line);border-radius:8px;
+    color:#c8d0b0;font-family:'Space Mono',monospace;font-size:11.5px;
+    padding:8px 12px;width:100%;outline:none;cursor:pointer;
+  }
+  .json-replace-select:focus{border-color:var(--brass);}
+  .json-append-input{
+    background:#0d0c09;border:1px solid var(--line);border-radius:8px;
+    color:#c8d0b0;font-family:'Space Mono',monospace;font-size:11.5px;
+    padding:8px 12px;width:100%;outline:none;box-sizing:border-box;
+  }
+  .json-append-input:focus{border-color:var(--led-tone);}
+  .json-append-input::placeholder{color:#4a4a3a;}
+  .json-label{font-size:11px;color:var(--parchment-dim);font-family:'Source Sans 3',sans-serif;margin:0;}
+  .json-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .json-btn{
+    flex:1;padding:10px;border-radius:10px;border:none;cursor:pointer;
+    font-family:'Source Sans 3',sans-serif;font-size:13px;font-weight:700;
+    letter-spacing:.02em;transition:opacity .1s;min-width:120px;
+  }
+  .json-btn:active{opacity:.8;}
+  .json-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .json-btn-validate{background:var(--panel-hi);color:var(--parchment);border:1px solid var(--line);}
+  .json-btn-reload{background:var(--panel-hi);color:var(--parchment-dim);border:1px solid var(--line);}
+  .json-btn-apply{background:var(--brass);color:var(--ink);}
+  .json-btn-save{background:var(--led-hat);color:var(--ink);}
+  .json-status{font-size:12px;min-height:16px;text-align:center;padding:2px 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div style="display:flex;align-items:center;justify-content:space-between;">
+    <div class="eyebrow">Rhythm machine</div>
+    <button class="dbx-auth-btn" id="dbxAuthBtn" title="Sign in to Dropbox to save presets">Dropbox</button>
+  </div>
+  <h1>Famous Beats</h1>
+  <div class="sub">Pick an iconic rhythmic pattern, dial in the tempo, and loop it. Tap any cell to remix the pattern yourself — it's your beat maker underneath the presets.</div>
+
+  <div class="control-row">
+    <select id="presetSelect"></select>
+    <div class="bpm-box">
+      <button id="bpmDown">−</button>
+      <div>
+        <div class="bpm-val" id="bpmVal">120</div>
+        <div class="bpm-label">BPM</div>
+      </div>
+      <button id="bpmUp">+</button>
+    </div>
+  </div>
+
+  <div class="tempo-row" id="tempoRow"></div>
+
+  <div class="vol-row">
+    <span>&#128264;</span>
+    <input type="range" id="volSlider" min="0" max="100" value="80">
+    <span>&#128266;</span>
+  </div>
+
+  <p class="preset-desc" id="presetDesc"></p>
+
+  <div class="transport">
+    <button class="btn-play" id="playBtn">▶ Play(/)</button>
+    <button class="btn-clear" id="clearBtn">Clear</button>
+    <button class="btn-clear" id="exportBtn" title="Save / export current pattern" style="border-color:var(--brass);color:var(--brass);">Save / Export</button>
+    <button class="btn-clear" id="loadBtn" title="Reload presets from the Dropbox file (signs in if needed) — replaces all dropdown items; unsaved board edits are lost">Load</button>
+    <button class="btn-clear" id="editJsonBtn" title="Edit the full presets JSON and save to Dropbox" style="border-color:var(--led-tone);color:var(--led-tone);">Edit JSON</button>
+    <button title="YouTube music" onclick="toggleYtModal()" style="width:32px;height:32px;border:none;border-radius:8px;cursor:pointer;background:rgb(224,224,224);display:flex;align-items:center;justify-content:center;padding:0"><svg width="20" height="14" viewBox="0 0 68 48"><path d="M66.5 7.7s-.7-4.7-2.7-6.8C61-1.7 58-1.7 56.6-1.9 47.3-2.6 34-2.6 34-2.6s-13.3 0-22.6.7C10-1.7 7-1.7 4.2.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.8v5.2c0 5.5.7 11.1.7 11.1s.7 4.7 2.7 6.8c2.8 2.6 6.4 2.5 8 2.8 5.8.5 24.8.7 24.8.7s13.3 0 22.6-.7c1.4-.2 4.4-.2 7.2-2.8 2-2.1 2.7-6.8 2.7-6.8s.7-5.5.7-11.1v-5.2c0-5.6-.7-11.1-.7-11.1z" fill="red"/><path d="M27 33V13l18.2 10L27 33z" fill="white"/></svg></button>
+  </div>
+
+  <div class="sequencer" id="sequencer"></div>
+
+  <div class="foot-note">Sounds are synthesized in the browser — no samples used.<br>Patterns represent the classic rhythmic feel of each style, not a reproduced recording.</div>
+
+  <div class="foot-note" style="margin-top:14px;text-align:left;line-height:2;">
+    <span style="color:var(--brass);font-weight:700;letter-spacing:.08em;font-size:10.5px;text-transform:uppercase;">Keyboard shortcuts</span><br>
+    <span style="opacity:.9;"><kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">Enter</kbd> Play / Stop beats &nbsp;&nbsp;
+    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">o</kbd> <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">/</kbd> Play / Stop beats &nbsp;&nbsp;
+    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">p</kbd> Start / Stop metronome</span><br>
+    <span style="opacity:.9;"><kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">← →</kbd> Previous / Next preset &nbsp;&nbsp;
+    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">[ ]</kbd> BPM −2 / +2 (both)</span><br>
+    <span style="opacity:.9;"><kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">- +</kbd> Volume −5 / +5 (both) &nbsp;&nbsp;
+    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">q–i</kbd> Tempo preset (Largo → Prestissimo) &nbsp;&nbsp;
+    <kbd style="background:var(--panel-hi);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:11px;">, .</kbd> Tempo step slower / faster</span>
+  </div>
+
+  <!-- Metronome -->
+  <div class="met-section">
+    <div class="eyebrow">Metronome</div>
+    <div class="met-controls">
+      <div class="met-bpm-row">
+        <button id="metBpmDown">−</button>
+        <div>
+          <div class="bpm-val" id="metBpmVal">120</div>
+          <div class="bpm-label">BPM</div>
+        </div>
+        <button id="metBpmUp">+</button>
+      </div>
+      <button class="met-btn-play" id="metPlayBtn">▶ Start</button>
+      <button class="met-btn-tap" id="metTapBtn">Tap</button>
+    </div>
+    <div class="met-vol-row">
+      <span>&#128264;</span>
+      <input type="range" id="metVolSlider" min="0" max="100" value="50">
+      <span>&#128266;</span>
+    </div>
+    <div class="met-lights" id="metLights">
+      <div class="met-light" id="metL0"></div>
+      <div class="met-light" id="metL1"></div>
+      <div class="met-light" id="metL2"></div>
+      <div class="met-light" id="metL3"></div>
+    </div>
+    <div class="met-sig-row">
+      <span class="met-sig-label">Time sig</span>
+      <button class="met-sig-btn active" data-beats="4">4/4</button>
+      <button class="met-sig-btn" data-beats="3">3/4</button>
+      <button class="met-sig-btn" data-beats="2">2/4</button>
+    </div>
+  </div>
+</div>
+
+<!-- JSON editor modal -->
+<div class="json-modal" id="jsonModal">
+  <div class="json-box">
+    <h3>Edit Presets JSON <button class="export-close" id="jsonClose">&times;</button></h3>
+    <div class="json-schema" id="jsonSchemaEl">— open Edit JSON to see selected preset —</div>
+    <span class="json-label">Replace preset at index:</span>
+    <select class="json-replace-select" id="jsonReplaceSelect"></select>
+    <span class="json-label">Or append new (type name — leave blank to replace above):</span>
+    <input class="json-append-input" id="jsonAppendInput" type="text" placeholder="New preset name…" autocomplete="off">
+    <div class="json-actions">
+      <button class="dbx-auth-btn" id="jsonDbxAuthBtn" title="Sign in to Dropbox to save presets">Dropbox</button>
+      <button class="json-btn json-btn-reload" id="jsonReloadBtn">Reload from Dropbox</button>
+      <button class="json-btn json-btn-apply" id="jsonApplyBtn">Apply to dropdown</button>
+      <button class="json-btn json-btn-save" id="jsonSaveBtn">Save to Dropbox</button>
+    </div>
+    <div class="json-status" id="jsonStatus"></div>
+  </div>
+</div>
+
+<!-- Export modal -->
+<div class="export-modal" id="exportModal">
+  <div class="export-box">
+    <h3>Save / export preset <button class="export-close" id="exportClose">&times;</button></h3>
+    <div class="export-fields">
+      <label>Name</label>
+      <input id="exportName" type="text" placeholder="e.g. My groove" autocomplete="off">
+      <label>Description</label>
+      <textarea id="exportDesc" rows="2" placeholder="Describe the feel…"></textarea>
+    </div>
+    <div class="export-code" id="exportCode"></div>
+    <button class="export-copy-btn" id="exportCopyBtn">Copy to clipboard</button>
+    <button class="export-copy-btn export-save-btn" id="exportSaveDbxBtn">Append to Dropbox</button>
+    <div id="exportSaveStatus" style="font-size:12px;color:var(--led-hat);min-height:16px;margin-top:6px;text-align:center;"></div>
+  </div>
+</div>
+
+<script src="famous-beats-presets.js"></script>
+<script>
+(function(){
+  const STEPS = 16;
+  const TRACKS = ['kick','snare','hat','crash','tone'];
+  const TRACK_LABELS = {kick:'Kick', snare:'Snare', hat:'Hi-Hat', crash:'Gong', tone:'Tone'};
+
+  function pattern(steps){
+    const arr = new Array(STEPS).fill(0);
+    steps.forEach(s => arr[s] = 1);
+    return arr;
+  }
+
+  // ── Presets source ─────────────────────────────────────────────────────────
+  // Loads from /api/presets which reads PRESETS_DROPBOX_URL from Vercel env vars.
+  // Update the env var in Vercel dashboard when the Dropbox link changes — no commit needed.
+  const PRESETS_API_URL = '/api/presets';
+
+  // ── Dropbox preset sync (OAuth PKCE, ported from index.html) ─────────────
+  const DROPBOX_PRESETS_PATH = '/vercel/famous-beats-presets.json';
+  const dbxIsLocalhost = ['localhost','127.0.0.1'].includes(window.location.hostname);
+  let dropboxAccessToken = null;
+
+  function generateCodeVerifier(){
+    const array = new Uint8Array(64);
+    crypto.getRandomValues(array);
+    return btoa(String.fromCharCode(...array))
+      .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  async function generateCodeChallenge(verifier){
+    const data = new TextEncoder().encode(verifier);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return btoa(String.fromCharCode(...new Uint8Array(digest)))
+      .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  async function fetchDropboxAppKey(){
+    if(dbxIsLocalhost){
+      let key = localStorage.getItem('dropbox-app-key') || '';
+      if(!key){
+        key = prompt('Enter your Dropbox App Key (saved to localStorage for localhost):') || '';
+        if(key) localStorage.setItem('dropbox-app-key', key);
+      }
+      return key;
+    }
+    try{
+      const res = await fetch('/api/dropbox-key');
+      const data = await res.json();
+      return data.key || '';
+    }catch{ return ''; }
+  }
+
+  const dbxAuthBtn = document.getElementById('dbxAuthBtn');
+  const jsonDbxAuthBtn = document.getElementById('jsonDbxAuthBtn');
+  function updateDbxAuthBtn(){
+    const btns = [dbxAuthBtn, jsonDbxAuthBtn];
+    if(dropboxAccessToken){
+      btns.forEach(b => { b.textContent = '● Dropbox'; b.classList.add('connected'); b.title = 'Connected — click to sign out'; });
+    } else {
+      btns.forEach(b => { b.textContent = 'Dropbox'; b.classList.remove('connected'); b.title = 'Sign in to Dropbox to save presets'; });
+    }
+  }
+  jsonDbxAuthBtn.addEventListener('click', () => {
+    dropboxAccessToken ? dbxSignOut() : dbxSignIn();
+  });
+
+  async function dbxSignIn(){
+    const appKey = await fetchDropboxAppKey();
+    if(!appKey){ alert('Dropbox App Key not configured'); return; }
+    // Stash the working grid so the OAuth redirect doesn't lose an unsaved remix
+    sessionStorage.setItem('famous_beats_pending', JSON.stringify({
+      grid: grid, bpm: bpm,
+      name: exportName.value.trim(), desc: exportDesc.value.trim(),
+      reopenSaveModal: exportModal.classList.contains('open'),
+    }));
+    const verifier = generateCodeVerifier();
+    const challenge = await generateCodeChallenge(verifier);
+    sessionStorage.setItem('dropbox_code_verifier', verifier);
+    const redirectUri = window.location.origin + window.location.pathname;
+    window.location.href = 'https://www.dropbox.com/oauth2/authorize?client_id=' + appKey +
+      '&response_type=code&code_challenge=' + challenge +
+      '&code_challenge_method=S256&redirect_uri=' + encodeURIComponent(redirectUri) +
+      '&token_access_type=online';
+  }
+
+  async function dbxHandleOAuthRedirect(){
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if(!code) return;
+    const verifier = sessionStorage.getItem('dropbox_code_verifier');
+    const appKey = await fetchDropboxAppKey();
+    if(!verifier || !appKey) return;
+    const redirectUri = window.location.origin + window.location.pathname;
+    try{
+      const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          code: code, grant_type: 'authorization_code', client_id: appKey,
+          redirect_uri: redirectUri, code_verifier: verifier,
+        }).toString(),
+      });
+      const data = await res.json();
+      if(data.access_token){
+        dropboxAccessToken = data.access_token;
+        sessionStorage.removeItem('dropbox_code_verifier');
+      } else {
+        console.error('Dropbox auth failed:', data);
+      }
+    }catch(err){ console.error('Dropbox auth error:', err); }
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  async function dbxSignOut(){
+    if(dropboxAccessToken){
+      try{
+        await fetch('https://api.dropboxapi.com/2/auth/token/revoke', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + dropboxAccessToken },
+        });
+      }catch{ /* ignore */ }
+    }
+    dropboxAccessToken = null;
+    updateDbxAuthBtn();
+  }
+
+  function dbxHandle401(){
+    dropboxAccessToken = null;
+    updateDbxAuthBtn();
+  }
+
+  async function dropboxDownloadFile(path){
+    if(!dropboxAccessToken) throw new Error('Not signed into Dropbox');
+    const response = await fetch('https://content.dropboxapi.com/2/files/download', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + dropboxAccessToken,
+        'Dropbox-API-Arg': JSON.stringify({ path: path }),
+      },
+    });
+    if(response.status === 401){ dbxHandle401(); throw new Error('Dropbox session expired — sign in again'); }
+    if(!response.ok) throw new Error('Download failed (' + response.status + ')');
+    return await response.text();
+  }
+
+  async function dropboxUploadFile(path, content){
+    if(!dropboxAccessToken) throw new Error('Not signed into Dropbox');
+    const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + dropboxAccessToken,
+        'Dropbox-API-Arg': JSON.stringify({ path: path, mode: { '.tag': 'overwrite' }, mute: true }),
+        'Content-Type': 'application/octet-stream',
+      },
+      body: content,
+    });
+    if(response.status === 401){ dbxHandle401(); throw new Error('Dropbox session expired — sign in again'); }
+    if(!response.ok) throw new Error('Upload failed (' + response.status + ')');
+    return true;
+  }
+
+  // ── Save / load beats ────────────────────────────────────────────────────
+  // loadBeats: Dropbox file (when signed in), else bundled famous-beats-presets.js.
+  // Returns { data, source } so the UI can show where the presets came from.
+  async function loadBeats(){
+    if(dropboxAccessToken){
+      try{
+        return { data: JSON.parse(await dropboxDownloadFile(DROPBOX_PRESETS_PATH)), source: 'Dropbox' };
+      }catch(e){ console.warn('Dropbox load failed, using bundled file:', e.message); }
+    }
+    return { data: window.FAMOUS_BEATS_PRESETS || [], source: 'bundled .js' };
+  }
+
+  // saveBeatToDropbox: always APPEND the current pattern to the Dropbox presets
+  // JSON (never overwrites existing entries), then add it to the dropdown.
+  async function saveBeatToDropbox(name, desc){
+    const preset = {
+      name: name, bpm: bpm, desc: desc,
+      kick: [...grid.kick], snare: [...grid.snare], hat: [...grid.hat],
+      crash: [...grid.crash], tone: [...grid.tone],
+    };
+    // Base off the freshest Dropbox copy so appends from elsewhere aren't lost
+    let arr;
+    try{ arr = JSON.parse(await dropboxDownloadFile(DROPBOX_PRESETS_PATH)); }
+    catch(e){ arr = presets.slice(); }
+    if(!Array.isArray(arr)) arr = [];
+    arr.push(preset);
+    await dropboxUploadFile(DROPBOX_PRESETS_PATH, JSON.stringify(arr, null, 2));
+
+    presets.push(preset);
+    const opt = document.createElement('option');
+    opt.value = presets.length - 1;
+    opt.textContent = name;
+    presetSelect.appendChild(opt);
+    presetSelect.value = presets.length - 1;
+  }
+
+  function restorePendingWork(){
+    let pending = null;
+    try{ pending = JSON.parse(sessionStorage.getItem('famous_beats_pending')); }catch(e){}
+    sessionStorage.removeItem('famous_beats_pending');
+    if(!pending || !pending.grid) return null;
+    grid = pending.grid;
+    TRACKS.forEach(t => { if(!grid[t]) grid[t] = new Array(STEPS).fill(0); });
+    bpm = pending.bpm || bpm;
+    bpmVal.textContent = bpm;
+    updateTempoHighlight();
+    renderGrid();
+    return pending;
+  }
+
+  let presets = [];
+
+  let grid = {};
+  let bpm = 120;
+  let playing = false;
+  let audioCtx = null;
+  let currentStep = 0;
+  let displayStep = 0;
+  let nextNoteTime = 0;
+  let schedulerTimer = null;
+  const scheduleAheadTime = 0.15;
+  const lookahead = 25;
+  let stepDuration = 0.125; // seconds, set from bpm
+  const swing = 0.25;      // 0 = straight, ~0.2–0.3 = lofi swing
+  const humanize = 0.004;  // ± seconds of random drift
+
+  function stepTime(step, stepDur) {
+    const isOffBeat = step % 2 === 1;
+    const swingOffset = isOffBeat ? stepDur * swing : 0;
+    const jitter = (Math.random() * 2 - 1) * humanize;
+    return step * stepDur + swingOffset + jitter;
+  }
+
+  const presetSelect = document.getElementById('presetSelect');
+  const presetDesc = document.getElementById('presetDesc');
+  const bpmVal = document.getElementById('bpmVal');
+  const sequencerEl = document.getElementById('sequencer');
+  const playBtn = document.getElementById('playBtn');
+  const clearBtn = document.getElementById('clearBtn');
+
+  const TEMPOS = [
+    {name:'Grave', bpm:30, key:null},
+    {name:'Largo', bpm:53, key:'q'},
+    {name:'Adagio', bpm:71, key:'w'},
+    {name:'Andante', bpm:92, key:'e'},
+    {name:'Moderato', bpm:114, key:'r'},
+    {name:'Allegro', bpm:138, key:'t'},
+    {name:'Vivace', bpm:176, key:'y'},
+    {name:'Presto', bpm:192, key:'u'},
+    {name:'Prestissimo', bpm:220, key:'i'},
+  ];
+
+  function applyTempo(t){
+    bpm = t.bpm;
+    bpmVal.textContent = bpm;
+    updateTempoHighlight();
+    metBpm = t.bpm;
+    document.getElementById('metBpmVal').textContent = metBpm;
+  }
+
+  const tempoRow = document.getElementById('tempoRow');
+  TEMPOS.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'tempo-btn';
+    btn.textContent = t.key ? t.key + ' ' + t.name : t.name;
+    btn.title = t.bpm + ' BPM';
+    btn.addEventListener('click', () => applyTempo(t));
+    tempoRow.appendChild(btn);
+  });
+
+  function updateTempoHighlight(){
+    tempoRow.querySelectorAll('.tempo-btn').forEach((btn, i) => {
+      btn.classList.toggle('active', bpm === TEMPOS[i].bpm);
+    });
+  }
+
+  function initPresets(loaded) {
+    presets = (loaded && loaded.length) ? loaded : (window.FAMOUS_BEATS_PRESETS || []);
+    presets.forEach((p, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = p.name;
+      presetSelect.appendChild(opt);
+    });
+    if(presets.length) loadPreset(0);
+  }
+
+  function loadPreset(i){
+    const p = presets[i];
+    grid = {
+      kick: [...p.kick], snare: [...p.snare], hat: [...p.hat], tone: [...p.tone],
+      crash: p.crash ? [...p.crash] : new Array(STEPS).fill(0)
+    };
+    bpm = p.bpm;
+    bpmVal.textContent = bpm;
+    presetDesc.textContent = p.desc;
+    updateTempoHighlight();
+    renderGrid();
+  }
+
+  function renderGrid(){
+    sequencerEl.innerHTML = '';
+    TRACKS.forEach(track => {
+      const row = document.createElement('div');
+      row.className = 'track';
+      const label = document.createElement('div');
+      label.className = 'track-label';
+      label.textContent = TRACK_LABELS[track];
+      row.appendChild(label);
+
+      const groupsWrap = document.createElement('div');
+      groupsWrap.className = 'beat-groups';
+      for(let g=0; g<4; g++){
+        const group = document.createElement('div');
+        group.className = 'beat-group';
+        for(let s=0; s<4; s++){
+          const stepIdx = g*4+s;
+          const cell = document.createElement('div');
+          cell.className = 'step' + (grid[track][stepIdx] ? ' on ' + track : '');
+          cell.dataset.track = track;
+          cell.dataset.step = stepIdx;
+          cell.addEventListener('click', () => {
+            grid[track][stepIdx] = grid[track][stepIdx] ? 0 : 1;
+            renderGrid();
+          });
+          group.appendChild(cell);
+        }
+        groupsWrap.appendChild(group);
+      }
+      row.appendChild(groupsWrap);
+      sequencerEl.appendChild(row);
+    });
+    markPlayhead();
+    refreshJsonSchema();
+  }
+
+  function markPlayhead(){
+    document.querySelectorAll('.step').forEach(el => {
+      el.classList.toggle('playhead', playing && +el.dataset.step === displayStep);
+    });
+  }
+
+  presetSelect.addEventListener('change', () => {
+    stop();
+    loadPreset(+presetSelect.value);
+    start();
+  });
+
+  document.getElementById('bpmUp').addEventListener('click', () => {
+    bpm = Math.min(220, bpm+2); bpmVal.textContent = bpm; updateTempoHighlight();
+  });
+  document.getElementById('bpmDown').addEventListener('click', () => {
+    bpm = Math.max(40, bpm-2); bpmVal.textContent = bpm; updateTempoHighlight();
+  });
+
+  clearBtn.addEventListener('click', () => {
+    TRACKS.forEach(t => grid[t] = new Array(STEPS).fill(0));
+    renderGrid();
+  });
+
+  let masterGain = null;
+  const volSlider = document.getElementById('volSlider');
+  volSlider.addEventListener('input', () => {
+    if(masterGain) masterGain.gain.value = volSlider.value / 100;
+  });
+
+  function ensureAudio(){
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(!masterGain){
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = volSlider.value / 100;
+      masterGain.connect(audioCtx.destination);
+    }
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function playKick(time){
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.frequency.setValueAtTime(150, time);
+    osc.frequency.exponentialRampToValueAtTime(45, time+0.12);
+    gain.gain.setValueAtTime(0.9, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time+0.22);
+    osc.connect(gain); gain.connect(masterGain);
+    osc.start(time); osc.stop(time+0.25);
+  }
+  function playSnare(time){
+    const bufferSize = audioCtx.sampleRate * 0.15;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1) * (1 - i/bufferSize);
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'highpass'; filter.frequency.value = 1200;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.55, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time+0.15);
+    noise.connect(filter); filter.connect(gain); gain.connect(masterGain);
+    noise.start(time); noise.stop(time+0.15);
+
+    const osc = audioCtx.createOscillator();
+    const oGain = audioCtx.createGain();
+    osc.frequency.value = 190;
+    oGain.gain.setValueAtTime(0.3, time);
+    oGain.gain.exponentialRampToValueAtTime(0.001, time+0.1);
+    osc.connect(oGain); oGain.connect(masterGain);
+    osc.start(time); osc.stop(time+0.1);
+  }
+  function playHat(time){
+    const bufferSize = audioCtx.sampleRate * 0.05;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1);
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'highpass'; filter.frequency.value = 7000;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.28, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time+0.04);
+    noise.connect(filter); filter.connect(gain); gain.connect(masterGain);
+    noise.start(time); noise.stop(time+0.05);
+  }
+  function playCrash(time){
+    // metallic, ringing "gong" hit: layered detuned tones + long noise wash
+    const freqs = [180, 243, 310, 410, 560];
+    freqs.forEach((f, idx) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = f * (1 + idx*0.003);
+      gain.gain.setValueAtTime(0.16 / (idx+1), time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.9);
+      osc.connect(gain); gain.connect(masterGain);
+      osc.start(time); osc.stop(time + 0.9);
+    });
+    const bufferSize = audioCtx.sampleRate * 0.9;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1);
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass'; filter.frequency.value = 3500; filter.Q.value = 0.6;
+    const nGain = audioCtx.createGain();
+    nGain.gain.setValueAtTime(0.22, time);
+    nGain.gain.exponentialRampToValueAtTime(0.001, time + 0.85);
+    noise.connect(filter); filter.connect(nGain); nGain.connect(masterGain);
+    noise.start(time); noise.stop(time + 0.85);
+  }
+  function playTone(time){
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = 330;
+    gain.gain.setValueAtTime(0.4, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time+0.18);
+    osc.connect(gain); gain.connect(masterGain);
+    osc.start(time); osc.stop(time+0.2);
+  }
+
+  function scheduleStep(stepIdx, time){
+    if(grid.kick[stepIdx]) playKick(time);
+    if(grid.snare[stepIdx]) playSnare(time);
+    if(grid.hat[stepIdx]) playHat(time);
+    if(grid.crash[stepIdx]) playCrash(time);
+    if(grid.tone[stepIdx]) playTone(time);
+    const delay = Math.max(0, (time - audioCtx.currentTime) * 1000);
+    setTimeout(() => { displayStep = stepIdx; markPlayhead(); }, delay);
+  }
+
+  function scheduler(){
+    stepDuration = (60 / bpm) / 4; // 16th notes
+    while(nextNoteTime < audioCtx.currentTime + scheduleAheadTime){
+      const offset = stepTime(currentStep, stepDuration) - currentStep * stepDuration;
+      scheduleStep(currentStep, nextNoteTime + offset);
+      nextNoteTime += stepDuration;
+      currentStep = (currentStep + 1) % STEPS;
+    }
+    schedulerTimer = setTimeout(scheduler, lookahead);
+  }
+
+  function start(){
+    if(playing) return;
+    ensureAudio();
+    playing = true;
+    currentStep = 0;
+    displayStep = 0;
+    nextNoteTime = audioCtx.currentTime + 0.05;
+    playBtn.textContent = '⏸ Stop(/)';
+    playBtn.classList.add('playing');
+    scheduler();
+  }
+  function stop(){
+    playing = false;
+    if(schedulerTimer) clearTimeout(schedulerTimer);
+    playBtn.textContent = '▶ Play(/)';
+    playBtn.classList.remove('playing');
+    markPlayhead();
+  }
+  playBtn.addEventListener('click', () => { playing ? stop() : start(); });
+
+  document.addEventListener('keydown', (e) => {
+    if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      playing ? stop() : start();
+    } else if(e.key === 'ArrowRight'){
+      e.preventDefault();
+      const next = Math.min(presets.length - 1, +presetSelect.value + 1);
+      presetSelect.value = next;
+      presetSelect.dispatchEvent(new Event('change'));
+    } else if(e.key === 'ArrowLeft'){
+      e.preventDefault();
+      const prev = Math.max(0, +presetSelect.value - 1);
+      presetSelect.value = prev;
+      presetSelect.dispatchEvent(new Event('change'));
+    } else if(e.key === 'ArrowUp'){
+      e.preventDefault();
+      const up = Math.max(0, +presetSelect.value - 1);
+      presetSelect.value = up;
+      presetSelect.dispatchEvent(new Event('change'));
+    } else if(e.key === 'ArrowDown'){
+      e.preventDefault();
+      const down = Math.min(presets.length - 1, +presetSelect.value + 1);
+      presetSelect.value = down;
+      presetSelect.dispatchEvent(new Event('change'));
+    } else if(e.key === ']'){
+      e.preventDefault();
+      bpm = Math.min(220, bpm+2); bpmVal.textContent = bpm; updateTempoHighlight();
+      metBpm = Math.min(240, metBpm+2); document.getElementById('metBpmVal').textContent = metBpm;
+    } else if(e.key === '['){
+      e.preventDefault();
+      bpm = Math.max(40, bpm-2); bpmVal.textContent = bpm; updateTempoHighlight();
+      metBpm = Math.max(40, metBpm-2); document.getElementById('metBpmVal').textContent = metBpm;
+    } else if(e.key === '.'){
+      e.preventDefault();
+      const next = TEMPOS.find(t => t.bpm > bpm);
+      if(next) applyTempo(next);
+    } else if(e.key === ','){
+      e.preventDefault();
+      const prev = [...TEMPOS].reverse().find(t => t.bpm < bpm);
+      if(prev) applyTempo(prev);
+    } else if(e.key === '+' || e.key === '='){
+      e.preventDefault();
+      const newVol = Math.min(100, +volSlider.value + 5);
+      volSlider.value = newVol;
+      if(masterGain) masterGain.gain.value = newVol / 100;
+      const newMetVol = Math.min(100, +document.getElementById('metVolSlider').value + 5);
+      document.getElementById('metVolSlider').value = newMetVol;
+      metVolume = newMetVol / 100;
+      if(metGain) metGain.gain.value = metVolume;
+    } else if(e.key === '-'){
+      e.preventDefault();
+      const newVol = Math.max(0, +volSlider.value - 5);
+      volSlider.value = newVol;
+      if(masterGain) masterGain.gain.value = newVol / 100;
+      const newMetVol = Math.max(0, +document.getElementById('metVolSlider').value - 5);
+      document.getElementById('metVolSlider').value = newMetVol;
+      metVolume = newMetVol / 100;
+      if(metGain) metGain.gain.value = metVolume;
+    } else if(e.key === 'o' || e.key === '/'){
+      e.preventDefault();
+      playing ? stop() : start();
+    } else if(e.key === 'p'){
+      e.preventDefault();
+      metIsPlaying ? metStop() : metStart();
+    } else {
+      const t = TEMPOS.find(t => t.key === e.key);
+      if(t){ e.preventDefault(); applyTempo(t); }
+    }
+  });
+
+  // ── Metronome ──────────────────────────────────────────────────────────────
+  let metIsPlaying = false;
+  let metBpm = 120;
+  let metNextNoteTime = 0;
+  let metBeatIdx = 0;
+  let metTimerInterval = null;
+  let metVolume = 0.5;
+  let metPattern = [true, false, false, false]; // 4/4
+  let metGain = null;
+  let metTaps = [];
+
+  const metLights = [
+    document.getElementById('metL0'),
+    document.getElementById('metL1'),
+    document.getElementById('metL2'),
+    document.getElementById('metL3'),
+  ];
+
+  function ensureMetGain() {
+    ensureAudio();
+    if (!metGain) {
+      metGain = audioCtx.createGain();
+      metGain.gain.value = metVolume;
+      metGain.connect(audioCtx.destination);
+    }
+  }
+
+  function refreshMetLights() {
+    metLights.forEach((l, i) => {
+      l.classList.remove('on-accent', 'on-tick');
+      l.classList.toggle('inactive', i >= metPattern.length);
+    });
+  }
+
+  function flashMetLight(beatIdx, accent) {
+    metLights.forEach(l => l.classList.remove('on-accent', 'on-tick'));
+    const light = metLights[beatIdx];
+    if (light && !light.classList.contains('inactive')) {
+      light.classList.add(accent ? 'on-accent' : 'on-tick');
+      setTimeout(() => light.classList.remove('on-accent', 'on-tick'), 120);
+    }
+  }
+
+  function playMetClick(time, accent, beatIdx) {
+    const osc = audioCtx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(accent ? 880 : 660, time);
+    osc.frequency.exponentialRampToValueAtTime(accent ? 440 : 330, time + 0.05);
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(0.0001, time);
+    g.gain.exponentialRampToValueAtTime(accent ? 0.7 : 0.45, time + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, time + 0.08);
+    osc.connect(g);
+    g.connect(metGain);
+    osc.start(time);
+    osc.stop(time + 0.1);
+    const delay = Math.max(0, (time - audioCtx.currentTime) * 1000);
+    setTimeout(() => flashMetLight(beatIdx, accent), delay);
+  }
+
+  function metScheduler() {
+    while (metNextNoteTime < audioCtx.currentTime + 0.1) {
+      playMetClick(metNextNoteTime, metPattern[metBeatIdx], metBeatIdx);
+      metNextNoteTime += 60.0 / metBpm;
+      metBeatIdx = (metBeatIdx + 1) % metPattern.length;
+    }
+  }
+
+  function metStart() {
+    ensureMetGain();
+    metBeatIdx = 0;
+    metNextNoteTime = audioCtx.currentTime + 0.06;
+    metTimerInterval = setInterval(metScheduler, 25);
+    metIsPlaying = true;
+    document.getElementById('metPlayBtn').textContent = '⏸ Stop';
+    document.getElementById('metPlayBtn').classList.add('active');
+  }
+
+  function metStop() {
+    clearInterval(metTimerInterval);
+    metTimerInterval = null;
+    metIsPlaying = false;
+    metLights.forEach(l => l.classList.remove('on-accent', 'on-tick'));
+    document.getElementById('metPlayBtn').textContent = '▶ Start';
+    document.getElementById('metPlayBtn').classList.remove('active');
+  }
+
+  function metTapBeat() {
+    ensureMetGain();
+    const now = audioCtx.currentTime;
+    metTaps = metTaps.filter(x => now - x < 2.2);
+    metTaps.push(now);
+    if (metTaps.length >= 2) {
+      let sum = 0;
+      for (let i = 1; i < metTaps.length; i++) sum += metTaps[i] - metTaps[i - 1];
+      metBpm = Math.min(240, Math.max(40, Math.round(60 / (sum / (metTaps.length - 1)))));
+      document.getElementById('metBpmVal').textContent = metBpm;
+    }
+    const tapBeatIdx = (metTaps.length - 1) % metPattern.length;
+    playMetClick(now + 0.004, tapBeatIdx === 0, tapBeatIdx);
+    metNextNoteTime = now + 60 / metBpm;
+    metBeatIdx = (tapBeatIdx + 1) % metPattern.length;
+    if (!metTimerInterval) {
+      metTimerInterval = setInterval(metScheduler, 25);
+    }
+    metIsPlaying = true;
+    document.getElementById('metPlayBtn').textContent = '⏸ Stop';
+    document.getElementById('metPlayBtn').classList.add('active');
+  }
+
+  document.getElementById('metPlayBtn').addEventListener('click', () => {
+    metIsPlaying ? metStop() : metStart();
+  });
+  document.getElementById('metTapBtn').addEventListener('click', metTapBeat);
+
+  document.getElementById('metBpmUp').addEventListener('click', () => {
+    metBpm = Math.min(240, metBpm + 2);
+    document.getElementById('metBpmVal').textContent = metBpm;
+  });
+  document.getElementById('metBpmDown').addEventListener('click', () => {
+    metBpm = Math.max(40, metBpm - 2);
+    document.getElementById('metBpmVal').textContent = metBpm;
+  });
+
+  document.getElementById('metVolSlider').addEventListener('input', function() {
+    metVolume = this.value / 100;
+    if (metGain) metGain.gain.value = metVolume;
+  });
+
+  document.querySelectorAll('.met-sig-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const beats = +btn.dataset.beats;
+      metPattern = Array.from({length: beats}, (_, i) => i === 0);
+      document.querySelectorAll('.met-sig-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      metBeatIdx = 0;
+      refreshMetLights();
+    });
+  });
+
+  refreshMetLights();
+
+  // ── Export ─────────────────────────────────────────────────────────────────
+  const exportModal  = document.getElementById('exportModal');
+  const exportName   = document.getElementById('exportName');
+  const exportDesc   = document.getElementById('exportDesc');
+  const exportCode   = document.getElementById('exportCode');
+  const exportCopyBtn= document.getElementById('exportCopyBtn');
+  const exportSaveDbxBtn = document.getElementById('exportSaveDbxBtn');
+  const exportSaveStatus = document.getElementById('exportSaveStatus');
+
+  dbxAuthBtn.addEventListener('click', () => {
+    dropboxAccessToken ? dbxSignOut() : dbxSignIn();
+  });
+
+  function activeSteps(track){
+    return (grid[track] || [])
+      .map((v,i) => v ? i : -1)
+      .filter(i => i >= 0);
+  }
+
+  function buildExportCode(){
+    const name = exportName.value.trim() || 'My preset';
+    const desc = exportDesc.value.trim() || 'Describe the feel…';
+    const tracks = ['kick','snare','hat','crash','tone'];
+    const lines = tracks.map(t => {
+      const steps = activeSteps(t);
+      return `      ${t}: pattern([${steps.join(',')}])`;
+    });
+    return (
+`    {
+      name: ${JSON.stringify(name)},
+      bpm: ${bpm},
+      desc: ${JSON.stringify(desc)},
+${lines.join(',\n')}
+    }`
+    );
+  }
+
+  function refreshExportCode(){
+    exportCode.textContent = buildExportCode();
+  }
+
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    const cur = presets[+presetSelect.value];
+    exportName.value = (cur ? cur.name : 'My preset') + ' -- edited';
+    exportDesc.value = cur ? (cur.desc || '') : '';
+    refreshExportCode();
+    exportModal.classList.add('open');
+    exportName.focus();
+    exportName.select();
+  });
+
+  // ── Load: sign in if needed, then rebuild the dropdown from the Dropbox file ──
+  document.getElementById('loadBtn').addEventListener('click', async () => {
+    const loadBtn = document.getElementById('loadBtn');
+    if(!dropboxAccessToken){
+      // Chess-app style: DB Login first — boot completes the load after redirect
+      sessionStorage.setItem('famous_beats_pending_load', '1');
+      loadBtn.textContent = 'Sign in…';
+      await dbxSignIn(); // navigates away; board is stashed in sessionStorage
+      return;
+    }
+    const cur = presets[+presetSelect.value];
+    const prevName = cur ? cur.name : null;
+    loadBtn.disabled = true;
+    loadBtn.textContent = 'Loading…';
+    try{
+      const result = await loadBeats();
+      presetSelect.innerHTML = ''; // wipe current dropdown items
+      initPresets(result.data);    // repopulates presets[] + options, loads preset 0
+      // keep the same preset selected if it still exists under its name
+      if(prevName){
+        const idx = presets.findIndex(p => p.name === prevName);
+        if(idx >= 0){ presetSelect.value = idx; loadPreset(idx); }
+      }
+      loadBtn.textContent = 'Loaded ✓ ' + result.source;
+    }catch(e){
+      console.error('Load failed:', e);
+      loadBtn.textContent = 'Failed';
+    }finally{
+      loadBtn.disabled = false;
+      setTimeout(() => { loadBtn.textContent = 'Load'; }, 2500);
+    }
+  });
+
+  document.getElementById('exportClose').addEventListener('click', () => {
+    exportModal.classList.remove('open');
+  });
+  exportModal.addEventListener('click', (e) => {
+    if(e.target === exportModal) exportModal.classList.remove('open');
+  });
+
+  exportName.addEventListener('input', refreshExportCode);
+  exportDesc.addEventListener('input', refreshExportCode);
+
+  exportCopyBtn.addEventListener('click', () => {
+    const text = buildExportCode();
+    navigator.clipboard.writeText(text).then(() => {
+      exportCopyBtn.textContent = 'Copied!';
+      setTimeout(() => exportCopyBtn.textContent = 'Copy to clipboard', 1800);
+    });
+  });
+
+  exportSaveDbxBtn.addEventListener('click', async () => {
+    if(!dropboxAccessToken){
+      exportSaveStatus.textContent = 'Redirecting to Dropbox sign-in…';
+      await dbxSignIn(); // navigates away; work is stashed in sessionStorage
+      return;
+    }
+    const name = exportName.value.trim() || 'My preset';
+    const desc = exportDesc.value.trim() || 'Saved beat';
+    exportSaveDbxBtn.disabled = true;
+    exportSaveStatus.textContent = 'Saving…';
+    try{
+      await saveBeatToDropbox(name, desc);
+      exportSaveStatus.textContent = 'Saved to Dropbox ✓';
+      setTimeout(() => {
+        exportModal.classList.remove('open');
+        exportSaveStatus.textContent = '';
+      }, 1200);
+    }catch(e){
+      exportSaveStatus.textContent = 'Save failed: ' + e.message;
+    }finally{
+      exportSaveDbxBtn.disabled = false;
+    }
+  });
+
+  // ── JSON Editor ────────────────────────────────────────────────────────────
+  const jsonModal         = document.getElementById('jsonModal');
+  const jsonReplaceSelect = document.getElementById('jsonReplaceSelect');
+  const jsonAppendInput   = document.getElementById('jsonAppendInput');
+  const jsonStatus        = document.getElementById('jsonStatus');
+  const jsonSchemaEl      = document.getElementById('jsonSchemaEl');
+
+  // Format a single preset object with compact arrays — for the schema preview
+  function formatPresetJson(p){
+    if(!p) return '(no preset selected)';
+    const tracks = ['kick','snare','hat','crash','tone'];
+    const lines = [
+      `  "name": ${JSON.stringify(p.name || '')}`,
+      `  "bpm": ${p.bpm || 120}`,
+      `  "desc": ${JSON.stringify(p.desc || '')}`,
+      ...tracks.map(t => `  "${t}": [${(p[t] || new Array(16).fill(0)).join(',')}]`),
+    ];
+    return '{\n' + lines.join(',\n') + '\n}';
+  }
+
+  function setJsonStatus(msg, ok){
+    jsonStatus.textContent = msg;
+    jsonStatus.style.color = ok === true ? 'var(--led-hat)' : ok === false ? 'var(--led-snare)' : 'var(--parchment-dim)';
+  }
+
+  function refreshJsonSchema(){
+    if(!jsonModal.classList.contains('open')) return;
+    const cur = presets[+presetSelect.value] || {};
+    jsonSchemaEl.textContent = formatPresetJson({
+      name: cur.name || '(current)', bpm: bpm, desc: cur.desc || '',
+      kick: [...grid.kick], snare: [...grid.snare], hat: [...grid.hat],
+      crash: [...grid.crash], tone: [...grid.tone],
+    });
+  }
+
+  function populateJsonReplaceSelect(){
+    jsonReplaceSelect.innerHTML = '';
+    presets.forEach((p, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `${i} — ${p.name || '(unnamed)'}`;
+      jsonReplaceSelect.appendChild(opt);
+    });
+    jsonReplaceSelect.value = presetSelect.value;
+  }
+
+  function currentBoardAsPreset(name, desc){
+    return {
+      name, bpm, desc,
+      kick: [...grid.kick], snare: [...grid.snare], hat: [...grid.hat],
+      crash: [...grid.crash], tone: [...grid.tone],
+    };
+  }
+
+  function applyReplaceOrAppend(){
+    const appendName = jsonAppendInput.value.trim();
+    if(appendName){
+      const newPreset = currentBoardAsPreset(appendName, '');
+      presets.push(newPreset);
+      const newIdx = presets.length - 1;
+      const opt = document.createElement('option');
+      opt.value = newIdx; opt.textContent = `${newIdx} — ${appendName}`;
+      presetSelect.appendChild(opt);
+      presetSelect.value = newIdx;
+      populateJsonReplaceSelect();
+      jsonReplaceSelect.value = newIdx;
+      jsonAppendInput.value = '';
+      return { action: 'append', idx: newIdx, name: appendName };
+    } else {
+      const idx = +jsonReplaceSelect.value;
+      const existingPreset = presets[idx] || {};
+      const newPreset = currentBoardAsPreset(existingPreset.name || '(unnamed)', existingPreset.desc || '');
+      presets[idx] = newPreset;
+      if(presetSelect.options[idx]) presetSelect.options[idx].textContent = `${idx} — ${newPreset.name}`;
+      if(jsonReplaceSelect.options[idx]) jsonReplaceSelect.options[idx].textContent = `${idx} — ${newPreset.name}`;
+      return { action: 'replace', idx, name: newPreset.name };
+    }
+  }
+
+  function openJsonEditor(){
+    populateJsonReplaceSelect();
+    jsonAppendInput.value = '';
+    setJsonStatus('', null);
+    jsonModal.classList.add('open');
+    refreshJsonSchema();
+  }
+
+  function closeJsonEditor(){ jsonModal.classList.remove('open'); }
+
+  document.getElementById('editJsonBtn').addEventListener('click', openJsonEditor);
+  document.getElementById('jsonClose').addEventListener('click', closeJsonEditor);
+  jsonModal.addEventListener('click', e => { if(e.target === jsonModal) closeJsonEditor(); });
+
+  document.getElementById('jsonReloadBtn').addEventListener('click', async () => {
+    if(!dropboxAccessToken){
+      setJsonStatus('⚠ Sign in to Dropbox first (top-right button), then reopen Edit JSON', null);
+      return;
+    }
+    const btn = document.getElementById('jsonReloadBtn');
+    btn.disabled = true;
+    setJsonStatus('Loading from Dropbox…', null);
+    try{
+      const text = await dropboxDownloadFile(DROPBOX_PRESETS_PATH);
+      const arr  = JSON.parse(text);
+      presets = arr;
+      presetSelect.innerHTML = '';
+      arr.forEach((p, i) => {
+        const opt = document.createElement('option');
+        opt.value = i; opt.textContent = `${i} — ${p.name || '(unnamed)'}`;
+        presetSelect.appendChild(opt);
+      });
+      populateJsonReplaceSelect();
+      setJsonStatus(`✓ Reloaded ${arr.length} preset${arr.length!==1?'s':''} from Dropbox`, true);
+    }catch(e){
+      setJsonStatus('✗ ' + e.message, false);
+    }finally{ btn.disabled = false; }
+  });
+
+  document.getElementById('jsonApplyBtn').addEventListener('click', () => {
+    const result = applyReplaceOrAppend();
+    if(result.action === 'append')
+      setJsonStatus(`✓ Appended "${result.name}" at index ${result.idx}`, true);
+    else
+      setJsonStatus(`✓ Replaced preset ${result.idx} — "${result.name}" in dropdown`, true);
+  });
+
+  document.getElementById('jsonSaveBtn').addEventListener('click', async () => {
+    const result = applyReplaceOrAppend();
+    if(!dropboxAccessToken){
+      setJsonStatus('⚠ Sign in to Dropbox first (top-right Dropbox button)', null);
+      return;
+    }
+    const btn = document.getElementById('jsonSaveBtn');
+    btn.disabled = true;
+    setJsonStatus('Saving…', null);
+    try{
+      const payload = '[\n' + presets.map(p => JSON.stringify(p)).join(',\n') + '\n]';
+      await dropboxUploadFile(DROPBOX_PRESETS_PATH, payload);
+      setJsonStatus(`✓ Saved ${presets.length} preset${presets.length!==1?'s':''} to Dropbox (${result.action}d "${result.name}")`, true);
+    }catch(e){
+      setJsonStatus('✗ ' + e.message, false);
+    }finally{ btn.disabled = false; }
+  });
+
+  // ── Boot: OAuth redirect → load (Dropbox when signed in → /api/presets → bundled) ──
+  (async function boot(){
+    await dbxHandleOAuthRedirect();
+    updateDbxAuthBtn();
+    const result = await loadBeats();
+    console.log('Presets loaded from:', result.source, '(' + result.data.length + ' presets)');
+    initPresets(result.data);
+    // Restore work stashed before an OAuth redirect; auto-finish a pending save
+    const pending = restorePendingWork();
+    if(pending && pending.reopenSaveModal){
+      exportName.value = pending.name || '';
+      exportDesc.value = pending.desc || '';
+      refreshExportCode();
+      exportModal.classList.add('open');
+      if(dropboxAccessToken) exportSaveDbxBtn.click();
+    }
+    // A Load click sent us through sign-in — boot already loaded via Dropbox
+    if(sessionStorage.getItem('famous_beats_pending_load')){
+      sessionStorage.removeItem('famous_beats_pending_load');
+      const loadBtn = document.getElementById('loadBtn');
+      loadBtn.textContent = 'Loaded ✓ ' + result.source;
+      setTimeout(() => { loadBtn.textContent = 'Load'; }, 2500);
+    }
+  })();
+})();
+</script>
+
+<!-- YouTube modal -->
+<div class="yt-modal" id="ytModal">
+  <div class="yt-modal-header">
+    <div class="yt-modal-title" id="ytTitle">YouTube Music</div>
+    <button class="yt-modal-close" onclick="toggleYtModal()">&times;</button>
+  </div>
+  <div class="yt-track-list" id="ytTrackList"></div>
+  <div style="margin-bottom:8px"><button id="ytRandomBtn" onclick="ytRandomSeek()" style="background:linear-gradient(45deg,#ff9800,#f57c00);padding:6px 12px;font-size:12px;border:none;border-radius:6px;color:#fff;cursor:pointer;font-weight:600">🎲 Random</button></div>
+  <div class="yt-iframe-wrap" id="ytIframeWrap"></div>
+</div>
+
+<script>
+var ytModal = document.getElementById('ytModal');
+var ytTracks = [
+  { id: 'rdoq4yi9cV0', title: '4 Classical Pieces | Relaxing Piano [15min]', duration: 900 },
+  { id: 'oPEBWXvo1Xc', title: '4 Pieces by Yiruma | Relaxing Piano [15min]', duration: 900 },
+  { id: 'mdJU5ogrPMY', title: 'Classical Music for Studying (2 hrs)', duration: 7200 }
+];
+var ytCurrentIdx = -1;
+
+function toggleYtModal() {
+  if (ytModal.classList.contains('open')) {
+    ytModal.classList.remove('open');
+  } else {
+    ytModal.classList.add('open');
+    if (ytCurrentIdx < 0) { buildYtTrackList(); loadYtTrack(0); }
+  }
+}
+
+function buildYtTrackList() {
+  var list = document.getElementById('ytTrackList');
+  list.innerHTML = '';
+  ytTracks.forEach(function(t, i) {
+    var btn = document.createElement('button');
+    btn.className = 'yt-track-btn';
+    btn.textContent = t.title;
+    btn.addEventListener('click', function() { loadYtTrack(i); });
+    list.appendChild(btn);
+  });
+}
+
+function loadYtTrack(idx, startSec) {
+  ytCurrentIdx = idx;
+  var t = ytTracks[idx];
+  var src = 'https://www.youtube.com/embed/' + t.id + '?autoplay=1';
+  if (startSec) {
+    src += '&start=' + startSec;
+    var m = Math.floor(startSec / 60);
+    var s = startSec % 60;
+    document.getElementById('ytTitle').textContent = t.title + ' — jumping to ' + m + ':' + (s < 10 ? '0' : '') + s;
+  } else {
+    document.getElementById('ytTitle').textContent = t.title;
+  }
+  document.getElementById('ytIframeWrap').innerHTML =
+    '<iframe src="' + src + '" allow="autoplay; encrypted-media" allowfullscreen></iframe>';
+  var btns = document.querySelectorAll('.yt-track-btn');
+  btns.forEach(function(b, i) {
+    b.className = 'yt-track-btn' + (i === idx ? ' active' : '');
+  });
+}
+
+function ytRandomSeek() {
+  if (ytCurrentIdx < 0) return;
+  var t = ytTracks[ytCurrentIdx];
+  var randomSec = Math.floor(Math.random() * (t.duration - 30));
+  loadYtTrack(ytCurrentIdx, randomSec);
+}
+</script>
+</body>
+</html>
