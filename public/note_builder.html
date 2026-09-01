@@ -174,6 +174,7 @@
     <div class="dur-row">
       <button class="dur-btn active" data-dur="4">Quarter <small>(Q)</small></button>
       <button class="dur-btn" data-dur="2">Half <small>(H)</small></button>
+      <button class="dur-btn" data-dur="3">Dotted Half <small>(D)</small></button>
     </div>
 
     <h2>2. Click a note to add it</h2>
@@ -276,13 +277,15 @@ document.querySelectorAll('.dur-btn').forEach(btn=>{
   });
 });
 
-// Keyboard shortcuts Q = quarter, H = half
+// Keyboard shortcuts Q = quarter, H = half, D = dotted half
 document.addEventListener('keydown', e=>{
   if(e.target.tagName === 'TEXTAREA') return;
   if(e.key === 'q' || e.key === 'Q'){
     document.querySelector('[data-dur="4"]').click();
   } else if(e.key === 'h' || e.key === 'H'){
     document.querySelector('[data-dur="2"]').click();
+  } else if(e.key === 'd' || e.key === 'D'){
+    document.querySelector('[data-dur="3"]').click();
   } else if(e.key === 'z' || e.key === 'Z'){
     document.getElementById('undoBtn').click();
   }

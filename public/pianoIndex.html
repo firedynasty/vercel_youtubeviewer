@@ -488,20 +488,55 @@
       }));
     })();
 
+    // Synthetic reverb — decaying white noise impulse response
+    function buildReverb(duration = 2.5, decay = 3) {
+      const len = audioCtx.sampleRate * duration;
+      const ir  = audioCtx.createBuffer(2, len, audioCtx.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = ir.getChannelData(ch);
+        for (let i = 0; i < len; i++)
+          d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+      }
+      const conv = audioCtx.createConvolver();
+      conv.buffer = ir;
+      // Wet/dry mix: mostly dry, light reverb tail
+      const dry = audioCtx.createGain(); dry.gain.value = 1.0;
+      const wet = audioCtx.createGain(); wet.gain.value = 0.25;
+      conv.connect(wet);
+      wet.connect(audioCtx.destination);
+      dry.connect(audioCtx.destination);
+      return { dry, conv };
+    }
+    let reverbNodes = null;
+
     function playBuffer(keyCode, durationSeconds) {
       const buffer = audioBuffers[String(keyCode)];
       if (!buffer) {
-        // fallback to <audio> element
         const el = document.querySelector(`audio[data-key="${keyCode}"]`);
         if (el) { el.currentTime = 0; el.play(); }
         return;
       }
       if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      // Build reverb once (needs audioCtx running)
+      if (!reverbNodes) reverbNodes = buildReverb();
+
       const source = audioCtx.createBufferSource();
       source.buffer = buffer;
-      source.connect(audioCtx.destination);
+
+      // Fade out with a GainNode so the note decays smoothly
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(1, audioCtx.currentTime);
+      // Start fading at the note duration, finish 1s later
+      const fadeStart = audioCtx.currentTime + (durationSeconds || buffer.duration);
+      const fadeEnd   = fadeStart + 1.0;
+      gain.gain.setTargetAtTime(0, fadeStart, 0.3);
+
+      source.connect(gain);
+      gain.connect(reverbNodes.dry);
+      gain.connect(reverbNodes.conv);
       source.start(0);
-      if (durationSeconds) source.stop(audioCtx.currentTime + durationSeconds);
+      source.stop(fadeEnd);
     }
 
     // Keyboard mapping
@@ -623,7 +658,7 @@
             const colonIdx = item.lastIndexOf(':');
             const notePart = item.slice(0, colonIdx).trim();
             const durVal = parseInt(item.slice(colonIdx + 1));
-            const beats = durVal ? (4 / durVal) : 1;
+            const beats = durVal === 3 ? 3 : (durVal ? (4 / durVal) : 1);
             return { note: notePart, beats };
           }
           return item;
