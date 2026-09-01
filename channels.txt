@@ -3,3 +3,5 @@
 # Supports channel URLs (@handle) or video URLs (auto-detects channel)
 
 https://www.youtube.com/@TBNIsrael
+https://www.youtube.com/@MaxAfterburnerusa
+https://www.youtube.com/@PrestonStewart

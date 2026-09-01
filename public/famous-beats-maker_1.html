@@ -262,12 +262,20 @@
     padding:10px 12px;font-family:'Space Mono',monospace;font-size:11px;
     color:#7fa695;line-height:1.8;white-space:pre;overflow-x:auto;
   }
-  .json-textarea{
-    height:360px;background:#0d0c09;border:1px solid var(--line);
-    border-radius:8px;color:#c8d0b0;font-family:'Space Mono',monospace;
-    font-size:11.5px;padding:12px;resize:vertical;outline:none;line-height:1.6;
+  .json-replace-select{
+    background:#0d0c09;border:1px solid var(--line);border-radius:8px;
+    color:#c8d0b0;font-family:'Space Mono',monospace;font-size:11.5px;
+    padding:8px 12px;width:100%;outline:none;cursor:pointer;
   }
-  .json-textarea:focus{border-color:var(--brass);}
+  .json-replace-select:focus{border-color:var(--brass);}
+  .json-append-input{
+    background:#0d0c09;border:1px solid var(--line);border-radius:8px;
+    color:#c8d0b0;font-family:'Space Mono',monospace;font-size:11.5px;
+    padding:8px 12px;width:100%;outline:none;box-sizing:border-box;
+  }
+  .json-append-input:focus{border-color:var(--led-tone);}
+  .json-append-input::placeholder{color:#4a4a3a;}
+  .json-label{font-size:11px;color:var(--parchment-dim);font-family:'Source Sans 3',sans-serif;margin:0;}
   .json-actions{display:flex;gap:8px;flex-wrap:wrap;}
   .json-btn{
     flex:1;padding:10px;border-radius:10px;border:none;cursor:pointer;
@@ -379,10 +387,12 @@
   <div class="json-box">
     <h3>Edit Presets JSON <button class="export-close" id="jsonClose">&times;</button></h3>
     <div class="json-schema" id="jsonSchemaEl">— open Edit JSON to see selected preset —</div>
-    <textarea class="json-textarea" id="jsonTextarea" spellcheck="false"></textarea>
+    <span class="json-label">Replace preset at index:</span>
+    <select class="json-replace-select" id="jsonReplaceSelect"></select>
+    <span class="json-label">Or append new (type name — leave blank to replace above):</span>
+    <input class="json-append-input" id="jsonAppendInput" type="text" placeholder="New preset name…" autocomplete="off">
     <div class="json-actions">
       <button class="dbx-auth-btn" id="jsonDbxAuthBtn" title="Sign in to Dropbox to save presets">Dropbox</button>
-      <button class="json-btn json-btn-validate" id="jsonValidateBtn">Validate</button>
       <button class="json-btn json-btn-reload" id="jsonReloadBtn">Reload from Dropbox</button>
       <button class="json-btn json-btn-apply" id="jsonApplyBtn">Apply to dropdown</button>
       <button class="json-btn json-btn-save" id="jsonSaveBtn">Save to Dropbox</button>
@@ -411,7 +421,7 @@
 <script src="famous-beats-presets.js"></script>
 <script>
 (function(){
-  const STEPS = 16;
+  const STEPS = 8;
   const TRACKS = ['kick','snare','hat','crash','tone'];
   const TRACK_LABELS = {kick:'Kick', snare:'Snare', hat:'Hi-Hat', crash:'Gong', tone:'Tone'};
 
@@ -599,7 +609,7 @@
     presets.push(preset);
     const opt = document.createElement('option');
     opt.value = presets.length - 1;
-    opt.textContent = name;
+    opt.textContent = `${presets.length - 1} — ${name}`;
     presetSelect.appendChild(opt);
     presetSelect.value = presets.length - 1;
   }
@@ -689,7 +699,7 @@
     presets.forEach((p, i) => {
       const opt = document.createElement('option');
       opt.value = i;
-      opt.textContent = p.name;
+      opt.textContent = `${i} — ${p.name}`;
       presetSelect.appendChild(opt);
     });
     if(presets.length) loadPreset(0);
@@ -720,7 +730,7 @@
 
       const groupsWrap = document.createElement('div');
       groupsWrap.className = 'beat-groups';
-      for(let g=0; g<4; g++){
+      for(let g=0; g<2; g++){
         const group = document.createElement('div');
         group.className = 'beat-group';
         for(let s=0; s<4; s++){
@@ -881,7 +891,7 @@
   }
 
   function scheduler(){
-    stepDuration = (60 / bpm) / 4; // 16th notes
+    stepDuration = (60 / bpm) / 2; // 8th notes
     while(nextNoteTime < audioCtx.currentTime + scheduleAheadTime){
       const offset = stepTime(currentStep, stepDuration) - currentStep * stepDuration;
       scheduleStep(currentStep, nextNoteTime + offset);
@@ -1251,10 +1261,11 @@ ${lines.join(',\n')}
   });
 
   // ── JSON Editor ────────────────────────────────────────────────────────────
-  const jsonModal    = document.getElementById('jsonModal');
-  const jsonTextarea = document.getElementById('jsonTextarea');
-  const jsonStatus   = document.getElementById('jsonStatus');
-  const jsonSchemaEl = document.getElementById('jsonSchemaEl');
+  const jsonModal         = document.getElementById('jsonModal');
+  const jsonReplaceSelect = document.getElementById('jsonReplaceSelect');
+  const jsonAppendInput   = document.getElementById('jsonAppendInput');
+  const jsonStatus        = document.getElementById('jsonStatus');
+  const jsonSchemaEl      = document.getElementById('jsonSchemaEl');
 
   // Format a single preset object with compact arrays — for the schema preview
   function formatPresetJson(p){
@@ -1298,35 +1309,63 @@ ${lines.join(',\n')}
     });
   }
 
+  function populateJsonReplaceSelect(){
+    jsonReplaceSelect.innerHTML = '';
+    presets.forEach((p, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `${i} — ${p.name || '(unnamed)'}`;
+      jsonReplaceSelect.appendChild(opt);
+    });
+    jsonReplaceSelect.value = presetSelect.value;
+  }
+
+  function currentBoardAsPreset(name, desc){
+    return {
+      name, bpm, desc,
+      kick: [...grid.kick], snare: [...grid.snare], hat: [...grid.hat],
+      crash: [...grid.crash], tone: [...grid.tone],
+    };
+  }
+
+  function applyReplaceOrAppend(){
+    const appendName = jsonAppendInput.value.trim();
+    if(appendName){
+      const newPreset = currentBoardAsPreset(appendName, '');
+      presets.push(newPreset);
+      const newIdx = presets.length - 1;
+      const opt = document.createElement('option');
+      opt.value = newIdx; opt.textContent = `${newIdx} — ${appendName}`;
+      presetSelect.appendChild(opt);
+      presetSelect.value = newIdx;
+      populateJsonReplaceSelect();
+      jsonReplaceSelect.value = newIdx;
+      jsonAppendInput.value = '';
+      return { action: 'append', idx: newIdx, name: appendName };
+    } else {
+      const idx = +jsonReplaceSelect.value;
+      const existingPreset = presets[idx] || {};
+      const newPreset = currentBoardAsPreset(existingPreset.name || '(unnamed)', existingPreset.desc || '');
+      presets[idx] = newPreset;
+      if(presetSelect.options[idx]) presetSelect.options[idx].textContent = `${idx} — ${newPreset.name}`;
+      if(jsonReplaceSelect.options[idx]) jsonReplaceSelect.options[idx].textContent = `${idx} — ${newPreset.name}`;
+      return { action: 'replace', idx, name: newPreset.name };
+    }
+  }
+
   function openJsonEditor(){
-    jsonTextarea.value = formatPresetsJson(presets);
+    populateJsonReplaceSelect();
+    jsonAppendInput.value = '';
     setJsonStatus('', null);
     jsonModal.classList.add('open');
     refreshJsonSchema();
-    jsonTextarea.focus();
   }
 
   function closeJsonEditor(){ jsonModal.classList.remove('open'); }
 
-  function parseJsonEditor(){
-    try{
-      const arr = JSON.parse(jsonTextarea.value);
-      if(!Array.isArray(arr)) throw new Error('Top level must be an array [ … ]');
-      return arr;
-    }catch(e){
-      setJsonStatus('✗ ' + e.message, false);
-      return null;
-    }
-  }
-
   document.getElementById('editJsonBtn').addEventListener('click', openJsonEditor);
   document.getElementById('jsonClose').addEventListener('click', closeJsonEditor);
   jsonModal.addEventListener('click', e => { if(e.target === jsonModal) closeJsonEditor(); });
-
-  document.getElementById('jsonValidateBtn').addEventListener('click', () => {
-    const arr = parseJsonEditor();
-    if(arr) setJsonStatus(`✓ Valid — ${arr.length} preset${arr.length!==1?'s':''}`, true);
-  });
 
   document.getElementById('jsonReloadBtn').addEventListener('click', async () => {
     if(!dropboxAccessToken){
@@ -1339,7 +1378,14 @@ ${lines.join(',\n')}
     try{
       const text = await dropboxDownloadFile(DROPBOX_PRESETS_PATH);
       const arr  = JSON.parse(text);
-      jsonTextarea.value = formatPresetsJson(arr);
+      presets = arr;
+      presetSelect.innerHTML = '';
+      arr.forEach((p, i) => {
+        const opt = document.createElement('option');
+        opt.value = i; opt.textContent = `${i} — ${p.name || '(unnamed)'}`;
+        presetSelect.appendChild(opt);
+      });
+      populateJsonReplaceSelect();
       setJsonStatus(`✓ Reloaded ${arr.length} preset${arr.length!==1?'s':''} from Dropbox`, true);
     }catch(e){
       setJsonStatus('✗ ' + e.message, false);
@@ -1347,23 +1393,15 @@ ${lines.join(',\n')}
   });
 
   document.getElementById('jsonApplyBtn').addEventListener('click', () => {
-    const arr = parseJsonEditor();
-    if(!arr) return;
-    stop();
-    presets = arr;
-    presetSelect.innerHTML = '';
-    arr.forEach((p, i) => {
-      const opt = document.createElement('option');
-      opt.value = i; opt.textContent = p.name || '(unnamed)';
-      presetSelect.appendChild(opt);
-    });
-    if(arr.length) loadPreset(0);
-    setJsonStatus(`✓ Applied ${arr.length} preset${arr.length!==1?'s':''} to dropdown`, true);
+    const result = applyReplaceOrAppend();
+    if(result.action === 'append')
+      setJsonStatus(`✓ Appended "${result.name}" at index ${result.idx}`, true);
+    else
+      setJsonStatus(`✓ Replaced preset ${result.idx} — "${result.name}" in dropdown`, true);
   });
 
   document.getElementById('jsonSaveBtn').addEventListener('click', async () => {
-    const arr = parseJsonEditor();
-    if(!arr) return;
+    const result = applyReplaceOrAppend();
     if(!dropboxAccessToken){
       setJsonStatus('⚠ Sign in to Dropbox first (top-right Dropbox button)', null);
       return;
@@ -1372,22 +1410,9 @@ ${lines.join(',\n')}
     btn.disabled = true;
     setJsonStatus('Saving…', null);
     try{
-      // Save compact-array format (keeps readability in Dropbox) but valid JSON
-      const payload = '[\n' + arr.map(p => JSON.stringify(p)).join(',\n') + '\n]';
+      const payload = '[\n' + presets.map(p => JSON.stringify(p)).join(',\n') + '\n]';
       await dropboxUploadFile(DROPBOX_PRESETS_PATH, payload);
-      // Sync in-memory presets and rebuild dropdown
-      const curName = (presets[+presetSelect.value] || {}).name;
-      presets = arr;
-      presetSelect.innerHTML = '';
-      arr.forEach((p, i) => {
-        const opt = document.createElement('option');
-        opt.value = i; opt.textContent = p.name || '(unnamed)';
-        presetSelect.appendChild(opt);
-      });
-      const idx = curName ? arr.findIndex(p => p.name === curName) : 0;
-      presetSelect.value = Math.max(0, idx);
-      loadPreset(+presetSelect.value);
-      setJsonStatus(`✓ Saved ${arr.length} preset${arr.length!==1?'s':''} to Dropbox`, true);
+      setJsonStatus(`✓ Saved ${presets.length} preset${presets.length!==1?'s':''} to Dropbox (${result.action}d "${result.name}")`, true);
     }catch(e){
       setJsonStatus('✗ ' + e.message, false);
     }finally{ btn.disabled = false; }
