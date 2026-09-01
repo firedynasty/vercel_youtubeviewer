@@ -365,6 +365,10 @@
           <input type="text" class="sequence-input" id="sequenceInput" placeholder="E4:1, G4:1, A4:2 ..." />
           <button class="play-btn" id="playSequence">Play</button>
         </div>
+        <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+          <label for="volumeSlider" style="color:#aaa; font-size:14px;">Vol</label>
+          <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1" style="width:160px; accent-color:#028ae9; cursor:pointer;">
+        </div>
         <div style="display:flex; align-items:center; gap:16px; margin-top:4px;">
           <div class="nowplaying"></div>
           <button class="play-btn" onclick="openDbxModal()" style="font-size:15px; background:linear-gradient(45deg,#0061ff,#004bb5);">📂 Dropbox</button>
@@ -488,6 +492,15 @@
       }));
     })();
 
+    // Master volume gain — all audio routes through this
+    const masterGain = audioCtx.createGain();
+    masterGain.gain.value = 1.0;
+    masterGain.connect(audioCtx.destination);
+
+    document.getElementById('volumeSlider').addEventListener('input', function() {
+      masterGain.gain.value = parseFloat(this.value);
+    });
+
     // Synthetic reverb — decaying white noise impulse response
     function buildReverb(duration = 2.5, decay = 3) {
       const len = audioCtx.sampleRate * duration;
@@ -503,8 +516,8 @@
       const dry = audioCtx.createGain(); dry.gain.value = 1.0;
       const wet = audioCtx.createGain(); wet.gain.value = 0.25;
       conv.connect(wet);
-      wet.connect(audioCtx.destination);
-      dry.connect(audioCtx.destination);
+      wet.connect(masterGain);
+      dry.connect(masterGain);
       return { dry, conv };
     }
     let reverbNodes = null;
