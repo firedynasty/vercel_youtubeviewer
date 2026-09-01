@@ -927,7 +927,6 @@
       }
 
       window.dbxLoadFile = async function(path, name, isImage) {
-        window.closeDbxModal();
         try {
           if (isImage) {
             const blob = await window.dropboxDownloadBlob(path);
@@ -937,12 +936,14 @@
             imageSizeState = 'small';
             document.getElementById('imagePreviewContainer').style.display = 'block';
             document.getElementById('loadImageBtn').textContent = name;
+            window.closeDbxModal();
           } else {
             const text = await window.dropboxDownloadText(path);
             document.getElementById('sequenceInput').value = text.trim();
+            document.getElementById('dbxStatus').textContent = '✅ '+name+' loaded — pick an image or close';
           }
         } catch(err) {
-          console.error('Dropbox load error:', err.message);
+          document.getElementById('dbxStatus').textContent = 'Error: '+err.message;
         }
       };
 
