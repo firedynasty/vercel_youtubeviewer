@@ -799,6 +799,7 @@
       handleOAuthRedirect();
 
       window.getDropboxAccessToken = () => dropboxAccessToken;
+      window.dropboxSignInPopup    = dropboxSignInPopup;
 
       window.dropboxDownloadText = async function(path) {
         const res = await fetch('https://content.dropboxapi.com/2/files/download', {
