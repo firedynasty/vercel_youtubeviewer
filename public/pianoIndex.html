@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>JavaScript Piano</title>
+    
+
+  </head>
+    
+  <body>
+  <html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JS Piano with Sequence Input</title>
+  <style>
+    html {
+      background: #000;
+      font-family: 'Noto Serif', serif;
+      -webkit-font-smoothing: antialiased;
+      text-align: center;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    video#bgvid { 
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      min-width: 100%;
+      min-height: 100%;
+      width: auto;
+      height: auto;
+      z-index: -100;
+      transform: translateX(-50%) translateY(-50%);
+      background-size: cover; 
+    }
+
+    header {
+      position: relative;
+      margin: 30px 0;
+    }
+
+    header:after {
+      content: '';
+      width: 460px;
+      height: 15px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      display: inline-block;
+      text-align: center;
+    }
+
+    h1 {
+      color: #fff;
+      font-size: 50px;
+      font-weight: 400;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin: 0;
+    }
+
+    h2 {
+      color: #fff;
+      font-size: 24px;
+      font-style: italic;
+      font-weight: 400;
+      margin: 0 0 30px;
+    }
+
+    .nowplaying {
+      font-size: 120px;
+      line-height: 1;
+      color: #eee;
+      text-shadow: 0 0 5rem #028ae9;
+      transition: all .07s ease;
+      min-height: 120px;
+    }
+
+    .keys {
+      display: block;
+      width: 100%;
+      height: 350px;
+      max-width: 880px;
+      position: relative;
+      margin: 40px auto 0;
+      cursor: none;
+    }
+
+    .key {
+      position: relative;
+      border: 4px solid black;
+      border-radius: .5rem;
+      transition: all .07s ease;
+      display: block;
+      box-sizing: border-box;
+      z-index: 2;
+    }
+
+    .key:not(.sharp) {
+      float: left;
+      width: 10%;
+      height: 100%;
+      background: rgba(255, 255, 255, .8);    
+    }
+
+    .key.sharp {
+      position: absolute;
+      width: 6%;
+      height: 60%;
+      background: #000;
+      color: #eee;
+      top: 0;
+      z-index: 3;
+    }
+
+    .key[data-key="87"] {
+      left: 7%;
+    }
+
+    .key[data-key="69"] {
+      left: 17%;
+    }
+
+    .key[data-key="84"] {
+      left: 37%;
+    }
+
+    .key[data-key="89"] {
+      left: 47%;
+    }
+
+    .key[data-key="85"] {
+      left: 57%;    
+    }
+
+    .key[data-key="79"] {
+      left: 77%;    
+    }
+
+    .key[data-key="80"] {
+      left: 87%;    
+    }
+
+    .playing {
+      transform: scale(.95);
+      border-color: #028ae9;
+      box-shadow: 0 0 1rem #028ae9;
+    }
+
+    .hints {
+      display: block;
+      width: 100%;
+      opacity: 0;
+      position: absolute;
+      bottom: 7px;
+      transition: opacity .3s ease-out;
+      font-size: 20px;
+    }
+
+    .keys:hover .hints {
+      opacity: 1;
+    }
+
+    /* Sequence input styles */
+    .sequence-container {
+      margin: 30px auto;
+      max-width: 805px;
+      width: 100%;
+      text-align: left; /* Left-align all content in the container */
+    }
+
+    .sequence-input {
+      background: rgba(255, 255, 255, 0.8);
+      border: 2px solid #028ae9;
+      padding: 10px 15px;
+      font-size: 18px;
+      border-radius: 4px;
+      width: 80%;
+      margin-right: 10px;
+    }
+
+    .play-btn {
+      background: #028ae9;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 18px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .play-btn:hover {
+      background: #0279d0;
+    }
+
+    .input-container {
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+  <section id="wrap">
+    <header>
+      <h1>JS Piano &nbsp;<a href="note_builder.html" target="_blank" style="font-size:14px; color:#028ae9; text-decoration:none; font-weight:400;">Note Builder ↗</a></h1>
+    </header>
+    <section id="main">
+      <div class="nowplaying"></div>
+
+      <!-- Reference image -->
+      <div class="sequence-container" style="margin-bottom:0;">
+        <button class="play-btn" id="loadImageBtn" onclick="document.getElementById('imageFileInput').click()" style="font-size:15px; margin-bottom:8px;">Load image</button>
+        <input type="file" id="imageFileInput" accept="image/*" style="display:none;">
+        <div id="imagePreviewContainer" style="display:none; position:relative; margin-bottom:10px;">
+          <img id="imagePreview" style="max-width:100%; max-height:180px; border-radius:6px; cursor:pointer; display:block;" onclick="toggleImageSize()">
+          <button onclick="closeImagePreview()" style="position:absolute; top:4px; right:4px; background:rgba(0,0,0,0.6); color:#fff; border:none; border-radius:50%; width:26px; height:26px; cursor:pointer; font-size:17px; line-height:1;">×</button>
+        </div>
+      </div>
+
+      <!-- Sequence input -->
+      <div class="sequence-container">
+        <div class="input-container">
+          <input type="text" class="sequence-input" id="sequenceInput" placeholder="E4:4, G4:4, A4:2 ..." />
+          <button class="play-btn" id="playSequence">Play</button>
+        </div>
+      </div>
+
+      <div class="keys">
+        <div data-key="65" class="key" data-note="C">
+            <span class="hints">A</span>
+        </div>
+        <div data-key="87" class="key sharp" data-note="C#">
+            <span class="hints">W</span>
+        </div>
+        <div data-key="83" class="key" data-note="D">
+            <span class="hints">S</span>
+        </div>
+        <div data-key="69" class="key sharp" data-note="D#">
+            <span class="hints">E</span>
+        </div>
+        <div data-key="68" class="key" data-note="E">
+            <span class="hints">D</span>
+        </div>
+        <div data-key="70" class="key" data-note="F">
+            <span class="hints">F</span>
+        </div>
+        <div data-key="84" class="key sharp" data-note="F#">
+            <span class="hints">T</span>
+        </div>
+        <div data-key="71" class="key" data-note="G">
+            <span class="hints">G</span>
+        </div>
+        <div data-key="89" class="key sharp" data-note="G#">
+            <span class="hints">Y</span>
+        </div>
+        <div data-key="72" class="key" data-note="A">
+            <span class="hints">H</span>
+        </div>
+        <div data-key="85" class="key sharp" data-note="A#">
+            <span class="hints">U</span>
+        </div>
+        <div data-key="74" class="key" data-note="B">
+            <span class="hints">J</span>
+        </div>
+        <div data-key="75" class="key" data-note="C">
+            <span class="hints">K</span>
+        </div>
+        <div data-key="79" class="key sharp" data-note="C#">
+            <span class="hints">O</span>
+        </div>
+        <div data-key="76" class="key" data-note="D">
+            <span class="hints">L</span>
+        </div>
+        <div data-key="80" class="key sharp" data-note="D#">
+            <span class="hints">P</span>
+        </div>
+        <div data-key="186" class="key" data-note="E">
+            <span class="hints">;</span>
+        </div>
+      </div>
+
+      <!-- Audio elements (fallback only) -->
+      <audio data-key="65" src="sounds/040.wav"></audio>
+      <audio data-key="87" src="sounds/041.wav"></audio>
+      <audio data-key="83" src="sounds/042.wav"></audio>
+      <audio data-key="69" src="sounds/043.wav"></audio>
+      <audio data-key="68" src="sounds/044.wav"></audio>
+      <audio data-key="70" src="sounds/045.wav"></audio>
+      <audio data-key="84" src="sounds/046.wav"></audio>
+      <audio data-key="71" src="sounds/047.wav"></audio>
+      <audio data-key="89" src="sounds/048.wav"></audio>
+      <audio data-key="72" src="sounds/049.wav"></audio>
+      <audio data-key="85" src="sounds/050.wav"></audio>
+      <audio data-key="74" src="sounds/051.wav"></audio>
+      <audio data-key="75" src="sounds/052.wav"></audio>
+      <audio data-key="79" src="sounds/053.wav"></audio>
+      <audio data-key="76" src="sounds/054.wav"></audio>
+      <audio data-key="80" src="sounds/055.wav"></audio>
+      <audio data-key="186" src="sounds/056.wav"></audio>
+    </section>
+  </section>
+  <div style="background: #000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -101;"></div>
+
+  <script>
+    // Web Audio API — load all WAVs into buffers for precise duration control
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const audioBuffers = {};
+
+    const keyToWav = {
+      65: 'sounds/040.wav', 87: 'sounds/041.wav', 83: 'sounds/042.wav',
+      69: 'sounds/043.wav', 68: 'sounds/044.wav', 70: 'sounds/045.wav',
+      84: 'sounds/046.wav', 71: 'sounds/047.wav', 89: 'sounds/048.wav',
+      72: 'sounds/049.wav', 85: 'sounds/050.wav', 74: 'sounds/051.wav',
+      75: 'sounds/052.wav', 79: 'sounds/053.wav', 76: 'sounds/054.wav',
+      80: 'sounds/055.wav', 186: 'sounds/056.wav'
+    };
+
+    (async function loadBuffers() {
+      await Promise.all(Object.entries(keyToWav).map(async ([key, url]) => {
+        try {
+          const res = await fetch(url);
+          const buf = await res.arrayBuffer();
+          audioBuffers[key] = await audioCtx.decodeAudioData(buf);
+        } catch(e) { console.warn('Could not load', url, e); }
+      }));
+    })();
+
+    function playBuffer(keyCode, durationSeconds) {
+      const buffer = audioBuffers[String(keyCode)];
+      if (!buffer) {
+        // fallback to <audio> element
+        const el = document.querySelector(`audio[data-key="${keyCode}"]`);
+        if (el) { el.currentTime = 0; el.play(); }
+        return;
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioCtx.destination);
+      source.start(0);
+      if (durationSeconds) source.stop(audioCtx.currentTime + durationSeconds);
+    }
+
+    // Keyboard mapping
+    const keyMap = {
+      'A': 65, 'W': 87, 'S': 83, 'E': 69, 'D': 68,
+      'F': 70, 'T': 84, 'G': 71, 'Y': 89, 'H': 72,
+      'U': 85, 'J': 74, 'K': 75, 'O': 79, 'L': 76,
+      'P': 80, ';': 186
+    };
+    
+    // Musical note to key mapping
+    const noteToKeyMap = {
+      'C': 'A',  'C4': 'A',
+      'C#': 'W', 'DB': 'W',  'C#4': 'W', 'DB4': 'W',
+      'D': 'S',  'D4': 'S',
+      'D#': 'E', 'EB': 'E',  'D#4': 'E', 'EB4': 'E',
+      'E': 'D',  'E4': 'D',
+      'F': 'F',  'F4': 'F',
+      'F#': 'T', 'GB': 'T',  'F#4': 'T', 'GB4': 'T',
+      'G': 'G',  'G4': 'G',
+      'G#': 'Y', 'AB': 'Y',  'G#4': 'Y', 'AB4': 'Y',
+      'A': 'H',  'A4': 'H',
+      'A#': 'U', 'BB': 'U',  'A#4': 'U', 'BB4': 'U',
+      'B': 'J',  'B4': 'J',
+      'C2': 'K', 'C5': 'K',
+      'C#2': 'O', 'DB2': 'O', 'C#5': 'O', 'DB5': 'O',
+      'D2': 'L', 'D5': 'L',
+      'D#2': 'P', 'EB2': 'P', 'D#5': 'P', 'EB5': 'P',
+      'E2': ';', 'E5': ';'
+    };
+
+    let currentSequenceTimeout = null;
+
+    const keys = document.querySelectorAll(".key"),
+          note = document.querySelector(".nowplaying"),
+          sequenceInput = document.getElementById("sequenceInput"),
+          playSequenceBtn = document.getElementById("playSequence");
+
+    // Function to play a note by key character
+    function playNoteByChar(char, durationSeconds) {
+      // If underscore, treat as rest
+      if (char === '_') {
+        note.innerHTML = 'REST';
+        return;
+      }
+
+      // If equals sign, sustain the current note
+      if (char === '=') {
+        note.innerHTML = 'HOLD';
+        return;
+      }
+
+      let keyChar = char;
+
+      // Always try note name lookup first (e.g. D4, C#, Eb, D)
+      if (char.length > 1 && "0123456789#Bb".includes(char[1])) {
+        // Try 3-char first (e.g. C#4, Eb5), then 2-char (e.g. D4, C#)
+        const threeCharNote = char.slice(0, 3).toUpperCase();
+        const twoCharNote   = char.slice(0, 2).toUpperCase();
+        if (noteToKeyMap[threeCharNote]) {
+          keyChar = noteToKeyMap[threeCharNote];
+        } else if (noteToKeyMap[twoCharNote]) {
+          keyChar = noteToKeyMap[twoCharNote];
+        }
+      } else {
+        keyChar = noteToKeyMap[char.toUpperCase()] || char;
+      }
+
+      const keyCode = keyMap[keyChar.toUpperCase()];
+      if (!keyCode) return;
+
+      const key = document.querySelector(`.key[data-key="${keyCode}"]`);
+      if (!key) return;
+
+      key.classList.add("playing");
+      note.innerHTML = key.getAttribute("data-note");
+      playBuffer(keyCode, durationSeconds);
+    }
+
+    // Play a sequence of notes with a delay between them
+    // Items can be strings or {note, beats} objects
+    function playSequence(sequence, delay = 800) {
+      let index = 0;
+
+      function playNext() {
+        if (index < sequence.length) {
+          const item = sequence[index];
+          const noteStr = (item && typeof item === 'object') ? item.note : item;
+          const beats   = (item && typeof item === 'object') ? item.beats : 1;
+          const durationSeconds = (delay * beats) / 1000;
+          playNoteByChar(noteStr, durationSeconds);
+          index++;
+          currentSequenceTimeout = setTimeout(playNext, delay * beats);
+        }
+      }
+
+      playNext();
+    }
+
+    // Play sequence button handler
+    playSequenceBtn.addEventListener("click", function() {
+      const sequence = sequenceInput.value.trim();
+      if (sequence) {
+        if (currentSequenceTimeout) clearTimeout(currentSequenceTimeout);
+        playSequence(parseNoteSequence(sequence));
+      }
+    });
+    
+    // Parse a sequence of notes that may include multi-character notes
+    // Supports duration suffix: D4:4 (quarter), D4:2 (half), D4:1 (whole)
+    // Duration value: 4=quarter(1 beat), 2=half(2 beats), 1=whole(4 beats)
+    function parseNoteSequence(inputString) {
+      // Check if using comma-delimited format
+      if (inputString.includes(',')) {
+        return inputString.split(',').map(item => {
+          item = item.trim();
+          if (item === '') return null;
+          if (item.includes(':')) {
+            const colonIdx = item.lastIndexOf(':');
+            const notePart = item.slice(0, colonIdx).trim();
+            const durVal = parseInt(item.slice(colonIdx + 1));
+            const beats = durVal ? (4 / durVal) : 1;
+            return { note: notePart, beats };
+          }
+          return item;
+        }).filter(item => item !== null);
+      }
+      
+      // Original parsing for space-separated or continuous format
+      const result = [];
+      let i = 0;
+      
+      while (i < inputString.length) {
+        // Skip spaces
+        if (inputString[i] === ' ') {
+          i++;
+          continue;
+        }
+        
+        // Check for rest
+        if (inputString[i] === '_') {
+          result.push('_');
+          i++;
+          continue;
+        }
+        
+        // Check for note name followed by # or b and optional octave number
+        if (i + 1 < inputString.length && "CDEFGAB".includes(inputString[i].toUpperCase())) {
+          if ("#B".includes(inputString[i+1].toUpperCase())) {
+            // We have a sharp/flat note
+            if (i + 2 < inputString.length && "0123456789".includes(inputString[i+2])) {
+              // We have an octave number too
+              result.push(inputString.slice(i, i+3));
+              i += 3;
+            } else {
+              // Just a sharp/flat note
+              result.push(inputString.slice(i, i+2));
+              i += 2;
+            }
+          } else if ("0123456789".includes(inputString[i+1])) {
+            // Just a note with octave number
+            result.push(inputString.slice(i, i+2));
+            i += 2;
+          } else {
+            // Just a regular note
+            result.push(inputString[i]);
+            i++;
+          }
+        } else {
+          // Regular character
+          result.push(inputString[i]);
+          i++;
+        }
+      }
+      
+      return result;
+    }
+
+    // Enter key to play sequence
+    sequenceInput.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") { e.preventDefault(); playSequenceBtn.click(); }
+    });
+
+    keys.forEach(key => key.addEventListener("transitionend", function(e) {
+      if (e.propertyName === "transform") key.classList.remove("playing");
+    }));
+
+    // Image picker
+    let imageSizeState = 'small';
+    const imageSizes = { small: '180px', regular: '400px', large: '800px' };
+
+    document.getElementById('imageFileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file || !file.type.startsWith('image/')) return;
+      const img = document.getElementById('imagePreview');
+      img.src = URL.createObjectURL(file);
+      img.style.maxHeight = imageSizes.small;
+      imageSizeState = 'small';
+      document.getElementById('imagePreviewContainer').style.display = 'block';
+      document.getElementById('loadImageBtn').textContent = file.name;
+    });
+
+    function toggleImageSize() {
+      const img = document.getElementById('imagePreview');
+      imageSizeState = imageSizeState === 'small' ? 'regular' : imageSizeState === 'regular' ? 'large' : 'small';
+      img.style.maxHeight = imageSizes[imageSizeState];
+    }
+
+    function closeImagePreview() {
+      document.getElementById('imagePreviewContainer').style.display = 'none';
+      document.getElementById('loadImageBtn').textContent = 'Load image';
+      document.getElementById('imageFileInput').value = '';
+    }
+  </script>
+</body>
+</html>
+    
+  </body>
+  
+</html>
