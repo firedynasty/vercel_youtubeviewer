@@ -348,12 +348,10 @@
       <h1>JS Piano &nbsp;<a href="note_builder.html" target="_blank" style="font-size:14px; color:#028ae9; text-decoration:none; font-weight:400;">Note Builder ↗</a></h1>
     </header>
     <section id="main">
-      <div class="nowplaying"></div>
 
       <!-- Reference image -->
       <div class="sequence-container" style="margin-bottom:0;">
         <button class="play-btn" id="loadImageBtn" onclick="document.getElementById('imageFileInput').click()" style="font-size:15px; margin-bottom:8px; margin-right:8px;">Load image</button>
-        <button class="play-btn" onclick="openDbxModal()" style="font-size:15px; margin-bottom:8px; background:linear-gradient(45deg,#0061ff,#004bb5);">📂 Dropbox</button>
         <input type="file" id="imageFileInput" accept="image/*" style="display:none;">
         <div id="imagePreviewContainer" style="display:none; position:relative; margin-bottom:10px;">
           <img id="imagePreview" style="max-width:100%; max-height:180px; border-radius:6px; cursor:pointer; display:block;" onclick="toggleImageSize()">
@@ -366,6 +364,10 @@
         <div class="input-container">
           <input type="text" class="sequence-input" id="sequenceInput" placeholder="E4:4, G4:4, A4:2 ..." />
           <button class="play-btn" id="playSequence">Play</button>
+        </div>
+        <div style="display:flex; align-items:center; gap:16px; margin-top:4px;">
+          <div class="nowplaying"></div>
+          <button class="play-btn" onclick="openDbxModal()" style="font-size:15px; background:linear-gradient(45deg,#0061ff,#004bb5);">📂 Dropbox</button>
         </div>
       </div>
 
