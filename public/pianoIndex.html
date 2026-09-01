@@ -801,10 +801,17 @@
       window.getDropboxAccessToken = () => dropboxAccessToken;
       window.dropboxSignInPopup    = dropboxSignInPopup;
 
+      // Headers must be ISO-8859-1; escape non-ASCII chars in the JSON value
+      function dbxArg(obj) {
+        return JSON.stringify(obj).replace(/[^\x00-\x7F]/g, c =>
+          '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')
+        );
+      }
+
       window.dropboxDownloadText = async function(path) {
         const res = await fetch('https://content.dropboxapi.com/2/files/download', {
           method: 'POST',
-          headers: { Authorization:'Bearer '+dropboxAccessToken, 'Dropbox-API-Arg':JSON.stringify({path}) },
+          headers: { Authorization:'Bearer '+dropboxAccessToken, 'Dropbox-API-Arg':dbxArg({path}) },
         });
         if (!res.ok) throw new Error('Download failed ('+res.status+')');
         return res.text();
@@ -812,7 +819,7 @@
       window.dropboxDownloadBlob = async function(path) {
         const res = await fetch('https://content.dropboxapi.com/2/files/download', {
           method: 'POST',
-          headers: { Authorization:'Bearer '+dropboxAccessToken, 'Dropbox-API-Arg':JSON.stringify({path}) },
+          headers: { Authorization:'Bearer '+dropboxAccessToken, 'Dropbox-API-Arg':dbxArg({path}) },
         });
         if (!res.ok) throw new Error('Download failed ('+res.status+')');
         return res.blob();
