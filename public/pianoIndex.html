@@ -927,7 +927,7 @@
       }
 
       window.dbxLoadFile = async function(path, name, isImage) {
-        document.getElementById('dbxStatus').textContent = 'Downloading '+name+'…';
+        window.closeDbxModal();
         try {
           if (isImage) {
             const blob = await window.dropboxDownloadBlob(path);
@@ -941,10 +941,8 @@
             const text = await window.dropboxDownloadText(path);
             document.getElementById('sequenceInput').value = text.trim();
           }
-          document.getElementById('dbxStatus').textContent = '✅ Loaded: '+name;
-          window.closeDbxModal();
         } catch(err) {
-          document.getElementById('dbxStatus').textContent = 'Error: '+err.message;
+          console.error('Dropbox load error:', err.message);
         }
       };
 
