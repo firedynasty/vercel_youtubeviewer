@@ -165,14 +165,15 @@
 <body>
 
 <h1>Staff Note Builder</h1>
-<div class="sub">Pick Quarter or Half (or press Q / H), then click a note on the staff — it appends instantly. Press Z to undo.</div>
+<div class="sub">Pick a duration (Q / H / N / D), then click a note — it appends instantly. Duration is in beats: 1=quarter, 1.5=dotted quarter, 2=half, 3=dotted half. Press Z to undo.</div>
 
 <div class="app">
 
   <div class="panel">
     <h2>1. Duration</h2>
     <div class="dur-row">
-      <button class="dur-btn active" data-dur="4">Quarter <small>(Q)</small></button>
+      <button class="dur-btn active" data-dur="1">Quarter <small>(Q)</small></button>
+      <button class="dur-btn" data-dur="1.5">Dotted Quarter <small>(N)</small></button>
       <button class="dur-btn" data-dur="2">Half <small>(H)</small></button>
       <button class="dur-btn" data-dur="3">Dotted Half <small>(D)</small></button>
     </div>
@@ -199,7 +200,7 @@
     </div>
 
     <h2 style="margin-top:14px;">Output</h2>
-    <textarea id="melodyOut" placeholder="E4:4, G4:4, Bb4:2 ..."></textarea>
+    <textarea id="melodyOut" placeholder="E4:1, G4:1, Bb4:2 ..."></textarea>
     <div class="copy-row">
       <button class="action" id="copyBtn">Copy</button>
       <span id="copyStatus"></span>
@@ -266,7 +267,7 @@ function drawStaff(){
   });
 }
 
-let duration = '4';
+let duration = '1';
 
 // Duration buttons
 document.querySelectorAll('.dur-btn').forEach(btn=>{
@@ -277,11 +278,13 @@ document.querySelectorAll('.dur-btn').forEach(btn=>{
   });
 });
 
-// Keyboard shortcuts Q = quarter, H = half, D = dotted half
+// Keyboard shortcuts: Q=quarter(1), N=dotted quarter(1.5), H=half(2), D=dotted half(3)
 document.addEventListener('keydown', e=>{
   if(e.target.tagName === 'TEXTAREA') return;
   if(e.key === 'q' || e.key === 'Q'){
-    document.querySelector('[data-dur="4"]').click();
+    document.querySelector('[data-dur="1"]').click();
+  } else if(e.key === 'n' || e.key === 'N'){
+    document.querySelector('[data-dur="1.5"]').click();
   } else if(e.key === 'h' || e.key === 'H'){
     document.querySelector('[data-dur="2"]').click();
   } else if(e.key === 'd' || e.key === 'D'){

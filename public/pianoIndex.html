@@ -362,7 +362,7 @@
       <!-- Sequence input -->
       <div class="sequence-container">
         <div class="input-container">
-          <input type="text" class="sequence-input" id="sequenceInput" placeholder="E4:4, G4:4, A4:2 ..." />
+          <input type="text" class="sequence-input" id="sequenceInput" placeholder="E4:1, G4:1, A4:2 ..." />
           <button class="play-btn" id="playSequence">Play</button>
         </div>
         <div style="display:flex; align-items:center; gap:16px; margin-top:4px;">
@@ -646,8 +646,8 @@
     });
     
     // Parse a sequence of notes that may include multi-character notes
-    // Supports duration suffix: D4:4 (quarter), D4:2 (half), D4:1 (whole)
-    // Duration value: 4=quarter(1 beat), 2=half(2 beats), 1=whole(4 beats)
+    // Supports duration suffix using direct beat counts:
+    //   :1 = quarter (1 beat), :1.5 = dotted quarter, :2 = half (2 beats), :3 = dotted half
     function parseNoteSequence(inputString) {
       // Check if using comma-delimited format
       if (inputString.includes(',')) {
@@ -657,8 +657,7 @@
           if (item.includes(':')) {
             const colonIdx = item.lastIndexOf(':');
             const notePart = item.slice(0, colonIdx).trim();
-            const durVal = parseInt(item.slice(colonIdx + 1));
-            const beats = durVal === 3 ? 3 : (durVal ? (4 / durVal) : 1);
+            const beats = parseFloat(item.slice(colonIdx + 1)) || 1;
             return { note: notePart, beats };
           }
           return item;
