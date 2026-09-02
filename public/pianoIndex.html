@@ -340,6 +340,41 @@
       display: block;
       margin: 48px auto 0;
     }
+
+    /* ---- note strip ---- */
+    #noteStrip {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 10px 0 14px;
+      scroll-behavior: smooth;
+      min-height: 80px;
+      align-items: flex-end;
+    }
+    .note-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 46px;
+      padding: 8px 6px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.07);
+      flex-shrink: 0;
+      transition: background .07s, transform .07s, border-color .07s;
+    }
+    .note-card.playing {
+      background: #028ae9;
+      border-color: #028ae9;
+      transform: scale(1.13) translateY(-5px);
+      box-shadow: 0 4px 16px rgba(2,138,233,.55);
+    }
+    .nc-name  { font-size: 14px; font-weight: 700; color: #ddd; }
+    .nc-dur   { font-size: 10px; color: #666; margin-top: 1px; }
+    .nc-lyric { font-size: 12px; color: #aaa; margin-top: 5px; white-space: nowrap; }
+    .note-card.playing .nc-name,
+    .note-card.playing .nc-dur,
+    .note-card.playing .nc-lyric { color: #fff; }
   </style>
 </head>
 <body>
@@ -369,10 +404,18 @@
           <label for="volumeSlider" style="color:#aaa; font-size:14px;">Vol</label>
           <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1" style="width:160px; accent-color:#028ae9; cursor:pointer;">
         </div>
-        <div style="display:flex; align-items:center; gap:16px; margin-top:4px;">
-          <div class="nowplaying"></div>
+        <div style="display:flex; align-items:center; gap:10px; margin-top:4px; flex-wrap:wrap;">
+          <label style="color:#aaa; font-size:14px;">BPM</label>
+          <input type="number" id="bpmInput" value="100" min="40" max="300"
+            style="width:58px; padding:6px; border-radius:6px; border:1px solid #333; background:#111; color:#eee; font-size:13px;">
+          <button class="play-btn" id="stopStripBtn" style="display:none; background:#b3261e;">&#9632; Stop</button>
           <button class="play-btn" onclick="openDbxModal()" style="font-size:15px; background:linear-gradient(45deg,#0061ff,#004bb5);">📂 Dropbox</button>
         </div>
+      </div>
+
+      <!-- Note strip -->
+      <div class="sequence-container" style="margin-top:8px;">
+        <div id="noteStrip"><span style="color:#555; font-size:13px;">Enter a sequence and press Play — the note strip appears here.</span></div>
       </div>
 
       <!-- Dropbox modal -->
@@ -536,6 +579,10 @@
 
       const source = audioCtx.createBufferSource();
       source.buffer = buffer;
+      activeSources.push(source);
+      source.addEventListener('ended', () => {
+        activeSources = activeSources.filter(s => s !== source);
+      });
 
       // Fade out with a GainNode so the note decays smoothly
       const gain = audioCtx.createGain();
@@ -581,26 +628,50 @@
       'E2': ';', 'E5': ';'
     };
 
-    let currentSequenceTimeout = null;
-
     const keys = document.querySelectorAll(".key"),
-          note = document.querySelector(".nowplaying"),
           sequenceInput = document.getElementById("sequenceInput"),
           playSequenceBtn = document.getElementById("playSequence");
 
+    // ---- note strip ----
+    const DUR_LABELS = {0.5:'♪',1:'♩',1.5:'♩.',2:'𝅗𝅥',3:'𝅗𝅥.'};
+    let allTimers = [];
+    let activeSources = [];
+
+    function renderNoteStrip(parsed) {
+      const strip = document.getElementById('noteStrip');
+      if (!parsed.length) {
+        strip.innerHTML = '<span style="color:#555;font-size:13px;">Enter a sequence and press Play — the note strip appears here.</span>';
+        return;
+      }
+      strip.innerHTML = '';
+      parsed.forEach((item, i) => {
+        const noteStr = item && typeof item === 'object' ? item.note : item;
+        const beats   = item && typeof item === 'object' ? item.beats : 1;
+        const lyric   = (item && item.lyric) || '';
+        const card = document.createElement('div');
+        card.className = 'note-card';
+        card.id = 'nc-' + i;
+        const durLabel = DUR_LABELS[beats] || beats + 'b';
+        const lyricSpan = lyric ? `<span class="nc-lyric">${lyric}</span>` : '';
+        card.innerHTML = `<span class="nc-name">${noteStr}</span><span class="nc-dur">${durLabel}</span>${lyricSpan}`;
+        strip.appendChild(card);
+      });
+    }
+
+    function stopStripPlayback() {
+      allTimers.forEach(clearTimeout);
+      allTimers = [];
+      activeSources.forEach(s => { try { s.stop(0); } catch(e) {} });
+      activeSources = [];
+      document.querySelectorAll('.note-card.playing').forEach(c => c.classList.remove('playing'));
+      document.getElementById('stopStripBtn').style.display = 'none';
+    }
+
+    document.getElementById('stopStripBtn').addEventListener('click', stopStripPlayback);
+
     // Function to play a note by key character
     function playNoteByChar(char, durationSeconds) {
-      // If underscore, treat as rest
-      if (char === '_') {
-        note.innerHTML = 'REST';
-        return;
-      }
-
-      // If equals sign, sustain the current note
-      if (char === '=') {
-        note.innerHTML = 'HOLD';
-        return;
-      }
+      if (char === '_' || char === '=') return; // rest / hold — no audio
 
       let keyChar = char;
 
@@ -625,56 +696,64 @@
       if (!key) return;
 
       key.classList.add("playing");
-      note.innerHTML = key.getAttribute("data-note");
       playBuffer(keyCode, durationSeconds);
     }
 
-    // Play a sequence of notes with a delay between them
-    // Items can be strings or {note, beats} objects
-    function playSequence(sequence, delay = 800) {
-      let index = 0;
-
-      function playNext() {
-        if (index < sequence.length) {
-          const item = sequence[index];
-          const noteStr = (item && typeof item === 'object') ? item.note : item;
-          const beats   = (item && typeof item === 'object') ? item.beats : 1;
-          const durationSeconds = (delay * beats) / 1000;
-          playNoteByChar(noteStr, durationSeconds);
-          index++;
-          currentSequenceTimeout = setTimeout(playNext, delay * beats);
-        }
-      }
-
-      playNext();
-    }
-
-    // Play sequence button handler
+    // Play sequence button handler — drives both audio and strip highlight
     playSequenceBtn.addEventListener("click", function() {
       const sequence = sequenceInput.value.trim();
-      if (sequence) {
-        if (currentSequenceTimeout) clearTimeout(currentSequenceTimeout);
-        playSequence(parseNoteSequence(sequence));
-      }
+      if (!sequence) return;
+      stopStripPlayback();
+
+      const parsed = parseNoteSequence(sequence);
+
+      renderNoteStrip(parsed);
+      document.getElementById('stopStripBtn').style.display = '';
+
+      const bpm = parseFloat(document.getElementById('bpmInput').value) || 100;
+      const msPerBeat = 60000 / bpm;
+
+      let t = 0;
+      parsed.forEach((item, i) => {
+        const noteStr = item && typeof item === 'object' ? item.note : item;
+        const beats   = item && typeof item === 'object' ? item.beats : 1;
+        const durSec  = (msPerBeat * beats) / 1000;
+
+        allTimers.push(setTimeout(() => {
+          document.querySelectorAll('.note-card.playing').forEach(c => c.classList.remove('playing'));
+          const card = document.getElementById('nc-' + i);
+          if (card) {
+            card.classList.add('playing');
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          }
+          playNoteByChar(noteStr, durSec);
+        }, t));
+        t += msPerBeat * beats;
+      });
+
+      allTimers.push(setTimeout(stopStripPlayback, t));
     });
     
-    // Parse a sequence of notes that may include multi-character notes
-    // Supports duration suffix using direct beat counts:
-    //   :1 = quarter (1 beat), :1.5 = dotted quarter, :2 = half (2 beats), :3 = dotted half
+    // Parse a sequence of notes.
+    // Supports three token formats (comma-delimited):
+    //   lyric:note:beats  →  { lyric, note, beats }   e.g. "do:C4:1"
+    //   note:beats        →  { note, beats }           e.g. "C4:2"
+    //   note              →  { note, beats:1 }         e.g. "C4"
+    // Two-colon format lets a single file carry both melody and lyrics.
     function parseNoteSequence(inputString) {
-      // Check if using comma-delimited format
       if (inputString.includes(',')) {
         return inputString.split(',').map(item => {
           item = item.trim();
           if (item === '') return null;
-          if (item.includes(':')) {
-            const colonIdx = item.lastIndexOf(':');
-            const notePart = item.slice(0, colonIdx).trim();
-            const beats = parseFloat(item.slice(colonIdx + 1)) || 1;
-            return { note: notePart, beats };
+          const parts = item.split(':');
+          if (parts.length >= 3) {
+            // lyric:note:beats
+            return { lyric: parts[0].trim(), note: parts[1].trim(), beats: parseFloat(parts[2]) || 1 };
+          } else if (parts.length === 2) {
+            return { note: parts[0].trim(), beats: parseFloat(parts[1]) || 1 };
           }
-          return item;
-        }).filter(item => item !== null);
+          return { note: item, beats: 1 };
+        }).filter(Boolean);
       }
       
       // Original parsing for space-separated or continuous format

@@ -160,22 +160,58 @@
     color:var(--muted);
     margin-top:6px;
   }
+  /* ---- note strip ---- */
+  #noteStrip{
+    display:flex;
+    gap:6px;
+    overflow-x:auto;
+    padding:10px 4px 14px;
+    scroll-behavior:smooth;
+    min-height:88px;
+    align-items:flex-end;
+  }
+  .note-card{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    min-width:46px;
+    padding:8px 6px 6px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:#fff;
+    flex-shrink:0;
+    transition:background .07s,transform .07s,border-color .07s;
+    cursor:default;
+  }
+  .note-card.playing{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+    transform:scale(1.13) translateY(-4px);
+    box-shadow:0 4px 14px rgba(124,58,237,.35);
+  }
+  .nc-name{font-size:14px;font-weight:700;}
+  .nc-dur{font-size:10px;color:var(--muted);margin-top:1px;}
+  .nc-lyric{font-size:12px;color:var(--ink);margin-top:5px;white-space:nowrap;}
+  .note-card.playing .nc-dur,
+  .note-card.playing .nc-lyric{color:rgba(255,255,255,.8);}
 </style>
 </head>
 <body>
 
 <h1>Staff Note Builder</h1>
-<div class="sub">Pick a duration (Q / H / N / D), then click a note — it appends instantly. Duration is in beats: 1=quarter, 1.5=dotted quarter, 2=half, 3=dotted half. Press Z to undo.</div>
+<div class="sub">Press <b>` / 0–8</b> to place notes (` / 0 = B3, 1 = C4 … 8 = C5) using the active duration. <b>Tab</b> cycles duration. <b>Z</b> = undo.</div>
+
 
 <div class="app">
 
   <div class="panel">
     <h2>1. Duration</h2>
     <div class="dur-row">
-      <button class="dur-btn active" data-dur="1">Quarter <small>(Q)</small></button>
-      <button class="dur-btn" data-dur="1.5">Dotted Quarter <small>(N)</small></button>
-      <button class="dur-btn" data-dur="2">Half <small>(H)</small></button>
-      <button class="dur-btn" data-dur="3">Dotted Half <small>(D)</small></button>
+      <button class="dur-btn active" data-dur="1">Quarter</button>
+      <button class="dur-btn" data-dur="1.5">Dotted Quarter</button>
+      <button class="dur-btn" data-dur="2">Half</button>
+      <button class="dur-btn" data-dur="3">Dotted Half</button>
     </div>
 
     <h2>2. Click a note to add it</h2>
@@ -207,6 +243,28 @@
     </div>
   </div>
 
+</div>
+
+<!-- ---- Lyrics + Note Strip ---- -->
+<div class="panel" style="max-width:1100px;margin:16px auto 0;">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+    <h2 style="margin:0;">Lyrics</h2>
+    <input type="text" id="lyricsInput" placeholder="do,you,hear,them,com,-ing,broth,-er"
+      style="flex:1;min-width:200px;padding:7px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;">
+    <label style="font-size:13px;color:var(--muted);">BPM</label>
+    <input type="number" id="bpmInput" value="100" min="40" max="300"
+      style="width:58px;padding:6px;border-radius:8px;border:1px solid var(--border);font-size:13px;">
+    <button class="action primary" id="playStripBtn">&#9654; Play</button>
+    <button class="action" id="stopStripBtn" style="display:none;">&#9632; Stop</button>
+  </div>
+  <div id="noteStrip"><span style="color:var(--muted);font-size:13px;">Build a melody above — the note strip appears here.</span></div>
+
+  <div style="margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <button class="action" id="exportBtn">Export combined</button>
+    <span id="exportStatus" style="font-size:12px;color:var(--accent);"></span>
+  </div>
+  <textarea id="exportOut" placeholder="do:C4:1, you:D4:1, hear:E4:1 …"
+    style="margin-top:8px;width:100%;min-height:56px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;padding:10px;border-radius:8px;border:1px solid var(--border);resize:vertical;background:#fbfbfa;display:none;"></textarea>
 </div>
 
 <script>
@@ -278,18 +336,33 @@ document.querySelectorAll('.dur-btn').forEach(btn=>{
   });
 });
 
-// Keyboard shortcuts: Q=quarter(1), N=dotted quarter(1.5), H=half(2), D=dotted half(3)
+// Note keys: ` / 0 / 1 = B3 … 8 = B4
+const NOTE_KEYS = {
+  '`':'B3','0':'B3',
+  '1':'C4','2':'D4','3':'E4','4':'F4',
+  '5':'G4','6':'A4','7':'B4','8':'C5'
+};
+
 document.addEventListener('keydown', e=>{
   if(e.target.tagName === 'TEXTAREA') return;
-  if(e.key === 'q' || e.key === 'Q'){
-    document.querySelector('[data-dur="1"]').click();
-  } else if(e.key === 'n' || e.key === 'N'){
-    document.querySelector('[data-dur="1.5"]').click();
-  } else if(e.key === 'h' || e.key === 'H'){
-    document.querySelector('[data-dur="2"]').click();
-  } else if(e.key === 'd' || e.key === 'D'){
-    document.querySelector('[data-dur="3"]').click();
-  } else if(e.key === 'z' || e.key === 'Z'){
+
+  // Tab cycles through duration buttons
+  if(e.key === 'Tab'){
+    e.preventDefault();
+    const btns = [...document.querySelectorAll('.dur-btn')];
+    const activeIdx = btns.findIndex(b=>b.classList.contains('active'));
+    btns[(activeIdx + 1) % btns.length].click();
+    return;
+  }
+
+  // Note placement: digit / grave keys — uses whichever duration is active
+  if(NOTE_KEYS[e.key]){
+    e.preventDefault();
+    addNote(NOTE_KEYS[e.key]);
+    return;
+  }
+
+  if(e.key === 'z' || e.key === 'Z'){
     document.getElementById('undoBtn').click();
   }
 });
@@ -358,7 +431,138 @@ function closeImagePreview() {
   document.getElementById('imageFileInput').value = '';
 }
 
+// ---- Export combined (lyric:note:beats) ----
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const notes = document.getElementById('melodyOut').value
+    .split(',').map(s=>s.trim()).filter(Boolean);
+  const lyrics = document.getElementById('lyricsInput').value
+    .split(',').map(s=>s.trim());
+
+  const combined = notes.map((tok, i)=>{
+    const lyric = lyrics[i] || '';
+    return lyric ? lyric + ':' + tok : tok;
+  }).join(', ');
+
+  const out = document.getElementById('exportOut');
+  const status = document.getElementById('exportStatus');
+  out.value = combined;
+  out.style.display = 'block';
+
+  navigator.clipboard.writeText(combined).then(()=>{
+    status.textContent = 'Copied!';
+    setTimeout(()=>status.textContent='', 1500);
+  }).catch(()=>{ status.textContent = 'Select text above to copy'; });
+});
+
 drawStaff();
+
+// ---- Note Strip & Playback ----
+const NOTE_FREQS = {
+  'B2':123.47,'C3':130.81,'D3':146.83,'E3':164.81,'F3':174.61,'G3':196.00,'A3':220.00,'B3':246.94,
+  'C4':261.63,'Db4':277.18,'D4':293.66,'Eb4':311.13,'E4':329.63,'F4':349.23,'F#4':369.99,
+  'G4':392.00,'Ab4':415.30,'A4':440.00,'Bb4':466.16,'B4':493.88,
+  'C5':523.25,'Db5':554.37,'D5':587.33,'Eb5':622.25,'E5':659.25,'F5':698.46,'F#5':739.99,
+  'G5':783.99,'Ab5':830.61,'A5':880.00,'Bb5':932.33,'B5':987.77,
+  'C6':1046.50,'D6':1174.66
+};
+
+let audioCtx = null;
+function getCtx(){
+  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function parseMelody(){
+  return document.getElementById('melodyOut').value
+    .split(',').map(s=>s.trim()).filter(Boolean)
+    .map(tok=>{ const [note,dur]=tok.split(':'); return {note:(note||'').trim(), dur:parseFloat(dur)||1}; });
+}
+
+function parseLyrics(){
+  return document.getElementById('lyricsInput').value.trim()
+    .split(',').map(s=>s.trim());
+}
+
+const DUR_LABELS = {0.5:'♪',1:'♩',1.5:'♩.',2:'𝅗𝅥',3:'𝅗𝅥.'};
+
+function renderNoteStrip(){
+  const notes = parseMelody();
+  const lyrics = parseLyrics();
+  const strip = document.getElementById('noteStrip');
+  if(!notes.length){
+    strip.innerHTML='<span style="color:var(--muted);font-size:13px;">Build a melody above — the note strip appears here.</span>';
+    return;
+  }
+  strip.innerHTML='';
+  notes.forEach((n,i)=>{
+    const card = document.createElement('div');
+    card.className='note-card';
+    card.id='nc-'+i;
+    const durLabel = DUR_LABELS[n.dur] || n.dur+'b';
+    const lyricSpan = lyrics[i] ? `<span class="nc-lyric">${lyrics[i]}</span>` : '';
+    card.innerHTML=`<span class="nc-name">${n.note}</span><span class="nc-dur">${durLabel}</span>${lyricSpan}`;
+    strip.appendChild(card);
+  });
+}
+
+let allTimers = [];
+
+function stopPlayback(){
+  allTimers.forEach(clearTimeout);
+  allTimers = [];
+  document.querySelectorAll('.note-card.playing').forEach(c=>c.classList.remove('playing'));
+  document.getElementById('playStripBtn').style.display='';
+  document.getElementById('stopStripBtn').style.display='none';
+}
+
+document.getElementById('playStripBtn').addEventListener('click', ()=>{
+  renderNoteStrip();
+  const notes = parseMelody();
+  if(!notes.length) return;
+  document.getElementById('playStripBtn').style.display='none';
+  document.getElementById('stopStripBtn').style.display='';
+
+  const bpm = parseFloat(document.getElementById('bpmInput').value)||100;
+  const spb = 60/bpm; // seconds per beat
+  const ctx = getCtx();
+  if(ctx.state === 'suspended') ctx.resume();
+  let t = ctx.currentTime + 0.04;
+
+  notes.forEach((n,i)=>{
+    const dur = n.dur * spb;
+    // Audio
+    if(n.note !== '_' && NOTE_FREQS[n.note]){
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.value = NOTE_FREQS[n.note];
+      gain.gain.setValueAtTime(0.28, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur*0.88);
+      osc.start(t); osc.stop(t + dur);
+    }
+    // Visual highlight
+    const startMs = (t - ctx.currentTime)*1000;
+    allTimers.push(setTimeout(()=>{
+      document.querySelectorAll('.note-card.playing').forEach(c=>c.classList.remove('playing'));
+      const card = document.getElementById('nc-'+i);
+      if(card){
+        card.classList.add('playing');
+        card.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+      }
+    }, startMs));
+    t += dur;
+  });
+
+  // Cleanup after last note
+  allTimers.push(setTimeout(stopPlayback, (t - ctx.currentTime)*1000));
+});
+
+document.getElementById('stopStripBtn').addEventListener('click', stopPlayback);
+
+// Re-render strip live as melody or lyrics change
+document.getElementById('melodyOut').addEventListener('input', renderNoteStrip);
+document.getElementById('lyricsInput').addEventListener('input', renderNoteStrip);
 </script>
 
 </body>
