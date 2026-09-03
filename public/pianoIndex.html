@@ -371,6 +371,10 @@
       cursor: pointer;
     }
     .note-card:hover { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.35); }
+    .note-card.end-card {
+      border-width: 3px;
+      padding: 6px 4px 4px; /* offset thicker border so card size matches the rest */
+    }
     .note-card.playing {
       background: #028ae9;
       border-color: #028ae9;
@@ -392,13 +396,20 @@
     </header>
     <section id="main">
 
-      <!-- Reference image -->
+      <!-- Reference image + audio -->
       <div class="sequence-container" style="margin-bottom:0;">
         <button class="play-btn" id="loadImageBtn" onclick="document.getElementById('imageFileInput').click()" style="font-size:15px; margin-bottom:8px; margin-right:8px;">Load image</button>
         <input type="file" id="imageFileInput" accept="image/*" style="display:none;">
+        <button class="play-btn" id="loadAudioBtn" onclick="document.getElementById('audioFileInput').click()" style="font-size:15px; margin-bottom:8px; margin-right:8px; background:#1a7a1a;">Load audio</button>
+        <input type="file" id="audioFileInput" accept="audio/*" style="display:none;">
+        <button class="play-btn" id="audioRepeatBtn" onclick="startAudioRepeat5()" style="font-size:15px; margin-bottom:8px; margin-right:8px; background:#1a4a7a;">🔁 5×</button>
         <div id="imagePreviewContainer" style="display:none; position:relative; margin-bottom:10px;">
           <img id="imagePreview" style="max-width:100%; max-height:180px; border-radius:6px; cursor:pointer; display:block;" onclick="toggleImageSize()">
           <button onclick="closeImagePreview()" style="position:absolute; top:4px; right:4px; background:rgba(0,0,0,0.6); color:#fff; border:none; border-radius:50%; width:26px; height:26px; cursor:pointer; font-size:17px; line-height:1;">×</button>
+        </div>
+        <div id="audioPlayerContainer" style="display:none; position:relative; margin-bottom:10px;">
+          <audio id="audioPlayer" controls style="width:100%; border-radius:6px;"></audio>
+          <button onclick="closeAudioPlayer()" style="position:absolute; top:4px; right:4px; background:rgba(0,0,0,0.6); color:#fff; border:none; border-radius:50%; width:26px; height:26px; cursor:pointer; font-size:17px; line-height:1;">×</button>
         </div>
       </div>
 
@@ -413,9 +424,11 @@
         </div>
         <div style="display:flex; align-items:center; gap:10px; margin-top:8px; flex-wrap:wrap;">
           <button class="play-btn" id="playSequence">&#9654; Play</button>
+          <button class="play-btn" id="seqRepeatBtn" onclick="toggleSeqRepeat()" style="background:#0e6b3a;">🔁 5× on</button>
           <label style="color:#aaa; font-size:14px;">BPM</label>
           <input type="number" id="bpmInput" value="100" min="40" max="300"
             style="width:58px; padding:6px; border-radius:6px; border:1px solid #333; background:#111; color:#eee; font-size:13px;">
+          <input type="number" id="repeatInput" value="5" min="1" max="99" style="display:none;">
           <button class="play-btn" id="stopStripBtn" style="display:none; background:#b3261e;">&#9632; Stop</button>
           <button class="play-btn" onclick="openDbxModal()" style="font-size:15px; background:linear-gradient(45deg,#0061ff,#004bb5);">📂 Dropbox</button>
         </div>
@@ -645,6 +658,54 @@
     let allTimers = [];
     let activeSources = [];
     let lastParsed = [];
+    let remainingRepeats = 0;
+
+    // ---- fade-loop helpers (mirrors bach-player pattern) ----
+    const LOOP_FADE_OUT_MS = 800;
+    const LOOP_FADE_IN_MS  = 600;
+    let loopFadeGen = 0;
+
+    function fadeGainTo(target, durationMs) {
+      masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+      masterGain.gain.setValueAtTime(masterGain.gain.value, audioCtx.currentTime);
+      masterGain.gain.linearRampToValueAtTime(target, audioCtx.currentTime + durationMs / 1000);
+    }
+
+    function fadeAudioElTo(el, target, durationMs) {
+      if (!el || !el.src || el.paused) return;
+      const start = el.volume;
+      const steps = 20;
+      const stepMs = durationMs / steps;
+      let i = 0;
+      const iv = setInterval(() => {
+        i++;
+        el.volume = Math.min(1, Math.max(0, start + (target - start) * (i / steps)));
+        if (i >= steps) clearInterval(iv);
+      }, stepMs);
+    }
+
+    function doFadeLoop() {
+      document.querySelectorAll('.note-card.playing').forEach(c => c.classList.remove('playing'));
+      const gen = ++loopFadeGen;
+      const sliderVol = parseFloat(document.getElementById('volumeSlider').value);
+      const audioEl = document.getElementById('audioPlayer');
+      const audioVol = audioEl.volume;
+      fadeGainTo(0, LOOP_FADE_OUT_MS);
+      fadeAudioElTo(audioEl, 0, LOOP_FADE_OUT_MS);
+      setTimeout(() => {
+        if (loopFadeGen !== gen) return;
+        // save repeat count — startPlaybackFrom→stopStripPlayback resets it to 0
+        const reps = remainingRepeats;
+        if (audioEl.src && !audioEl.paused) audioEl.currentTime = 0;
+        startPlaybackFrom(lastParsed, 0);
+        remainingRepeats = reps; // restore after stopStripPlayback wiped it
+        // stopStripPlayback also snaps gain back to full, so force 0 → fade in
+        masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+        masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+        masterGain.gain.linearRampToValueAtTime(sliderVol, audioCtx.currentTime + LOOP_FADE_IN_MS / 1000);
+        if (audioEl.src) { audioEl.volume = 0; fadeAudioElTo(audioEl, audioVol, LOOP_FADE_IN_MS); }
+      }, LOOP_FADE_OUT_MS);
+    }
 
     function renderNoteStrip(parsed) {
       const strip = document.getElementById('noteStrip');
@@ -659,6 +720,7 @@
         const lyric   = (item && item.lyric) || '';
         const card = document.createElement('div');
         card.className = 'note-card';
+        if (i === parsed.length - 1) card.classList.add('end-card');
         card.id = 'nc-' + i;
         const durLabel = DUR_LABELS[beats] || beats + 'b';
         const lyricSpan = lyric ? `<span class="nc-lyric">${lyric}</span>` : '';
@@ -669,6 +731,15 @@
     }
 
     function stopStripPlayback() {
+      loopFadeGen++;           // cancels any pending doFadeLoop callback
+      remainingRepeats = 0;
+      // restore gain immediately
+      const sliderVol = parseFloat(document.getElementById('volumeSlider').value);
+      masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+      masterGain.gain.setValueAtTime(sliderVol, audioCtx.currentTime);
+      // restore audio element volume if it was mid-fade
+      const audioEl = document.getElementById('audioPlayer');
+      if (audioEl && audioEl.volume < 0.99) audioEl.volume = 1;
       allTimers.forEach(clearTimeout);
       allTimers = [];
       activeSources.forEach(s => { try { s.stop(0); } catch(e) {} });
@@ -680,6 +751,14 @@
     function startPlaybackFrom(parsed, startIdx) {
       stopStripPlayback();
       if (!parsed.length) return;
+      if (startIdx === 0) {
+        // instant jump — #noteStrip has scroll-behavior:smooth in CSS, which would
+        // otherwise animate this reset and lag behind the first note's audio
+        const strip = document.getElementById('noteStrip');
+        strip.style.scrollBehavior = 'auto';
+        strip.scrollLeft = 0;
+        strip.style.scrollBehavior = '';
+      }
       document.getElementById('stopStripBtn').style.display = '';
 
       const bpm = parseFloat(document.getElementById('bpmInput').value) || 100;
@@ -704,7 +783,14 @@
         t += msPerBeat * beats;
       });
 
-      allTimers.push(setTimeout(stopStripPlayback, t));
+      allTimers.push(setTimeout(() => {
+        if (remainingRepeats > 0) {
+          remainingRepeats--;
+          doFadeLoop();   // fade out → restart → fade in
+        } else {
+          stopStripPlayback();
+        }
+      }, t));
     }
 
     document.getElementById('stopStripBtn').addEventListener('click', stopStripPlayback);
@@ -739,6 +825,15 @@
       playBuffer(keyCode, durationSeconds);
     }
 
+    function toggleSeqRepeat() {
+      const btn = document.getElementById('seqRepeatBtn');
+      const input = document.getElementById('repeatInput');
+      const isOn = input.value !== '1';
+      input.value = isOn ? '1' : '5';
+      btn.style.background = isOn ? '#1a4a7a' : '#0e6b3a';
+      btn.textContent = isOn ? '🔁 5×' : '🔁 5× on';
+    }
+
     // Play button — parse, render strip, start from beginning
     playSequenceBtn.addEventListener("click", function() {
       const sequence = sequenceInput.value.trim();
@@ -746,6 +841,8 @@
       lastParsed = parseNoteSequence(sequence);
       renderNoteStrip(lastParsed);
       startPlaybackFrom(lastParsed, 0);
+      // set AFTER startPlaybackFrom — it calls stopStripPlayback() which resets remainingRepeats to 0
+      remainingRepeats = Math.max(0, (parseInt(document.getElementById('repeatInput').value) || 1) - 1);
     });
     
     // Parse a sequence of notes.
@@ -857,6 +954,68 @@ keys.forEach(key => key.addEventListener("transitionend", function(e) {
       document.getElementById('imagePreviewContainer').style.display = 'none';
       document.getElementById('loadImageBtn').textContent = 'Load image';
       document.getElementById('imageFileInput').value = '';
+    }
+
+    // Audio picker
+    document.getElementById('audioFileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file || !file.type.startsWith('audio/')) return;
+      const audio = document.getElementById('audioPlayer');
+      audio.src = URL.createObjectURL(file);
+      document.getElementById('audioPlayerContainer').style.display = 'block';
+      document.getElementById('loadAudioBtn').textContent = file.name;
+    });
+
+    function closeAudioPlayer() {
+      const audio = document.getElementById('audioPlayer');
+      audio.pause();
+      audio.src = '';
+      document.getElementById('audioPlayerContainer').style.display = 'none';
+      document.getElementById('loadAudioBtn').textContent = 'Load audio';
+      document.getElementById('audioFileInput').value = '';
+    }
+
+    // ---- audio 5× repeat ----
+    let audioRepeatRemaining = 0;
+    let audioRepeatGen = 0;
+    let _audioRepeatHandler = null;
+
+    function startAudioRepeat5() {
+      const audioEl = document.getElementById('audioPlayer');
+      if (!audioEl.src) return;
+
+      // cancel any running repeat
+      audioRepeatGen++;
+      if (_audioRepeatHandler) {
+        audioEl.removeEventListener('ended', _audioRepeatHandler);
+        _audioRepeatHandler = null;
+      }
+
+      const gen = audioRepeatGen;
+      audioRepeatRemaining = 4; // 4 more after first play = 5 total
+
+      const savedVol = audioEl.volume || 1;
+      audioEl.currentTime = 0;
+      audioEl.play();
+
+      _audioRepeatHandler = function handleRepeatEnded() {
+        if (audioRepeatGen !== gen) {
+          audioEl.removeEventListener('ended', _audioRepeatHandler);
+          _audioRepeatHandler = null;
+          return;
+        }
+        if (audioRepeatRemaining > 0) {
+          audioRepeatRemaining--;
+          audioEl.volume = 0;
+          audioEl.currentTime = 0;
+          audioEl.play();
+          fadeAudioElTo(audioEl, savedVol, LOOP_FADE_IN_MS);
+        } else {
+          audioEl.removeEventListener('ended', _audioRepeatHandler);
+          _audioRepeatHandler = null;
+        }
+      };
+      audioEl.addEventListener('ended', _audioRepeatHandler);
     }
 
     // ── Dropbox integration ────────────────────────────────────────────────
@@ -997,6 +1156,7 @@ keys.forEach(key => key.addEventListener("transitionend", function(e) {
       };
 
       const DBX_IMAGE_EXT = new Set(['.jpg','.jpeg','.png','.gif','.webp','.bmp']);
+      const DBX_AUDIO_EXT = new Set(['.mp3','.wav','.m4a','.ogg','.flac','.aac']);
       const DBX_TEXT_EXT  = new Set(['.txt']);
 
       window.dbxBrowse = async function(path) {
@@ -1016,7 +1176,7 @@ keys.forEach(key => key.addEventListener("transitionend", function(e) {
             .filter(e => {
               if (e.isFolder) return true;
               const ext = e.name.slice(e.name.lastIndexOf('.')).toLowerCase();
-              return DBX_IMAGE_EXT.has(ext) || DBX_TEXT_EXT.has(ext);
+              return DBX_IMAGE_EXT.has(ext) || DBX_AUDIO_EXT.has(ext) || DBX_TEXT_EXT.has(ext);
             })
             .sort((a,b) => {
               if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
@@ -1056,22 +1216,24 @@ keys.forEach(key => key.addEventListener("transitionend", function(e) {
             return `<div class="dbx-item" onclick="dbxBrowse('${p}')"><span class="dbx-icon">📁</span><span class="dbx-name">${e.name}</span></div>`;
           }
           const ext = e.name.slice(e.name.lastIndexOf('.')).toLowerCase();
-          const isImg = DBX_IMAGE_EXT.has(ext);
-          const icon  = isImg ? '🖼️' : '📄';
-          const label = isImg ? 'Image' : 'Load';
+          const isImg   = DBX_IMAGE_EXT.has(ext);
+          const isAudio = DBX_AUDIO_EXT.has(ext);
+          const icon  = isImg ? '🖼️' : isAudio ? '🎵' : '📄';
+          const label = isImg ? 'Image' : isAudio ? 'Audio' : 'Load';
+          const fileType = isImg ? 'image' : isAudio ? 'audio' : 'text';
           const p = e.path.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
           const n = e.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
           return `<div class="dbx-item">
             <span class="dbx-icon">${icon}</span>
             <span class="dbx-name">${e.name}</span>
-            <button class="dbx-action" onclick="dbxLoadFile('${p}','${n}',${isImg})">${label}</button>
+            <button class="dbx-action" onclick="dbxLoadFile('${p}','${n}','${fileType}')">${label}</button>
           </div>`;
         }).join('');
       }
 
-      window.dbxLoadFile = async function(path, name, isImage) {
+      window.dbxLoadFile = async function(path, name, fileType) {
         try {
-          if (isImage) {
+          if (fileType === 'image') {
             const blob = await window.dropboxDownloadBlob(path);
             const img  = document.getElementById('imagePreview');
             img.src = URL.createObjectURL(blob);
@@ -1080,10 +1242,18 @@ keys.forEach(key => key.addEventListener("transitionend", function(e) {
             document.getElementById('imagePreviewContainer').style.display = 'block';
             document.getElementById('loadImageBtn').textContent = name;
             window.closeDbxModal();
+          } else if (fileType === 'audio') {
+            const blob  = await window.dropboxDownloadBlob(path);
+            const audio = document.getElementById('audioPlayer');
+            audio.src = URL.createObjectURL(blob);
+            document.getElementById('audioPlayerContainer').style.display = 'block';
+            document.getElementById('loadAudioBtn').textContent = name;
+            window.closeDbxModal();
           } else {
             const text = await window.dropboxDownloadText(path);
             document.getElementById('sequenceInput').value = text.trim();
             document.getElementById('dbxStatus').textContent = '✅ '+name+' loaded — pick an image or close';
+            closeAudioPlayer();
           }
         } catch(err) {
           document.getElementById('dbxStatus').textContent = 'Error: '+err.message;
