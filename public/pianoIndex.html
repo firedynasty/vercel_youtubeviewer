@@ -174,14 +174,20 @@
     }
 
     .sequence-input {
-      background: rgba(255, 255, 255, 0.8);
+      background: rgba(255, 255, 255, 0.07);
       border: 2px solid #028ae9;
       padding: 10px 15px;
-      font-size: 18px;
+      font-size: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       border-radius: 4px;
-      width: 80%;
-      margin-right: 10px;
+      width: 100%;
+      color: #eee;
+      resize: vertical;
+      min-height: 100px;
+      line-height: 1.6;
+      box-sizing: border-box;
     }
+    .sequence-input::placeholder { color: #555; }
 
     .play-btn {
       background: #028ae9;
@@ -362,7 +368,9 @@
       background: rgba(255,255,255,.07);
       flex-shrink: 0;
       transition: background .07s, transform .07s, border-color .07s;
+      cursor: pointer;
     }
+    .note-card:hover { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.35); }
     .note-card.playing {
       background: #028ae9;
       border-color: #028ae9;
@@ -397,14 +405,14 @@
       <!-- Sequence input -->
       <div class="sequence-container">
         <div class="input-container">
-          <input type="text" class="sequence-input" id="sequenceInput" placeholder="E4:1, G4:1, A4:2 ..." />
-          <button class="play-btn" id="playSequence">Play</button>
+          <textarea class="sequence-input" id="sequenceInput" placeholder="do:D4:1, you:D4:1, hear:E4:1, them:F4:1&#10;next line continues here…"></textarea>
         </div>
         <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
           <label for="volumeSlider" style="color:#aaa; font-size:14px;">Vol</label>
           <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1" style="width:160px; accent-color:#028ae9; cursor:pointer;">
         </div>
-        <div style="display:flex; align-items:center; gap:10px; margin-top:4px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:10px; margin-top:8px; flex-wrap:wrap;">
+          <button class="play-btn" id="playSequence">&#9654; Play</button>
           <label style="color:#aaa; font-size:14px;">BPM</label>
           <input type="number" id="bpmInput" value="100" min="40" max="300"
             style="width:58px; padding:6px; border-radius:6px; border:1px solid #333; background:#111; color:#eee; font-size:13px;">
@@ -636,6 +644,7 @@
     const DUR_LABELS = {0.5:'♪',1:'♩',1.5:'♩.',2:'𝅗𝅥',3:'𝅗𝅥.'};
     let allTimers = [];
     let activeSources = [];
+    let lastParsed = [];
 
     function renderNoteStrip(parsed) {
       const strip = document.getElementById('noteStrip');
@@ -654,6 +663,7 @@
         const durLabel = DUR_LABELS[beats] || beats + 'b';
         const lyricSpan = lyric ? `<span class="nc-lyric">${lyric}</span>` : '';
         card.innerHTML = `<span class="nc-name">${noteStr}</span><span class="nc-dur">${durLabel}</span>${lyricSpan}`;
+        card.addEventListener('click', () => startPlaybackFrom(lastParsed, i));
         strip.appendChild(card);
       });
     }
@@ -665,6 +675,36 @@
       activeSources = [];
       document.querySelectorAll('.note-card.playing').forEach(c => c.classList.remove('playing'));
       document.getElementById('stopStripBtn').style.display = 'none';
+    }
+
+    function startPlaybackFrom(parsed, startIdx) {
+      stopStripPlayback();
+      if (!parsed.length) return;
+      document.getElementById('stopStripBtn').style.display = '';
+
+      const bpm = parseFloat(document.getElementById('bpmInput').value) || 100;
+      const msPerBeat = 60000 / bpm;
+
+      let t = 0;
+      parsed.slice(startIdx).forEach((item, offset) => {
+        const i = startIdx + offset;
+        const noteStr = item && typeof item === 'object' ? item.note : item;
+        const beats   = item && typeof item === 'object' ? item.beats : 1;
+        const durSec  = (msPerBeat * beats) / 1000;
+
+        allTimers.push(setTimeout(() => {
+          document.querySelectorAll('.note-card.playing').forEach(c => c.classList.remove('playing'));
+          const card = document.getElementById('nc-' + i);
+          if (card) {
+            card.classList.add('playing');
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          }
+          playNoteByChar(noteStr, durSec);
+        }, t));
+        t += msPerBeat * beats;
+      });
+
+      allTimers.push(setTimeout(stopStripPlayback, t));
     }
 
     document.getElementById('stopStripBtn').addEventListener('click', stopStripPlayback);
@@ -699,39 +739,13 @@
       playBuffer(keyCode, durationSeconds);
     }
 
-    // Play sequence button handler — drives both audio and strip highlight
+    // Play button — parse, render strip, start from beginning
     playSequenceBtn.addEventListener("click", function() {
       const sequence = sequenceInput.value.trim();
       if (!sequence) return;
-      stopStripPlayback();
-
-      const parsed = parseNoteSequence(sequence);
-
-      renderNoteStrip(parsed);
-      document.getElementById('stopStripBtn').style.display = '';
-
-      const bpm = parseFloat(document.getElementById('bpmInput').value) || 100;
-      const msPerBeat = 60000 / bpm;
-
-      let t = 0;
-      parsed.forEach((item, i) => {
-        const noteStr = item && typeof item === 'object' ? item.note : item;
-        const beats   = item && typeof item === 'object' ? item.beats : 1;
-        const durSec  = (msPerBeat * beats) / 1000;
-
-        allTimers.push(setTimeout(() => {
-          document.querySelectorAll('.note-card.playing').forEach(c => c.classList.remove('playing'));
-          const card = document.getElementById('nc-' + i);
-          if (card) {
-            card.classList.add('playing');
-            card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-          }
-          playNoteByChar(noteStr, durSec);
-        }, t));
-        t += msPerBeat * beats;
-      });
-
-      allTimers.push(setTimeout(stopStripPlayback, t));
+      lastParsed = parseNoteSequence(sequence);
+      renderNoteStrip(lastParsed);
+      startPlaybackFrom(lastParsed, 0);
     });
     
     // Parse a sequence of notes.
@@ -741,6 +755,14 @@
     //   note              →  { note, beats:1 }         e.g. "C4"
     // Two-colon format lets a single file carry both melody and lyrics.
     function parseNoteSequence(inputString) {
+      // Flatten multi-line: join lines with a comma, collapse runs of commas/spaces
+      inputString = inputString
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean)
+        .join(',')
+        .replace(/,+/g, ',');
+
       if (inputString.includes(',')) {
         return inputString.split(',').map(item => {
           item = item.trim();
@@ -806,12 +828,7 @@
       return result;
     }
 
-    // Enter key to play sequence
-    sequenceInput.addEventListener("keydown", function(e) {
-      if (e.key === "Enter") { e.preventDefault(); playSequenceBtn.click(); }
-    });
-
-    keys.forEach(key => key.addEventListener("transitionend", function(e) {
+keys.forEach(key => key.addEventListener("transitionend", function(e) {
       if (e.propertyName === "transform") key.classList.remove("playing");
     }));
 
