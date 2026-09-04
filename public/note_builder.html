@@ -200,7 +200,7 @@
 <body>
 
 <h1>Staff Note Builder</h1>
-<div class="sub">Press <b>` / 0–8</b> to place notes (` / 0 = B3, 1 = C4 … 8 = C5) using the active duration. <b>Tab</b> cycles duration. <b>Z</b> = undo.</div>
+<div class="sub">Press <b>C–B</b> to place notes (C = C4 … B = B4) using the active duration. <b>1–4</b> arm duration for the next note only — 1 = Quarter, 2 = Dotted Quarter, 3 = Half, 4 = Dotted Half — then it falls back to Quarter. <b>Tab</b> cycles duration. <b>Z</b> = undo.</div>
 
 
 <div class="app">
@@ -212,6 +212,16 @@
       <button class="dur-btn" data-dur="1.5">Dotted Quarter</button>
       <button class="dur-btn" data-dur="2">Half</button>
       <button class="dur-btn" data-dur="3">Dotted Half</button>
+    </div>
+    <div style="margin-top:4px;display:none;">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:5px;">Rhythm plan &nbsp;<span style="font-weight:600;color:var(--ink);">Q</span>=Quarter &nbsp;<span style="font-weight:600;color:var(--ink);">DQ</span>=Dotted Quarter &nbsp;<span style="font-weight:600;color:var(--ink);">H</span>=Half &nbsp;<span style="font-weight:600;color:var(--ink);">DH</span>=Dotted Half</div>
+      <textarea id="rhythmInput" placeholder="2Q,3DQ,4H,5Q — or just build notes and watch this fill in"
+        style="width:100%;min-height:72px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;padding:10px;border-radius:8px;border:1px solid var(--border);resize:vertical;background:#fbfbfa;"></textarea>
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <button class="action primary" id="rhythmApplyBtn">Apply plan</button>
+        <button class="action danger" id="rhythmResetBtn" style="display:none;">Reset queue</button>
+      </div>
+      <div id="rhythmStatus" style="font-size:12px;color:var(--accent);margin-top:5px;min-height:18px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;"></div>
     </div>
 
     <h2>2. Click a note to add it</h2>
@@ -354,15 +364,17 @@ document.querySelectorAll('.dur-btn').forEach(btn=>{
   });
 });
 
-// Note keys: ` / 0 / 1 = B3 … 8 = B4
+// Note keys: C = C4 … B = B4 (letter keys)
 const NOTE_KEYS = {
-  '`':'B3','0':'B3',
-  '1':'C4','2':'D4','3':'E4','4':'F4',
-  '5':'G4','6':'A4','7':'B4','8':'C5'
+  'c':'C4','d':'D4','e':'E4','f':'F4','g':'G4','a':'A4','b':'B4'
 };
 
+// Duration keys: 1 = Quarter, 2 = Dotted Quarter, 3 = Half, 4 = Dotted Half
+const DUR_KEYS = { '1':'1', '2':'1.5', '3':'2', '4':'3' };
+
 document.addEventListener('keydown', e=>{
-  if(e.target.tagName === 'TEXTAREA') return;
+  if(e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+  if(e.metaKey || e.ctrlKey || e.altKey) return;
 
   // Tab cycles through duration buttons
   if(e.key === 'Tab'){
@@ -373,10 +385,18 @@ document.addEventListener('keydown', e=>{
     return;
   }
 
-  // Note placement: digit / grave keys — uses whichever duration is active
-  if(NOTE_KEYS[e.key]){
+  // Duration selection: 1–4 arms the duration that letter keys depend on
+  if(DUR_KEYS[e.key]){
     e.preventDefault();
-    addNote(NOTE_KEYS[e.key]);
+    setActiveDur(DUR_KEYS[e.key]);
+    return;
+  }
+
+  // Note placement: letter keys — uses whichever duration is active
+  const note = NOTE_KEYS[e.key.toLowerCase()];
+  if(note){
+    e.preventDefault();
+    addNote(note);
     return;
   }
 
@@ -390,23 +410,60 @@ function appendToTextarea(token){
   ta.value = ta.value ? ta.value + ', ' + token : token;
 }
 
+// Mirror the built rhythm into the plan textarea as compact tokens (3Q,2DH,…)
+function syncRhythmInput(){
+  const durs = document.getElementById('melodyOut').value
+    .split(',').map(s=>s.trim()).filter(Boolean)
+    .map(tok=>{ const d = parseFloat(tok.split(':')[1]); return isNaN(d) ? 1 : d; });
+  document.getElementById('rhythmInput').value = compressQueue(durs);
+}
+
+function consumeQueueDur(){
+  if(durQueue.length && durQueueIdx < durQueue.length){
+    const dur = durQueue[durQueueIdx++];
+    setActiveDur(durQueueIdx < durQueue.length ? durQueue[durQueueIdx] : dur);
+    updateRhythmStatus();
+    return String(dur);
+  }
+  return duration;
+}
+
+// Durations 2/3/4 arm the next placed item only, then fall back to Quarter.
+// (Skipped while a rhythm queue is mid-flight — the queue drives durations itself.)
+function resetDurToQuarter(){
+  if(!durQueue.length || durQueueIdx >= durQueue.length) setActiveDur('1');
+}
+
 function addNote(name){
-  appendToTextarea(name + ':' + duration);
+  appendToTextarea(name + ':' + consumeQueueDur());
+  syncRhythmInput();
+  resetDurToQuarter();
 }
 
 document.getElementById('addRestBtn').addEventListener('click', ()=>{
-  appendToTextarea('_:' + duration);
+  appendToTextarea('_:' + consumeQueueDur());
+  syncRhythmInput();
+  resetDurToQuarter();
 });
 
 document.getElementById('undoBtn').addEventListener('click', ()=>{
   const ta = document.getElementById('melodyOut');
   const parts = ta.value.split(',').map(s=>s.trim()).filter(Boolean);
+  if(!parts.length) return;
   parts.pop();
   ta.value = parts.join(', ');
+  syncRhythmInput();
+  // Step queue back
+  if(durQueue.length && durQueueIdx > 0){
+    durQueueIdx--;
+    setActiveDur(durQueue[durQueueIdx]);
+    updateRhythmStatus();
+  }
 });
 
 document.getElementById('clearBtn').addEventListener('click', ()=>{
   document.getElementById('melodyOut').value = '';
+  document.getElementById('rhythmInput').value = '';
 });
 
 document.getElementById('copyBtn').addEventListener('click', ()=>{
@@ -482,8 +539,7 @@ function closePdfPreview() {
 
 // Key hint labels shown on the staff
 const NOTE_KEY_HINTS = {
-  'B3':'`/0','C4':'1','D4':'2','E4':'3','F4':'4',
-  'G4':'5','A4':'6','B4':'7','C5':'8'
+  'C4':'C','D4':'D','E4':'E','F4':'F','G4':'G','A4':'A','B4':'B'
 };
 
 // ---- Export combined (lyric:note:beats) ----
@@ -507,6 +563,76 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
     status.textContent = 'Copied!';
     setTimeout(()=>status.textContent='', 1500);
   }).catch(()=>{ status.textContent = 'Select text above to copy'; });
+});
+
+// ---- Rhythm Queue ----
+const DUR_ABBR   = { Q:1, DQ:1.5, H:2, DH:3, W:4 };
+const DUR_ABBR_R = { 1:'Q', 1.5:'DQ', 2:'H', 3:'DH', 4:'W' };
+
+let durQueue = [];
+let durQueueIdx = 0;
+
+function parseRhythmPlan(str) {
+  const queue = [];
+  str.split(',').map(s=>s.trim()).filter(Boolean).forEach(tok=>{
+    const m = tok.match(/^(\d+)?([A-Za-z]+)$/);
+    if(!m) return;
+    const count = m[1] ? parseInt(m[1]) : 1;
+    const dur = DUR_ABBR[m[2].toUpperCase()];
+    if(!dur) return;
+    for(let i=0;i<count;i++) queue.push(dur);
+  });
+  return queue;
+}
+
+function compressQueue(arr) {
+  if(!arr.length) return '';
+  const parts = [];
+  let i = 0;
+  while(i < arr.length){
+    let j = i;
+    while(j < arr.length && arr[j]===arr[i]) j++;
+    parts.push((j-i>1 ? (j-i) : '') + (DUR_ABBR_R[arr[i]] || arr[i]));
+    i = j;
+  }
+  return parts.join(',');
+}
+
+function setActiveDur(dur){
+  duration = String(dur);
+  document.querySelectorAll('.dur-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.dur===String(dur));
+  });
+}
+
+function updateRhythmStatus(){
+  const el = document.getElementById('rhythmStatus');
+  if(!durQueue.length){ el.textContent=''; return; }
+  if(durQueueIdx >= durQueue.length){
+    el.textContent = 'Queue done';
+    return;
+  }
+  const remaining = durQueue.slice(durQueueIdx);
+  el.textContent = compressQueue(remaining) + ' \u2014 ' + (durQueue.length-durQueueIdx) + ' left';
+}
+
+document.getElementById('rhythmApplyBtn').addEventListener('click', ()=>{
+  const q = parseRhythmPlan(document.getElementById('rhythmInput').value);
+  if(!q.length) return;
+  durQueue = q;
+  durQueueIdx = 0;
+  setActiveDur(durQueue[0]);
+  document.getElementById('rhythmResetBtn').style.display='';
+  updateRhythmStatus();
+});
+
+
+document.getElementById('rhythmResetBtn').addEventListener('click', ()=>{
+  durQueue=[];
+  durQueueIdx=0;
+  document.getElementById('rhythmInput').value='';
+  document.getElementById('rhythmResetBtn').style.display='none';
+  document.getElementById('rhythmStatus').textContent='';
 });
 
 drawStaff();
@@ -538,7 +664,7 @@ function parseLyrics(){
     .split(',').map(s=>s.trim());
 }
 
-const DUR_LABELS = {0.5:'♪',1:'♩',1.5:'♩.',2:'𝅗𝅥',3:'𝅗𝅥.'};
+const DUR_LABELS = {0.5:'♪',1:'♩',1.5:'♩.',2:'𝅗𝅥',3:'𝅗𝅥.'};
 
 function renderNoteStrip(){
   const notes = parseMelody();
@@ -616,7 +742,7 @@ document.getElementById('playStripBtn').addEventListener('click', ()=>{
 document.getElementById('stopStripBtn').addEventListener('click', stopPlayback);
 
 // Re-render strip live as melody or lyrics change
-document.getElementById('melodyOut').addEventListener('input', renderNoteStrip);
+document.getElementById('melodyOut').addEventListener('input', ()=>{ renderNoteStrip(); syncRhythmInput(); });
 document.getElementById('lyricsInput').addEventListener('input', renderNoteStrip);
 </script>
 
