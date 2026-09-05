@@ -669,10 +669,10 @@
   const clearBtn = document.getElementById('clearBtn');
 
   const TEMPOS = [
-    {name:'Grave', bpm:30, key:null},
-    {name:'Largo', bpm:53, key:'q'},
+    {name:'Grave', bpm:25, key:null},
+    {name:'Largo', bpm:50, key:'q'},
     {name:'Adagio', bpm:71, key:'w'},
-    {name:'Andante', bpm:92, key:'e'},
+    {name:'Andante', bpm:100, key:'e'},
     {name:'Moderato', bpm:114, key:'r'},
     {name:'Allegro', bpm:138, key:'t'},
     {name:'Vivace', bpm:176, key:'y'},
@@ -692,7 +692,7 @@
   TEMPOS.forEach(t => {
     const btn = document.createElement('button');
     btn.className = 'tempo-btn';
-    btn.textContent = t.key ? t.key + ' ' + t.name : t.name;
+    btn.textContent = (t.key ? t.key + ' ' : '') + t.name + '(' + t.bpm + ')';
     btn.title = t.bpm + ' BPM';
     btn.addEventListener('click', () => applyTempo(t));
     tempoRow.appendChild(btn);
@@ -781,7 +781,7 @@
     bpm = Math.min(220, bpm+1); bpmVal.textContent = bpm; updateTempoHighlight();
   });
   document.getElementById('bpmDown').addEventListener('click', () => {
-    bpm = Math.max(40, bpm-1); bpmVal.textContent = bpm; updateTempoHighlight();
+    bpm = Math.max(20, bpm-1); bpmVal.textContent = bpm; updateTempoHighlight();
   });
 
   clearBtn.addEventListener('click', () => {
@@ -975,8 +975,8 @@
       metBpm = Math.min(240, metBpm+1); document.getElementById('metBpmVal').textContent = metBpm;
     } else if(e.key === '['){
       e.preventDefault();
-      bpm = Math.max(40, bpm-1); bpmVal.textContent = bpm; updateTempoHighlight();
-      metBpm = Math.max(40, metBpm-1); document.getElementById('metBpmVal').textContent = metBpm;
+      bpm = Math.max(20, bpm-1); bpmVal.textContent = bpm; updateTempoHighlight();
+      metBpm = Math.max(20, metBpm-1); document.getElementById('metBpmVal').textContent = metBpm;
     } else if(e.key === '.'){
       e.preventDefault();
       const next = TEMPOS.find(t => t.bpm > bpm);
@@ -1110,7 +1110,7 @@
     if (metTaps.length >= 2) {
       let sum = 0;
       for (let i = 1; i < metTaps.length; i++) sum += metTaps[i] - metTaps[i - 1];
-      metBpm = Math.min(240, Math.max(40, Math.round(60 / (sum / (metTaps.length - 1)))));
+      metBpm = Math.min(240, Math.max(20, Math.round(60 / (sum / (metTaps.length - 1)))));
       document.getElementById('metBpmVal').textContent = metBpm;
     }
     const tapBeatIdx = (metTaps.length - 1) % metPattern.length;
@@ -1135,7 +1135,7 @@
     document.getElementById('metBpmVal').textContent = metBpm;
   });
   document.getElementById('metBpmDown').addEventListener('click', () => {
-    metBpm = Math.max(40, metBpm - 2);
+    metBpm = Math.max(20, metBpm - 2);
     document.getElementById('metBpmVal').textContent = metBpm;
   });
 
