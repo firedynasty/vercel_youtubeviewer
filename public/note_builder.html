@@ -200,7 +200,7 @@
 <body>
 
 <h1>Staff Note Builder</h1>
-<div class="sub">Press <b>C–B</b> to place notes (C = C4 … B = B4) using the active duration. <b>1–4</b> arm duration for the next note only — 1 = Quarter, 2 = Dotted Quarter, 3 = Half, 4 = Dotted Half — then it falls back to Quarter. <b>Tab</b> cycles duration. <b>Z</b> = undo.</div>
+<div class="sub">Press <b>C–B</b> to place notes (C = C4 … B = B4) using the active duration. <b>1–5</b> arm duration for the next note only — 1 = Quarter, 2 = Dotted Quarter, 3 = Half, 4 = Dotted Half, 5 = Whole — then it falls back to Quarter. <b>Tab</b> cycles duration. <b>Z</b> = undo.</div>
 
 
 <div class="app">
@@ -212,6 +212,7 @@
       <button class="dur-btn" data-dur="1.5">Dotted Quarter</button>
       <button class="dur-btn" data-dur="2">Half</button>
       <button class="dur-btn" data-dur="3">Dotted Half</button>
+      <button class="dur-btn" data-dur="4">Whole</button>
     </div>
     <div style="margin-top:4px;display:none;">
       <div style="font-size:12px;color:var(--muted);margin-bottom:5px;">Rhythm plan &nbsp;<span style="font-weight:600;color:var(--ink);">Q</span>=Quarter &nbsp;<span style="font-weight:600;color:var(--ink);">DQ</span>=Dotted Quarter &nbsp;<span style="font-weight:600;color:var(--ink);">H</span>=Half &nbsp;<span style="font-weight:600;color:var(--ink);">DH</span>=Dotted Half</div>
@@ -369,8 +370,8 @@ const NOTE_KEYS = {
   'c':'C4','d':'D4','e':'E4','f':'F4','g':'G4','a':'A4','b':'B4'
 };
 
-// Duration keys: 1 = Quarter, 2 = Dotted Quarter, 3 = Half, 4 = Dotted Half
-const DUR_KEYS = { '1':'1', '2':'1.5', '3':'2', '4':'3' };
+// Duration keys: 1 = Quarter, 2 = Dotted Quarter, 3 = Half, 4 = Dotted Half, 5 = Whole
+const DUR_KEYS = { '1':'1', '2':'1.5', '3':'2', '4':'3', '5':'4' };
 
 document.addEventListener('keydown', e=>{
   if(e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;

@@ -100,6 +100,13 @@
   .step.on.hat{background:var(--led-hat);box-shadow:0 0 6px rgba(127,166,149,0.5);}
   .step.on.tone{background:var(--led-tone);box-shadow:0 0 6px rgba(201,178,94,0.5);}
   .step.on.crash{background:#8a8f9c;box-shadow:0 0 8px rgba(138,143,156,0.6);}
+  .step.on.c2{background:#2980b9;box-shadow:0 0 6px rgba(41,128,185,0.55);}
+  .step.on.d2{background:#2e86c1;box-shadow:0 0 6px rgba(46,134,193,0.55);}
+  .step.on.e2{background:#5dade2;box-shadow:0 0 6px rgba(93,173,226,0.55);}
+  .step.on.f2{background:#5b7fcf;box-shadow:0 0 6px rgba(91,127,207,0.55);}
+  .step.on.g2{background:#7f68cc;box-shadow:0 0 6px rgba(127,104,204,0.55);}
+  .step.on.a2{background:#9b59b6;box-shadow:0 0 6px rgba(155,89,182,0.55);}
+  .step.on.b2{background:#8e44ad;box-shadow:0 0 6px rgba(142,68,173,0.55);}
   .step.playhead{outline:2px solid var(--parchment);outline-offset:1px;}
   .steps-row{display:flex;gap:8px;flex:1;}
 
@@ -422,8 +429,10 @@
 <script>
 (function(){
   const STEPS = 16;
-  const TRACKS = ['kick','snare','hat','crash','tone'];
-  const TRACK_LABELS = {kick:'Kick', snare:'Snare', hat:'Hi-Hat', crash:'Gong', tone:'Tone'};
+  const TRACKS = ['kick','snare','hat','crash','tone','c2','d2','e2','f2','g2','a2','b2'];
+  const TRACK_LABELS = {kick:'Kick', snare:'Snare', hat:'Hi-Hat', crash:'Gong', tone:'Tone',
+    c2:'C2', d2:'D2', e2:'E2', f2:'F2', g2:'G2', a2:'A2', b2:'B2'};
+  const BASS_FREQS = {c2:65.41, d2:73.42, e2:82.41, f2:87.31, g2:98.00, a2:110.00, b2:123.47};
 
   function pattern(steps){
     const arr = new Array(STEPS).fill(0);
@@ -597,6 +606,7 @@
       name: name, bpm: bpm, desc: desc,
       kick: [...grid.kick], snare: [...grid.snare], hat: [...grid.hat],
       crash: [...grid.crash], tone: [...grid.tone],
+      ...Object.fromEntries(Object.keys(BASS_FREQS).map(n => [n, [...(grid[n] || new Array(STEPS).fill(0))]]))
     };
     // Base off the freshest Dropbox copy so appends from elsewhere aren't lost
     let arr;
@@ -709,7 +719,8 @@
     const p = presets[i];
     grid = {
       kick: [...p.kick], snare: [...p.snare], hat: [...p.hat], tone: [...p.tone],
-      crash: p.crash ? [...p.crash] : new Array(STEPS).fill(0)
+      crash: p.crash ? [...p.crash] : new Array(STEPS).fill(0),
+      ...Object.fromEntries(Object.keys(BASS_FREQS).map(n => [n, p[n] ? [...p[n]] : new Array(STEPS).fill(0)]))
     };
     bpm = p.bpm;
     bpmVal.textContent = bpm;
@@ -767,10 +778,10 @@
   });
 
   document.getElementById('bpmUp').addEventListener('click', () => {
-    bpm = Math.min(220, bpm+2); bpmVal.textContent = bpm; updateTempoHighlight();
+    bpm = Math.min(220, bpm+1); bpmVal.textContent = bpm; updateTempoHighlight();
   });
   document.getElementById('bpmDown').addEventListener('click', () => {
-    bpm = Math.max(40, bpm-2); bpmVal.textContent = bpm; updateTempoHighlight();
+    bpm = Math.max(40, bpm-1); bpmVal.textContent = bpm; updateTempoHighlight();
   });
 
   clearBtn.addEventListener('click', () => {
@@ -879,6 +890,17 @@
     osc.connect(gain); gain.connect(masterGain);
     osc.start(time); osc.stop(time+0.2);
   }
+  function playBassNote(time, freq){
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, time);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.96, time + 0.35);
+    gain.gain.setValueAtTime(0.55, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.4);
+    osc.connect(gain); gain.connect(masterGain);
+    osc.start(time); osc.stop(time + 0.42);
+  }
 
   function scheduleStep(stepIdx, time){
     if(grid.kick[stepIdx]) playKick(time);
@@ -886,6 +908,7 @@
     if(grid.hat[stepIdx]) playHat(time);
     if(grid.crash[stepIdx]) playCrash(time);
     if(grid.tone[stepIdx]) playTone(time);
+    Object.keys(BASS_FREQS).forEach(n => { if(grid[n] && grid[n][stepIdx]) playBassNote(time, BASS_FREQS[n]); });
     const delay = Math.max(0, (time - audioCtx.currentTime) * 1000);
     setTimeout(() => { displayStep = stepIdx; markPlayhead(); }, delay);
   }
@@ -948,12 +971,12 @@
       presetSelect.dispatchEvent(new Event('change'));
     } else if(e.key === ']'){
       e.preventDefault();
-      bpm = Math.min(220, bpm+2); bpmVal.textContent = bpm; updateTempoHighlight();
-      metBpm = Math.min(240, metBpm+2); document.getElementById('metBpmVal').textContent = metBpm;
+      bpm = Math.min(220, bpm+1); bpmVal.textContent = bpm; updateTempoHighlight();
+      metBpm = Math.min(240, metBpm+1); document.getElementById('metBpmVal').textContent = metBpm;
     } else if(e.key === '['){
       e.preventDefault();
-      bpm = Math.max(40, bpm-2); bpmVal.textContent = bpm; updateTempoHighlight();
-      metBpm = Math.max(40, metBpm-2); document.getElementById('metBpmVal').textContent = metBpm;
+      bpm = Math.max(40, bpm-1); bpmVal.textContent = bpm; updateTempoHighlight();
+      metBpm = Math.max(40, metBpm-1); document.getElementById('metBpmVal').textContent = metBpm;
     } else if(e.key === '.'){
       e.preventDefault();
       const next = TEMPOS.find(t => t.bpm > bpm);
@@ -1156,7 +1179,7 @@
   function buildExportCode(){
     const name = exportName.value.trim() || 'My preset';
     const desc = exportDesc.value.trim() || 'Describe the feel…';
-    const tracks = ['kick','snare','hat','crash','tone'];
+    const tracks = ['kick','snare','hat','crash','tone',...Object.keys(BASS_FREQS)];
     const lines = tracks.map(t => {
       const steps = activeSteps(t);
       return `      ${t}: pattern([${steps.join(',')}])`;
@@ -1270,7 +1293,7 @@ ${lines.join(',\n')}
   // Format a single preset object with compact arrays — for the schema preview
   function formatPresetJson(p){
     if(!p) return '(no preset selected)';
-    const tracks = ['kick','snare','hat','crash','tone'];
+    const tracks = ['kick','snare','hat','crash','tone',...Object.keys(BASS_FREQS)];
     const lines = [
       `  "name": ${JSON.stringify(p.name || '')}`,
       `  "bpm": ${p.bpm || 120}`,
@@ -1292,6 +1315,7 @@ ${lines.join(',\n')}
       name: cur.name || '(current)', bpm: bpm, desc: cur.desc || '',
       kick: [...grid.kick], snare: [...grid.snare], hat: [...grid.hat],
       crash: [...grid.crash], tone: [...grid.tone],
+      ...Object.fromEntries(Object.keys(BASS_FREQS).map(n => [n, [...(grid[n] || new Array(STEPS).fill(0))]]))
     });
   }
 
@@ -1311,6 +1335,7 @@ ${lines.join(',\n')}
       name, bpm, desc,
       kick: [...grid.kick], snare: [...grid.snare], hat: [...grid.hat],
       crash: [...grid.crash], tone: [...grid.tone],
+      ...Object.fromEntries(Object.keys(BASS_FREQS).map(n => [n, [...(grid[n] || new Array(STEPS).fill(0))]]))
     };
   }
 
