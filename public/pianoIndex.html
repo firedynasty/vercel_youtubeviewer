@@ -400,6 +400,14 @@
           <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1" style="width:160px; accent-color:#028ae9; cursor:pointer;">
         </div>
         <div style="display:flex; align-items:center; gap:10px; margin-top:8px; flex-wrap:wrap;">
+          <select id="syncSelect" style="padding:6px 8px; border-radius:6px; border:1px solid #333; background:#111; color:#aaa; font-size:13px; cursor:pointer;">
+            <option value="">⏱ Sync…</option>
+          </select>
+          <span id="syncStatus" style="font-family:monospace; font-size:12px; color:#aaa;">—</span>
+          <button id="clockBtn" style="padding:6px 10px; border-radius:6px; border:1px solid #333; background:#111; color:#aaa; font-size:13px; cursor:pointer;">🕐</button>
+          <span id="clockDisplay" style="font-family:monospace; font-size:12px; color:#aaa;"></span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; margin-top:8px; flex-wrap:wrap;">
           <button class="play-btn" id="playSequence">&#9654; Play</button>
           <button class="play-btn" id="seqRepeatBtn" onclick="toggleSeqRepeat()" style="background:#0e6b3a;">🔁 5× on</button>
           <label style="color:#aaa; font-size:14px;">BPM</label>
@@ -1233,6 +1241,93 @@
       document.getElementById('dbxPathInput').addEventListener('keydown', e => {
         if (e.key === 'Enter') window.dbxBrowse(e.target.value);
       });
+    })();
+
+    // ── Sync Start ──────────────────────────────────────────────────────────
+    (function(){
+      let bc;
+      try { bc = new BroadcastChannel('piano-beats-sync'); } catch(e) { bc = null; }
+
+      const syncSelect   = document.getElementById('syncSelect');
+      const syncStatus   = document.getElementById('syncStatus');
+      const clockBtn     = document.getElementById('clockBtn');
+      const clockDisplay = document.getElementById('clockDisplay');
+
+      let syncWatcher = null;
+
+      function fmt(d) {
+        return [d.getHours(), d.getMinutes(), d.getSeconds()]
+          .map(n => String(n).padStart(2,'0')).join(':');
+      }
+
+      function getNextHalfMarks(count) {
+        const marks = [];
+        const now = new Date();
+        const next = new Date(now);
+        next.setMilliseconds(0);
+        const s = next.getSeconds();
+        if (s < 30) { next.setSeconds(30); }
+        else { next.setSeconds(0); next.setMinutes(next.getMinutes() + 1); }
+        for (let i = 0; i < count; i++) {
+          marks.push(new Date(next));
+          next.setSeconds(next.getSeconds() + 30);
+        }
+        return marks;
+      }
+
+      function cancelSync() {
+        if (syncWatcher) { clearInterval(syncWatcher); syncWatcher = null; }
+        syncSelect.style.color = '#aaa';
+        syncStatus.textContent = '—';
+        syncSelect.value = '';
+      }
+
+      function armAt(targetMs, broadcast) {
+        cancelSync();
+        if (broadcast && bc) bc.postMessage({ type: 'sync-start', targetMs });
+        syncStatus.textContent = 'fires ' + fmt(new Date(targetMs));
+        syncSelect.style.color = '#f0c060';
+        syncWatcher = setInterval(() => {
+          if (Date.now() >= targetMs) {
+            clearInterval(syncWatcher); syncWatcher = null;
+            syncSelect.style.color = '#aaa';
+            syncStatus.textContent = '▶ fired :' + String(new Date().getSeconds()).padStart(2,'0');
+            document.getElementById('playSequence').click();
+          }
+        }, 250);
+      }
+
+      syncSelect.addEventListener('mousedown', () => {
+        syncSelect.innerHTML = '<option value="">⏱ Sync…</option>';
+        getNextHalfMarks(3).forEach(m => {
+          const o = document.createElement('option');
+          o.value = m.getTime(); o.textContent = fmt(m);
+          syncSelect.appendChild(o);
+        });
+        const cancel = document.createElement('option');
+        cancel.value = 'cancel'; cancel.textContent = '— cancel —';
+        syncSelect.appendChild(cancel);
+      });
+
+      syncSelect.addEventListener('change', () => {
+        if (!syncSelect.value) return;
+        if (syncSelect.value === 'cancel') {
+          cancelSync();
+          if (bc) bc.postMessage({ type: 'sync-cancel' });
+          return;
+        }
+        armAt(+syncSelect.value, true);
+      });
+
+      clockBtn.addEventListener('click', () => {
+        clockDisplay.textContent = fmt(new Date());
+      });
+
+      if (bc) bc.onmessage = (e) => {
+        if (!e.data) return;
+        if (e.data.type === 'sync-start') armAt(e.data.targetMs, false);
+        if (e.data.type === 'sync-cancel') cancelSync();
+      };
     })();
   </script>
 </body>
