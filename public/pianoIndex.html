@@ -732,17 +732,25 @@
       }
       strip.innerHTML = '';
       parsed.forEach((item, i) => {
-        const noteStr = item && typeof item === 'object' ? item.note : item;
-        const beats   = item && typeof item === 'object' ? item.beats : 1;
-        const lyric   = (item && item.lyric) || '';
         const card = document.createElement('div');
-        card.className = 'note-card';
-        if (i === parsed.length - 1) card.classList.add('end-card');
         card.id = 'nc-' + i;
-        const durLabel = DUR_LABELS[beats] || beats + 'b';
-        const lyricSpan = lyric ? `<span class="nc-lyric">${lyric}</span>` : '';
-        card.innerHTML = `<span class="nc-name">${noteStr}</span><span class="nc-dur">${durLabel}</span>${lyricSpan}`;
-        card.addEventListener('click', () => startPlaybackFrom(lastParsed, i));
+        if (i === parsed.length - 1) card.classList.add('end-card');
+
+        if (item && item.type === 'section') {
+          card.className = 'note-card';
+          card.style.cssText = 'background:#1a3a1a; border-color:#2a6a2a; min-width:80px; justify-content:center;';
+          card.innerHTML = `<span class="nc-name" style="color:#4caf50; font-size:11px;">[${item.label}]</span><span class="nc-dur" style="color:#555;">rest</span>`;
+          card.addEventListener('click', () => startPlaybackFrom(lastParsed, i));
+        } else {
+          const noteStr = item && typeof item === 'object' ? item.note : item;
+          const beats   = item && typeof item === 'object' ? item.beats : 1;
+          const lyric   = (item && item.lyric) || '';
+          card.className = 'note-card';
+          const durLabel = DUR_LABELS[beats] || beats + 'b';
+          const lyricSpan = lyric ? `<span class="nc-lyric">${lyric}</span>` : '';
+          card.innerHTML = `<span class="nc-name">${noteStr}</span><span class="nc-dur">${durLabel}</span>${lyricSpan}`;
+          card.addEventListener('click', () => startPlaybackFrom(lastParsed, i));
+        }
         strip.appendChild(card);
       });
     }
@@ -784,7 +792,8 @@
       let t = 0;
       parsed.slice(startIdx).forEach((item, offset) => {
         const i = startIdx + offset;
-        const noteStr = item && typeof item === 'object' ? item.note : item;
+        const isSection = item && item.type === 'section';
+        const noteStr = isSection ? '_' : (item && typeof item === 'object' ? item.note : item);
         const beats   = item && typeof item === 'object' ? item.beats : 1;
         const durSec  = (msPerBeat * beats) / 1000;
 
@@ -795,7 +804,7 @@
             card.classList.add('playing');
             card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
           }
-          playNoteByChar(noteStr, durSec);
+          if (!isSection) playNoteByChar(noteStr, durSec);
         }, t));
         t += msPerBeat * beats;
       });
@@ -847,14 +856,32 @@
     //   note              →  { note, beats:1 }         e.g. "C4"
     // Two-colon format lets a single file carry both melody and lyrics.
     function parseNoteSequence(inputString) {
-      // Flatten multi-line: join lines with a comma, collapse runs of commas/spaces
-      inputString = inputString
-        .split('\n')
-        .map(l => l.trim())
-        .filter(Boolean)
-        .join(',')
-        .replace(/,+/g, ',');
+      const result = [];
 
+      // Process line by line to detect section headers like [verse1] or [chorus]
+      const lines = inputString.split('\n').map(l => l.trim()).filter(Boolean);
+      const noteLines = [];
+      for (const line of lines) {
+        if (/^\[.+\]$/.test(line)) {
+          // Flush any accumulated note lines first
+          if (noteLines.length) {
+            const joined = noteLines.join(',').replace(/,+/g, ',');
+            result.push(...parseNoteTokens(joined));
+            noteLines.length = 0;
+          }
+          result.push({ type: 'section', label: line.slice(1, -1), beats: 1 });
+        } else {
+          noteLines.push(line);
+        }
+      }
+      if (noteLines.length) {
+        const joined = noteLines.join(',').replace(/,+/g, ',');
+        result.push(...parseNoteTokens(joined));
+      }
+      return result;
+    }
+
+    function parseNoteTokens(inputString) {
       if (inputString.includes(',')) {
         return inputString.split(',').map(item => {
           item = item.trim();
@@ -916,9 +943,9 @@
           i++;
         }
       }
-      
+
       return result;
-    }
+    }  // end parseNoteTokens
 
     // Image picker
     let imageSizeState = 'small';
