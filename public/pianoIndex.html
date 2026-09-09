@@ -502,6 +502,22 @@
       'D5':  { file: 'sounds/054.wav', rate: 1 },
       'D#5': { file: 'sounds/055.wav', rate: 1 },
       'E5':  { file: 'sounds/056.wav', rate: 1 },
+      // F5–G5: anchor Fs5 (±1 semitone)
+      'F5':  { file: 'sounds/Fs5.wav', rate: 1 / SEMI },
+      'F#5': { file: 'sounds/Fs5.wav', rate: 1 },
+      'G5':  { file: 'sounds/Fs5.wav', rate: SEMI },
+      // G#5–A#5: anchor A5 (±1 semitone)
+      'G#5': { file: 'sounds/A5.wav',  rate: 1 / SEMI },
+      'A5':  { file: 'sounds/A5.wav',  rate: 1 },
+      'A#5': { file: 'sounds/A5.wav',  rate: SEMI },
+      // B5–C#6: anchor C6 (±1 semitone)
+      'B5':  { file: 'sounds/C6.wav',  rate: 1 / SEMI },
+      'C6':  { file: 'sounds/C6.wav',  rate: 1 },
+      'C#6': { file: 'sounds/C6.wav',  rate: SEMI },
+      // D6–E6: anchor Ds6 (±1 semitone)
+      'D6':  { file: 'sounds/Ds6.wav', rate: 1 / SEMI },
+      'D#6': { file: 'sounds/Ds6.wav', rate: 1 },
+      'E6':  { file: 'sounds/Ds6.wav', rate: SEMI },
     };
 
     // Load each unique source file once
@@ -633,7 +649,7 @@
 
     const row0Notes = ['B1','C2','C#2','D2','D#2','E2','F2','F#2','G2','G#2'];
     const row1Notes = ['A2','A#2','B2','C3','C#3','D3','D#3','E3','F3','F#3','G3','G#3','A3','A#3','B3'];
-    const row2Notes = ['C4','C#4','D4','D#4','E4','F4','F#4','G4','G#4','A4','A#4','B4','C5','C#5','D5','D#5','E5'];
+    const row2Notes = ['C4','C#4','D4','D#4','E4','F4','F#4','G4','G#4','A4','A#4','B4','C5','C#5','D5','D#5','E5','F5','F#5','G5','G#5','A5','A#5','B5'];
     buildPianoRow('keysRow0', row0Notes);
     buildPianoRow('keysRow1', row1Notes);
     buildPianoRow('keysRow2', row2Notes);
