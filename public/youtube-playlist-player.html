@@ -261,8 +261,9 @@
       font-size: 12px;
       font-weight: 700;
       cursor: pointer;
-      display: none;
+      opacity: 0.35;
     }
+    #loop-pause-btn:not(:disabled) { opacity: 1; }
 
     #loop-status {
       font-size: 11px;
@@ -423,7 +424,7 @@
       <input id="loop-ts-input" type="text" value="00:00:00" placeholder="00:00:00"
              title="Loop back to this timestamp (HH:MM:SS)" spellcheck="false">
       <button id="loop-btn" title="Play 30s, rewind, repeat x40">⏱️ 30s</button>
-      <button id="loop-pause-btn" title="Pause loop">⏸</button>
+      <button id="loop-pause-btn" title="Pause loop" disabled>⏸</button>
       <span id="loop-status"></span>
     </div>
   </div>
@@ -484,7 +485,7 @@
           ytReady = true;
           if (pendingVideo) {
             ytPlayer.loadVideoById(pendingVideo);
-            ytPlayerDiv.style.display = '';
+            ytPlayerDiv.style.display = 'block';
             pendingVideo = null;
           }
         },
@@ -509,7 +510,7 @@
     }
     pendingVideo = null;
     ytPlayer.loadVideoById(params);
-    ytPlayerDiv.style.display = '';
+    ytPlayerDiv.style.display = 'block';
   }
 
   function ytSeekTo(secs) {
@@ -543,8 +544,8 @@
     errorState.style.display   = 'none';
     noVideoMsg.style.display   = 'none';
     ytPlayerDiv.style.display  = 'none';
-    // ytPlayerDiv is absolutely positioned — just unhide it; others need flex
-    el.style.display = (el === ytPlayerDiv) ? '' : 'flex';
+    // ytPlayerDiv is absolutely positioned — needs 'block' to override CSS display:none
+    el.style.display = (el === ytPlayerDiv) ? 'block' : 'flex';
   }
 
   function secsToHMS(s) {
@@ -665,10 +666,11 @@
       } else {
         t3Timeout = null;
         ytSetVolume(t3SavedVolume);
-        loopBtn.textContent        = '⏱️ 30s';
-        loopBtn.style.background   = 'linear-gradient(45deg,#ff9800,#f57c00)';
-        loopPauseBtn.style.display = 'none';
-        loopPauseBtn.textContent   = '⏸';
+        loopBtn.textContent           = '⏱️ 30s';
+        loopBtn.style.background      = 'linear-gradient(45deg,#ff9800,#f57c00)';
+        loopPauseBtn.disabled         = true;
+        loopPauseBtn.textContent      = '⏸';
+        loopPauseBtn.style.background = '#546e7a';
         t3Paused = false;
         flashLoopStatus(`Done ✓ (${T3_TOTAL_LOOPS}/${T3_TOTAL_LOOPS})`, '#2ecc71');
       }
@@ -680,10 +682,10 @@
     if (t3Timeout) { clearTimeout(t3Timeout); t3Timeout = null; }
     t3Paused = false;
     ytSetVolume(t3SavedVolume);
-    loopBtn.textContent          = '⏱️ 30s';
-    loopBtn.style.background     = 'linear-gradient(45deg,#ff9800,#f57c00)';
-    loopPauseBtn.style.display   = 'none';
-    loopPauseBtn.textContent     = '⏸';
+    loopBtn.textContent           = '⏱️ 30s';
+    loopBtn.style.background      = 'linear-gradient(45deg,#ff9800,#f57c00)';
+    loopPauseBtn.disabled         = true;
+    loopPauseBtn.textContent      = '⏸';
     loopPauseBtn.style.background = '#546e7a';
     flashLoopStatus('Loop cancelled', '#e74c3c');
   }
@@ -691,13 +693,13 @@
   function toggleT3() {
     if (t3Timeout || t3Paused) { cancelT3(); return; }
     if (!activeYoutubeId) { flashLoopStatus('No video loaded', '#e74c3c'); return; }
-    loopTsInput.value  = secsToHMS(ytGetCurrentTime());
-    t3SavedVolume      = ytGetVolume();
-    t3LoopsRemaining   = T3_TOTAL_LOOPS;
-    t3Paused           = false;
+    loopTsInput.value             = secsToHMS(ytGetCurrentTime());
+    t3SavedVolume                 = ytGetVolume();
+    t3LoopsRemaining              = T3_TOTAL_LOOPS;
+    t3Paused                      = false;
     t3Generation++;
-    loopPauseBtn.style.display   = '';
-    loopPauseBtn.textContent     = '⏸';
+    loopPauseBtn.disabled         = false;
+    loopPauseBtn.textContent      = '⏸';
     loopPauseBtn.style.background = '#546e7a';
     runT3Loop(t3Generation);
   }
