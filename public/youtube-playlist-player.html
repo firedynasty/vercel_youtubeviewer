@@ -18,7 +18,7 @@
     /* ── Layout ─────────────────────────────────────────── */
     #app {
       display: grid;
-      grid-template-columns: 260px 1fr;
+      grid-template-columns: 260px 1fr 220px;
       height: 100vh;
     }
 
@@ -194,37 +194,62 @@
       font-size: 13px;
     }
 
-    /* ── Track list ──────────────────────────────────────── */
+    /* ── Track list (right pane) ─────────────────────────── */
     #track-list {
-      display: none;
-      flex-shrink: 0;
-      max-height: 180px;
+      display: flex;
+      flex-direction: column;
       overflow-y: auto;
-      background: #0f0f24;
-      border-top: 1px solid rgba(255,255,255,0.06);
-      padding: 6px 0;
+      background: #12122a;
+      border-left: 1px solid rgba(201, 168, 76, 0.15);
+    }
+
+    #track-list-header {
+      padding: 14px 14px 10px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      color: #c9a84c;
+      text-transform: uppercase;
+      border-bottom: 1px solid rgba(201, 168, 76, 0.15);
+      flex-shrink: 0;
+    }
+
+    #track-list-inner {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 0 20px;
+    }
+
+    #track-list-empty {
+      padding: 20px 14px;
+      font-size: 12px;
+      color: #444;
     }
 
     .track-item {
-      padding: 5px 16px;
+      padding: 6px 14px 6px 14px;
       font-size: 11px;
-      color: #888;
+      color: #aaa;
       cursor: pointer;
       display: flex;
-      gap: 8px;
-      align-items: baseline;
+      flex-direction: column;
+      gap: 2px;
+      border-left: 2px solid transparent;
+      transition: background .1s, color .1s;
     }
 
-    .track-item:hover { background: rgba(255,255,255,0.04); color: #e0e0e0; }
+    .track-item:hover { background: rgba(255,255,255,0.05); color: #e0e0e0; }
 
-    .track-item.track-active { color: #c9a84c; }
+    .track-item.track-active {
+      color: #c9a84c;
+      background: rgba(201, 168, 76, 0.08);
+      border-left-color: #c9a84c;
+    }
 
     .track-time {
       font-family: 'Courier New', monospace;
       font-size: 10px;
       color: #555;
-      min-width: 36px;
-      flex-shrink: 0;
     }
 
     .track-item.track-active .track-time { color: #a07e30; }
@@ -264,8 +289,14 @@
         style="display:none;"
       ></iframe>
     </div>
+  </div>
 
-    <div id="track-list"></div>
+  <!-- Track list (right pane) -->
+  <div id="track-list">
+    <div id="track-list-header">Tracks</div>
+    <div id="track-list-inner">
+      <div id="track-list-empty">Select an album</div>
+    </div>
   </div>
 
 </div>
@@ -286,8 +317,9 @@
   const errorState   = document.getElementById('error-state');
   const errText      = document.getElementById('err-text');
   const noVideoMsg   = document.getElementById('no-video-msg');
-  const trackList    = document.getElementById('track-list');
-  const retryBtn     = document.getElementById('retry-btn');
+  const trackListInner = document.getElementById('track-list-inner');
+  const trackListEmpty = document.getElementById('track-list-empty');
+  const retryBtn       = document.getElementById('retry-btn');
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
   function toLabel(key) {
@@ -339,9 +371,10 @@
 
   // ── Track list ────────────────────────────────────────────────────────────────
   function renderTrackList(album, tracks) {
-    trackList.innerHTML = '';
+    trackListInner.innerHTML = '';
     if (!tracks || !tracks.length) {
-      trackList.style.display = 'none';
+      trackListEmpty.textContent = 'No chapters';
+      trackListInner.appendChild(trackListEmpty);
       return;
     }
 
@@ -360,14 +393,12 @@
 
       el.appendChild(timeEl);
       el.appendChild(titleEl);
-      trackList.appendChild(el);
+      trackListInner.appendChild(el);
     });
-
-    trackList.style.display = 'block';
   }
 
   function setActiveTrack(el) {
-    trackList.querySelectorAll('.track-item').forEach(t => t.classList.remove('track-active'));
+    trackListInner.querySelectorAll('.track-item').forEach(t => t.classList.remove('track-active'));
     if (el) el.classList.add('track-active');
   }
 
@@ -392,7 +423,7 @@
 
     if (!youtubeId) {
       showOnly(noVideoMsg);
-      trackList.style.display = 'none';
+      renderTrackList(null, []);
       return;
     }
 
@@ -437,7 +468,7 @@
     if (albumEl) selectAlbum(albumEl);
   });
 
-  trackList.addEventListener('click', e => {
+  trackListInner.addEventListener('click', e => {
     const trackEl = e.target.closest('.track-item');
     if (!trackEl || !activeYoutubeId) return;
     const secs = parseInt(trackEl.dataset.seconds) || 0;
