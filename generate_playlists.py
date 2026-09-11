@@ -1,101 +1,231 @@
 #!/usr/bin/env python3
-"""Generate playlists.json from .txt files in playlist/ directory.
+"""Generate playlists.json from .txt files in playlists/ subdirectories.
 
-Each .txt file becomes a category (filename stem = key).
-Each line in a .txt file: name,url  OR  just url (name auto-derived).
+Each subdirectory becomes a category (e.g. classical, adhd).
+Each .txt file contains one or more entries delimited by URLs.
+
+Supported formats:
+  - URL on its own line, followed by timestamped tracks below
+  - name,URL on a single line
+  - Multiple URLs in one file (each starts a new entry)
 
 Usage:
+  # Use default path (bach-player playlists alongside this project):
   python generate_playlists.py
-  python generate_playlists.py -i playlist -o public/playlists.json
+
+  # Explicit path:
+  python generate_playlists.py \
+    -i /Users/stanleytan/Documents/technical/github/extensions/bach-player/playlists \
+    -o playlists.json
+
+After running, copy playlists.json to Dropbox and set YOUTUBE_PLAYLISTS_URL in .env.local
+to the Dropbox direct-download link (e.g. https://www.dropbox.com/s/XXX/playlists.json?dl=1).
 """
 
 import argparse
 import json
 import re
 from pathlib import Path
+from urllib.parse import urlparse, unquote
 
 
-def parse_playlist_file(filepath):
+def time_to_seconds(time_str):
+    """Convert time string like '1:03:35', '05:50', '0:00' to seconds."""
+    parts = time_str.split(':')
+    parts = [int(p) for p in parts]
+    if len(parts) == 3:
+        return parts[0] * 3600 + parts[1] * 60 + parts[2]
+    elif len(parts) == 2:
+        return parts[0] * 60 + parts[1]
+    return 0
+
+
+def name_from_url(url):
+    """Extract a human-readable name from a Dropbox URL path."""
+    try:
+        path = urlparse(url).path
+        filename = unquote(path.split('/')[-1])
+        # Strip extension
+        filename = re.sub(r'\.\w{2,4}$', '', filename)
+        # Strip video ID in brackets like [VmImA0YKsJg]
+        filename = re.sub(r'\s*\[[\w-]+\]$', '', filename)
+        # Replace hyphens and underscores with spaces
+        filename = filename.replace('-', ' ').replace('_', ' ')
+        # Strip trailing YouTube video ID (11 alphanumeric chars at end)
+        filename = re.sub(r'\s+[A-Za-z0-9_-]{11}$', '', filename)
+        # Collapse whitespace
+        filename = re.sub(r'\s+', ' ', filename).strip()
+        return filename
+    except Exception:
+        return 'Untitled'
+
+
+def extract_youtube_id(url):
+    """Extract a YouTube video ID embedded at the end of a Dropbox filename.
+
+    Dropbox filenames created by youtube-dl/yt-dlp end with the 11-char
+    YouTube video ID just before the extension, e.g.:
+      Clear-Mind-...-A6dzSX62gEY.m4a  →  A6dzSX62gEY
+      Bach-...-N6sUlZa-IrU.m4a        →  N6sUlZa-IrU  (hyphen in ID)
+    """
+    try:
+        path = urlparse(url).path
+        filename = unquote(path.split('/')[-1])
+        stem = re.sub(r'\.\w{2,4}$', '', filename)
+        # Bracket-style IDs first: [VmImA0YKsJg]
+        m = re.search(r'\[([A-Za-z0-9_-]{11})\]$', stem)
+        if m:
+            return m.group(1)
+        # Dash-separated ID at end: -A6dzSX62gEY
+        m = re.search(r'[_-]([A-Za-z0-9_-]{11})$', stem)
+        if m:
+            candidate = m.group(1)
+            # Reject if any hyphen-separated segment is all-digits
+            # (e.g. "1983-Presto" looks like a year-word, not a YouTube ID)
+            if any(re.match(r'^\d+$', part) for part in candidate.split('-')):
+                return None
+            return candidate
+    except Exception:
+        pass
+    return None
+
+
+def is_timestamp_line(line):
+    """Check if line starts with a timestamp like 00:00, 1:03:35, etc."""
+    return bool(re.match(r'^\d{1,2}:\d{2}(:\d{2})?\s', line))
+
+
+def is_all_caps_header(line):
+    """Check if line is an ALL CAPS section header like ANTONIO VIVALDI."""
+    stripped = line.strip()
+    if not stripped or len(stripped) < 3:
+        return False
+    # Must be mostly uppercase letters/spaces, no digits at start (not a timestamp)
+    alpha = re.sub(r'[^a-zA-Z]', '', stripped)
+    return len(alpha) >= 3 and alpha == alpha.upper() and not re.match(r'^\d', stripped)
+
+
+def is_url_line(line):
+    """Check if line contains an http URL."""
+    return bool(re.search(r'https?://', line))
+
+
+def is_youtube_url(url):
+    """Check if a URL points to YouTube."""
+    return 'youtube.com' in url or 'youtu.be' in url
+
+
+def youtube_id_from_url(url):
+    """Extract YouTube video ID from a watch URL, short URL, or shorts URL."""
+    m = re.search(r'(?:v=|youtu\.be/|shorts/)([\w-]{6,})', url)
+    return m.group(1) if m else None
+
+
+def parse_timestamp_line(line):
+    """Parse a timestamp line into time string and title."""
+    m = re.match(r'^(\d{1,2}:\d{2}(?::\d{2})?)\s+(.*)$', line)
+    if not m:
+        return None, None
+    time_str = m.group(1)
+    title = m.group(2).strip()
+    # Strip leading track number like "1 ", "25 "
+    title = re.sub(r'^\d+\s+', '', title)
+    return time_str, title
+
+
+def parse_url_line(line):
+    """Parse a line that contains a URL, returning (name, url)."""
+    line = line.strip()
+    # Check for name,url format
+    m = re.match(r'^(.+?)\s*,\s*(https?://.+)$', line)
+    if m:
+        name = m.group(1).strip()
+        url = m.group(2).strip()
+        return name, url
+    # Just a URL
+    m = re.match(r'^(https?://.+)$', line)
+    if m:
+        url = m.group(1).strip()
+        return '', url
+    return '', ''
+
+
+def parse_file(filepath):
+    """Parse a .txt file into a list of entries."""
     entries = []
-    with open(filepath, 'r', encoding='utf-8-sig') as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-            # Check for quoted value: name,"url,time1,time2(label),..."
-            m = re.match(r'^([^,]*),\s*"(.+)"$', line)
-            if m:
-                name = m.group(1).strip()
-                inner = m.group(2).strip()
-                parts = [p.strip() for p in inner.split(',')]
-                url = parts[0]
-                times = []
-                for t in parts[1:]:
-                    if not t:
-                        continue
-                    tm = re.match(r'^([\d:]+)\s*(?:\(([^)]*)\))?(.*)$', t)
-                    if tm:
-                        time_str = tm.group(1)
-                        label = (tm.group(2) or '').strip()
-                        entry = {'time': time_str}
-                        if label:
-                            entry['label'] = label
-                        times.append(entry)
-            else:
-                parts = line.split(',', 1)
-                if len(parts) == 2:
-                    name = parts[0].strip()
-                    rest = parts[1].strip()
-                else:
-                    rest = parts[0].strip()
-                    name = ''
-                url = rest
-                times = []
-                # Check if rest contains inline timestamps after URL
-                is_url = bool(re.match(r'^https?://', rest))
-                if is_url:
-                    url_and_times = rest.split(',')
-                    trailing_times = []
-                    i = len(url_and_times) - 1
-                    while i > 0:
-                        candidate = url_and_times[i].strip()
-                        if re.match(r'^\d{1,2}:\d{2}', candidate):
-                            trailing_times.insert(0, candidate)
-                            i -= 1
-                        else:
-                            break
-                    if trailing_times:
-                        url = ','.join(url_and_times[:i + 1])
-                        for t in trailing_times:
-                            tm = re.match(r'^([\d:]+)\s*(?:\(([^)]*)\))?(.*)$', t)
-                            if tm:
-                                tentry = {'time': tm.group(1)}
-                                label = (tm.group(2) or '').strip()
-                                if label:
-                                    tentry['label'] = label
-                                times.append(tentry)
+    current_entry = None
+
+    try:
+        with open(filepath, 'r', encoding='utf-8-sig') as f:
+            lines = f.readlines()
+    except UnicodeDecodeError:
+        with open(filepath, 'r', encoding='latin-1') as f:
+            lines = f.readlines()
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        if is_url_line(line):
+            # Start a new entry
+            name, url = parse_url_line(line)
             if not url:
                 continue
-            if not name:
-                # Derive name from URL
-                name = url.rstrip('/').split('/')[-1]
-                name = name.split('?')[0]
-                if '.' in name:
-                    name = name.rsplit('.', 1)[0]
-                name = name.replace('_', ' ').replace('-', ' ').strip()
-            entry = {'name': name, 'url': url}
-            if times:
-                entry['times'] = times
-            entries.append(entry)
+            if is_youtube_url(url):
+                youtube_id = youtube_id_from_url(url)
+                # name may be empty here; will be filled from txt stem in main()
+                current_entry = {'name': name, 'youtubeId': youtube_id, 'tracks': []}
+            else:
+                # Existing Dropbox logic: keep url field, extract youtubeId from filename
+                if not name:
+                    name = name_from_url(url)
+                youtube_id = extract_youtube_id(url)
+                current_entry = {'name': name, 'url': url, 'tracks': []}
+                if youtube_id:
+                    current_entry['youtubeId'] = youtube_id
+            entries.append(current_entry)
+
+        elif is_timestamp_line(line) and current_entry is not None:
+            time_str, title = parse_timestamp_line(line)
+            if time_str and title:
+                current_entry['tracks'].append({
+                    'time': time_str,
+                    'seconds': time_to_seconds(time_str),
+                    'title': title
+                })
+
+        elif is_all_caps_header(line) and current_entry is not None:
+            # Section header like ANTONIO VIVALDI
+            current_entry['tracks'].append({'header': line})
+
+        elif current_entry is not None and current_entry['tracks']:
+            # Non-timestamp, non-URL, non-header line → artist for previous track
+            last_track = None
+            for t in reversed(current_entry['tracks']):
+                if 'time' in t:
+                    last_track = t
+                    break
+            if last_track:
+                if 'artist' in last_track:
+                    last_track['artist'] += ', ' + line
+                else:
+                    last_track['artist'] = line
+
+    # For files with multiple URL-only entries and no tracks,
+    # use the filename stem as a group name
     return entries
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Generate playlists.json from .txt files')
-    parser.add_argument('-i', '--input', default='playlist',
-                        help='Input folder containing .txt files (default: playlist)')
-    parser.add_argument('-o', '--output', default='public/playlists.json',
-                        help='Output JSON file (default: public/playlists.json)')
+    parser = argparse.ArgumentParser(description='Generate playlists.json from playlists/ directory')
+    BACH_PLAYER_PLAYLISTS = str(
+        Path(__file__).parent.parent / 'extensions' / 'bach-player' / 'playlists'
+    )
+    parser.add_argument('-i', '--input', default=BACH_PLAYER_PLAYLISTS,
+                        help=f'Input folder containing category subdirectories (default: {BACH_PLAYER_PLAYLISTS})')
+    parser.add_argument('-o', '--output', default='playlists.json',
+                        help='Output JSON file (default: playlists.json)')
     args = parser.parse_args()
 
     input_dir = Path(args.input)
@@ -103,17 +233,33 @@ def main():
         print(f'No {input_dir}/ directory found.')
         return 1
 
-    txt_files = sorted(input_dir.glob('*.txt'))
-    if not txt_files:
-        print(f'No .txt files found in {input_dir}')
-        return 1
-
     playlists = {}
-    for txt_file in txt_files:
-        category = txt_file.stem
-        entries = parse_playlist_file(txt_file)
-        playlists[category] = entries
-        print(f'  {category}: {len(entries)} item(s)')
+
+    for category_dir in sorted(input_dir.iterdir()):
+        if not category_dir.is_dir():
+            continue
+        category = category_dir.name
+        all_entries = []
+
+        for txt_file in sorted(category_dir.glob('*.txt')):
+            entries = parse_file(txt_file)
+            # Fill empty names from the txt filename stem (strip [ID] suffix)
+            stem = re.sub(r'\s*\[[\w-]+\]$', '', txt_file.stem)
+            for e in entries:
+                if not e.get('name'):
+                    e['name'] = stem
+            # Prefix entry names with the source filename when a file
+            # contains multiple URL-only entries (no timestamps)
+            if len(entries) > 1:
+                prefix = txt_file.stem
+                for e in entries:
+                    e['name'] = f'{prefix} - {e["name"]}'
+            all_entries.extend(entries)
+            track_count = sum(len(e['tracks']) for e in entries)
+            print(f'  {category}/{txt_file.name}: {len(entries)} entry(ies), {track_count} tracks')
+
+        if all_entries:
+            playlists[category] = all_entries
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -121,15 +267,8 @@ def main():
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(playlists, f, indent=2, ensure_ascii=False)
 
-    print(f'\n-> Wrote {len(playlists)} categories to {output_path}')
-
-    # Print commands to sync to Dropbox and update Vercel env var
-    base = Path(__file__).resolve().parent / 'public'
-    print(f'\nrclone copyto {base / "playlists.json"}  dropbox:/vercel/youtube_playlist.json')
-    print(f'rclone link dropbox:/vercel/youtube_playlist.json')
-    print(f'\n# Then update Vercel with the link (append &raw=1):')
-    print(f'vercel env rm YOUTUBE_PLAYLISTS_URL production -y')
-    print(f'echo "<LINK>&raw=1" | vercel env add YOUTUBE_PLAYLISTS_URL production')
+    total = sum(len(v) for v in playlists.values())
+    print(f'\n-> Wrote {len(playlists)} categories, {total} entries to {output_path}')
     return 0
 
 
