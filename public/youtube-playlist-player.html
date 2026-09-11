@@ -227,6 +227,27 @@
       min-height: 38px;
     }
 
+    .ctrl-btn {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 5px;
+      background: #2c3e50;
+      color: #e0e0e0;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .ctrl-btn:hover { background: #37474f; }
+
+    .ctrl-divider {
+      width: 1px;
+      height: 20px;
+      background: rgba(255,255,255,0.12);
+      flex-shrink: 0;
+      margin: 0 2px;
+    }
+
     #loop-ts-input {
       width: 72px;
       padding: 3px 5px;
@@ -419,8 +440,17 @@
       <div id="yt-player"></div>
     </div>
 
-    <!-- Loop controls (30s × 40) -->
+    <!-- Playback + Loop controls -->
     <div id="loop-controls">
+      <!-- Playback controls -->
+      <button id="ctrl-back10"  class="ctrl-btn" title="Skip back 10s">−10s</button>
+      <button id="ctrl-fwd30"   class="ctrl-btn" title="Skip forward 30s">+30s</button>
+      <button id="ctrl-playpause" class="ctrl-btn" title="Play / Pause">▶</button>
+      <button id="ctrl-vol-down" class="ctrl-btn" title="Volume −10%">🔉</button>
+      <button id="ctrl-vol-up"   class="ctrl-btn" title="Volume +10%">🔊</button>
+      <span id="ctrl-time" style="font-family:'Courier New',monospace; font-size:12px; font-weight:700; color:#e0e0e0; white-space:nowrap; min-width:52px; text-align:right;">--:--</span>
+      <span class="ctrl-divider"></span>
+      <!-- Loop controls -->
       <input id="loop-ts-input" type="text" value="00:00:00" placeholder="00:00:00"
              title="Loop back to this timestamp (HH:MM:SS)" spellcheck="false">
       <button id="loop-btn" title="Play 30s, rewind, repeat x40">⏱️ 30s</button>
@@ -488,6 +518,10 @@
             ytPlayerDiv.style.display = 'block';
             pendingVideo = null;
           }
+          startTimeClock();
+        },
+        onStateChange: function (e) {
+          if (window._ytOnStateChange) window._ytOnStateChange(e);
         },
         onError: function (e) { console.warn('YT player error:', e.data); }
       }
@@ -719,6 +753,64 @@
       runT3Loop(t3Generation);
     }
   }
+
+  // ── Live time clock ───────────────────────────────────────────────────────────
+  let _clockInterval = null;
+  function fmtTime(sec) {
+    if (!isFinite(sec) || sec < 0) return '--:--';
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = Math.floor(sec % 60);
+    const mm = h ? String(m).padStart(2, '0') : String(m);
+    const ss = String(s).padStart(2, '0');
+    return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+  }
+  function startTimeClock() {
+    if (_clockInterval) clearInterval(_clockInterval);
+    const timeEl = document.getElementById('ctrl-time');
+    _clockInterval = setInterval(() => {
+      if (!ytPlayer || !ytReady) return;
+      timeEl.textContent = fmtTime(ytPlayer.getCurrentTime());
+    }, 500);
+  }
+
+  // ── Playback controls ─────────────────────────────────────────────────────────
+  let _playPauseState = 'paused'; // track display state
+
+  function ytSkip(secs) {
+    if (!ytPlayer || !ytReady) return;
+    const t = (ytPlayer.getCurrentTime() || 0) + secs;
+    ytPlayer.seekTo(Math.max(0, t), true);
+  }
+
+  function ytTogglePlayPause() {
+    if (!ytPlayer || !ytReady) return;
+    const state = ytPlayer.getPlayerState();
+    // 1 = playing, 2 = paused/stopped, 5 = cued
+    if (state === YT.PlayerState.PLAYING) {
+      ytPlayer.pauseVideo();
+    } else {
+      ytPlayer.playVideo();
+    }
+  }
+
+  function ytChangeVolume(delta) {  // delta: ±10
+    if (!ytPlayer || !ytReady) return;
+    ytPlayer.setVolume(Math.max(0, Math.min(100, ytPlayer.getVolume() + delta)));
+  }
+
+  // Keep play/pause button icon in sync with player state
+  window._ytOnStateChange = function (event) {
+    const btn = document.getElementById('ctrl-playpause');
+    if (!btn) return;
+    btn.textContent = (event.data === YT.PlayerState.PLAYING) ? '⏸' : '▶';
+  };
+
+  document.getElementById('ctrl-back10').addEventListener('click', () => ytSkip(-10));
+  document.getElementById('ctrl-fwd30').addEventListener('click',  () => ytSkip(+30));
+  document.getElementById('ctrl-playpause').addEventListener('click', ytTogglePlayPause);
+  document.getElementById('ctrl-vol-down').addEventListener('click', () => ytChangeVolume(-10));
+  document.getElementById('ctrl-vol-up').addEventListener('click',   () => ytChangeVolume(+10));
 
   loopBtn.addEventListener('click', toggleT3);
   loopPauseBtn.addEventListener('click', toggleT3Pause);
