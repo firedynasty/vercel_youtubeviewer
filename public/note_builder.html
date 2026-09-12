@@ -30,6 +30,19 @@
     font-size:13px;
     margin-bottom:16px;
   }
+  .key{
+    display:inline-block;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:11px;
+    font-weight:700;
+    padding:1px 6px;
+    border-radius:5px;
+    border:1px solid var(--border);
+    border-bottom-width:2px;
+    background:var(--accent-soft);
+    color:var(--accent);
+    margin:0 1px;
+  }
   .app{
     display:grid;
     grid-template-columns:1fr;
@@ -200,7 +213,7 @@
 <body>
 
 <h1>Staff Note Builder</h1>
-<div class="sub">Press <b>C–B</b> for notes at the current octave (default 4). <b>Shift+C/D/F/G/A</b> = sharp. <b>[ ]</b> = octave down/up. <b>1–6</b> = duration (sticky): 1=Eighth, 2=Quarter, 3=Dot-Quarter, 4=Half, 5=Dot-Half, 6=Whole. <b>Tab</b> / <b>Shift+Tab</b> = cycle duration. <b>Z</b> = undo.</div>
+<div class="sub">Press <span class="key">C–B</span> for notes at the current octave (default 4). <span class="key">Shift+C/D/F/G/A</span> = sharp. <span class="key">[ ]</span> = octave down/up. The <b>Spot</b> (purple marker, starts at C4) moves only when you click the staff or press a letter key. <span class="key">0–6</span> or the 1/2/3 buttons = step that many staff-rows from the Spot in the current direction (<span class="key">0</span> or <span class="key">&#96;</span> repeats the Spot). <span class="key">-</span> / <span class="key">=</span> or the toggle button = flip step direction (sticky, starts +). <span class="key">Tab</span>/<span class="key">Shift+Tab</span> or <span class="key">,</span>/<span class="key">.</span> = cycle duration. <span class="key">/</span> or <span class="key">q</span> = reset duration to Quarter. <span class="key">h</span> = jump to Half. <span class="key">Z</span> = undo.</div>
 
 
 <div class="app">
@@ -213,12 +226,12 @@
       <span style="font-size:12px;color:var(--muted);">&nbsp;[ &darr; &nbsp; ] &uarr;</span>
     </div>
     <div class="dur-row">
-      <button class="dur-btn" data-dur="0.5">♪ <small style="opacity:.55">1</small></button>
-      <button class="dur-btn active" data-dur="1">♩ <small style="opacity:.55">2</small></button>
-      <button class="dur-btn" data-dur="1.5">♩. <small style="opacity:.55">3</small></button>
-      <button class="dur-btn" data-dur="2">𝅗𝅥 <small style="opacity:.55">4</small></button>
-      <button class="dur-btn" data-dur="3">𝅗𝅥. <small style="opacity:.55">5</small></button>
-      <button class="dur-btn" data-dur="4">○ <small style="opacity:.55">6</small></button>
+      <button class="dur-btn" data-dur="0.5">♪ <small style="opacity:.55">0.5</small></button>
+      <button class="dur-btn active" data-dur="1">♩ <small style="opacity:.55">1</small></button>
+      <button class="dur-btn" data-dur="1.5">♩. <small style="opacity:.55">1.5</small></button>
+      <button class="dur-btn" data-dur="2">𝅗𝅥 <small style="opacity:.55">2</small></button>
+      <button class="dur-btn" data-dur="3">𝅗𝅥. <small style="opacity:.55">3</small></button>
+      <button class="dur-btn" data-dur="4">○ <small style="opacity:.55">4</small></button>
     </div>
     <div style="margin-top:4px;display:none;">
       <div style="font-size:12px;color:var(--muted);margin-bottom:5px;">Rhythm plan &nbsp;<span style="font-weight:600;color:var(--ink);">Q</span>=Quarter &nbsp;<span style="font-weight:600;color:var(--ink);">DQ</span>=Dotted Quarter &nbsp;<span style="font-weight:600;color:var(--ink);">H</span>=Half &nbsp;<span style="font-weight:600;color:var(--ink);">DH</span>=Dotted Half</div>
@@ -231,8 +244,18 @@
       <div id="rhythmStatus" style="font-size:12px;color:var(--accent);margin-top:5px;min-height:18px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;"></div>
     </div>
 
-    <h2>2. Click a note to add it</h2>
+    <h2>2. Click a note to add it (sets the Spot)</h2>
     <svg id="staff" viewBox="-30 0 530 330" xmlns="http://www.w3.org/2000/svg"></svg>
+
+    <div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;flex-wrap:wrap;">
+      <span style="color:var(--muted);">Spot:</span>
+      <b id="spotDisplay" style="color:var(--accent);font-size:16px;">C4</b>
+      <button class="action" id="dirToggle" title="Step direction (+ up / − down)">+</button>
+      <span style="color:var(--muted);font-size:12px;">steps:</span>
+      <button class="action step-btn" data-step="1" title="Add a note 1 staff-row from the Spot">1</button>
+      <button class="action step-btn" data-step="2" title="Add a note 2 staff-rows from the Spot">2</button>
+      <button class="action step-btn" data-step="3" title="Add a note 3 staff-rows from the Spot">3</button>
+    </div>
 
     <div class="btn-row">
       <button class="action" id="addRestBtn">Add rest (_)</button>
@@ -352,16 +375,23 @@ function drawStaff(){
       svg.appendChild(hintEl);
     }
 
+    // Spot marker: accent notehead on the current spot row (FR-014); redrawn by drawStaff()
+    if(r.name === spot){
+      svg.appendChild(el('ellipse',{cx:X_NOTE,cy:r.y,rx:9,ry:6.5,fill:'#7c3aed'}));
+    }
+
     const g = el('g',{class:'row-hit'});
     const hit = el('rect',{x:X_LEFT-2,y:r.y-8,width:X_RIGHT-X_LEFT+4,height:16,fill:'transparent'});
     g.appendChild(hit);
-    g.addEventListener('click', ()=>addNote(r.name));
+    g.addEventListener('click', ()=>{ addNote(r.name); setSpot(r.name); }); // add, then re-anchor (FR-001)
     svg.appendChild(g);
   });
 }
 
 let duration = '1';
 let currentOctave = 4;
+let direction = '+'; // persistent relative-step direction: '+' = ascending, '-' = descending
+let spot = 'C4'; // fixed reference row for relative-step entry (FR-002); moves only via setSpot()
 
 // Duration buttons
 document.querySelectorAll('.dur-btn').forEach(btn=>{
@@ -372,14 +402,57 @@ document.querySelectorAll('.dur-btn').forEach(btn=>{
   });
 });
 
-// Number keys → duration (Sibelius-style, sticky)
-// 1=Eighth, 2=Quarter, 3=Dot-Quarter, 4=Half, 5=Dot-Half, 6=Whole
-const DUR_KEYS = { '1':'0.5', '2':'1', '3':'1.5', '4':'2', '5':'3', '6':'4' };
+// Step buttons 1/2/3 — same shared path as the digit keys, so buttons and keys can never
+// diverge (FR-012). They add a note N staff-rows from the spot and never move it (FR-007).
+document.querySelectorAll('.step-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>relativeStep(Number(btn.dataset.step)));
+});
+
+// −/+ toggle — one control that displays the current direction and flips it on click (FR-013)
+document.getElementById('dirToggle').addEventListener('click', ()=>{
+  setDirection(direction === '+' ? '-' : '+');
+});
 
 function updateOctaveDisplay(){
   const el = document.getElementById('octaveDisplay');
   if(el) el.textContent = currentOctave;
   drawStaff(); // refresh key hints
+}
+
+// The Spot is the fixed reference row for relative-step entry. It always exists — it starts
+// at C4 (FR-002) and moves ONLY via setSpot(): staff-row clicks and letter-key entry (FR-007).
+// Digit keys, step buttons, direction, duration, octave, undo, and rests never move it.
+// Sharps normalize to their natural row (C#4 → C4) since steps land on naturals only (FR-008).
+function setSpot(name){
+  spot = String(name).replace('#', '');
+  const disp = document.getElementById('spotDisplay');
+  if(disp) disp.textContent = spot;
+  drawStaff(); // repaint the spot-row marker (FR-014)
+}
+
+// Direction and its on-screen toggle are one state: every mutation (keyboard +/-, the
+// #dirToggle button, Clear all) goes through here so the label can never disagree (FR-013).
+function setDirection(d){
+  direction = d;
+  const t = document.getElementById('dirToggle');
+  if(t) t.textContent = d;
+}
+
+// Resolve a relative step of `magnitude` staff-rows from `fromRow`, in the current
+// `direction`. `rows` is ordered top-to-bottom (D6 first, B3 last), so ascending pitch
+// means a *smaller* array index. Clamps to the staff's drawn range (FR-011).
+function resolveStep(fromRow, magnitude){
+  const idx = rows.findIndex(r=>r.name === fromRow);
+  if(idx === -1) return fromRow;
+  const delta = direction === '+' ? -magnitude : magnitude;
+  const clamped = Math.max(0, Math.min(rows.length - 1, idx + delta));
+  return rows[clamped].name;
+}
+
+// One shared path for the digit keys and the on-screen step buttons: add the note N rows
+// from the current spot — and NEVER move the spot (FR-007, FR-012).
+function relativeStep(magnitude){
+  addNote(resolveStep(spot, magnitude));
 }
 
 document.addEventListener('keydown', e=>{
@@ -393,6 +466,32 @@ document.addEventListener('keydown', e=>{
     const activeIdx = btns.findIndex(b=>b.classList.contains('active'));
     const dir = e.shiftKey ? -1 : 1;
     btns[(activeIdx + dir + btns.length) % btns.length].click();
+    return;
+  }
+
+  // , / . — cycle duration backward / forward (aliases for Shift+Tab / Tab)
+  if(e.key === ',' || e.key === '.'){
+    e.preventDefault();
+    const btns = [...document.querySelectorAll('.dur-btn')];
+    const activeIdx = btns.findIndex(b=>b.classList.contains('active'));
+    const dir = e.key === ',' ? -1 : 1;
+    btns[(activeIdx + dir + btns.length) % btns.length].click();
+    return;
+  }
+
+  // / or q — reset duration directly to Quarter (identical action, two keys; "q" for "Quarter")
+  if(e.key === '/' || e.key === 'q' || e.key === 'Q'){
+    e.preventDefault();
+    const quarterBtn = document.querySelector('.dur-btn[data-dur="1"]');
+    if(quarterBtn) quarterBtn.click();
+    return;
+  }
+
+  // h — jump duration directly to Half, 2 beats ("h" for "Half", mirroring q for Quarter)
+  if(e.key === 'h' || e.key === 'H'){
+    e.preventDefault();
+    const halfBtn = document.querySelector('.dur-btn[data-dur="2"]');
+    if(halfBtn) halfBtn.click();
     return;
   }
 
@@ -410,24 +509,43 @@ document.addEventListener('keydown', e=>{
     return;
   }
 
-  // Number keys 1–6 → set duration (sticky)
-  if(DUR_KEYS[e.key]){
+  // - / = — toggle the step direction (no Shift needed; the two keys left of Backspace).
+  // Their shifted forms _ / + toggle too, since they're the same physical keys. Goes through
+  // setDirection so the on-screen #dirToggle label always matches (FR-013).
+  if(e.key === '-' || e.key === '_' || e.key === '=' || e.key === '+'){
     e.preventDefault();
-    setActiveDur(DUR_KEYS[e.key]);
+    setDirection(direction === '+' ? '-' : '+');
+    return;
+  }
+
+  // Number keys 0–6 (and ` as an alias for 0) → add a note N staff-rows from the Spot, in
+  // the current direction. 0 (or `) repeats the Spot's own row — direction is irrelevant at
+  // a step of 0. The Spot always exists (defaults to C4, FR-002) and is never moved by these
+  // keys (FR-007) — repeated presses add repeated pitches by design.
+  if(/^[0-6]$/.test(e.key) || e.key === '`'){
+    e.preventDefault();
+    relativeStep(e.key === '`' ? 0 : Number(e.key));
     return;
   }
 
   // Letter keys c–b → note at current octave
   // Shift+letter → sharp (C# D# F# G# A# only; E and B have no sharp)
+  // Letter entry also re-anchors the Spot to the added note (FR-008); a sharp sets the spot
+  // to its natural staff row (C#4 → C4) via setSpot's #-stripping.
   const lk = e.key.toLowerCase();
   if(lk.length === 1 && 'cdefgab'.includes(lk)){
     e.preventDefault();
     if(e.shiftKey){
       const SHARP_MAP = {c:'C#', d:'D#', f:'F#', g:'G#', a:'A#'};
       const sharp = SHARP_MAP[lk];
-      if(sharp) addNote(sharp + currentOctave);
+      if(sharp){
+        addNote(sharp + currentOctave);
+        setSpot(sharp + currentOctave);
+      }
     } else {
-      addNote(e.key.toUpperCase() + currentOctave);
+      const name = e.key.toUpperCase() + currentOctave;
+      addNote(name);
+      setSpot(name);
     }
     return;
   }
@@ -496,6 +614,8 @@ document.getElementById('undoBtn').addEventListener('click', ()=>{
 document.getElementById('clearBtn').addEventListener('click', ()=>{
   document.getElementById('melodyOut').value = '';
   document.getElementById('rhythmInput').value = '';
+  setDirection('+'); // reset relative-step direction (FR-005)
+  setSpot('C4');     // reset the spot (FR-015)
 });
 
 document.getElementById('copyBtn').addEventListener('click', ()=>{
