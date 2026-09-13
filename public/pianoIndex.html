@@ -255,6 +255,15 @@
     }
     .dbx-go-btn:hover { background: #333; color: #fff; }
     .dbx-go-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .dbx-preset-select {
+      background: #111;
+      border: 1px solid #3a3a3a;
+      border-radius: 6px;
+      color: #ccc;
+      font-size: 13px;
+      padding: 6px 8px;
+      cursor: pointer;
+    }
     .dbx-breadcrumb {
       padding: 5px 16px;
       font-size: 12px;
@@ -434,6 +443,9 @@
           <div class="dbx-toolbar">
             <input class="dbx-path-input" id="dbxPathInput" value="/" placeholder="/ (root)">
             <button class="dbx-go-btn" id="dbxGoBtn" onclick="dbxBrowse(document.getElementById('dbxPathInput').value)">Go</button>
+            <select class="dbx-preset-select" id="dbxPresetSelect" onchange="if(this.value){dbxBrowse(this.value); this.value='';}">
+              <option value="">-- Presets --</option>
+            </select>
           </div>
           <div class="dbx-breadcrumb" id="dbxBreadcrumb"></div>
           <div class="dbx-status" id="dbxStatus">Not signed in</div>
@@ -1042,6 +1054,7 @@
       let dropboxAppKey = '';
       const IS_LOCALHOST = ['localhost', '127.0.0.1'].includes(window.location.hostname);
       const DBX_LAST_PATH_KEY = 'piano-dbx-last-path';
+      const DBX_FOLDER_PRESETS = { 'Piano': '/piano' };
 
       function generateCodeVerifier() {
         const a = new Uint8Array(64);
@@ -1277,6 +1290,14 @@
           document.getElementById('dbxStatus').textContent = 'Error: '+err.message;
         }
       };
+
+      const dbxPresetSelect = document.getElementById('dbxPresetSelect');
+      Object.entries(DBX_FOLDER_PRESETS).forEach(([label, path]) => {
+        const opt = document.createElement('option');
+        opt.value = path;
+        opt.textContent = label;
+        dbxPresetSelect.appendChild(opt);
+      });
 
       document.getElementById('dbxOverlay').addEventListener('click', e => {
         if (e.target === document.getElementById('dbxOverlay')) window.closeDbxModal();
