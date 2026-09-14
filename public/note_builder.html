@@ -508,12 +508,19 @@ document.addEventListener('keydown', e=>{
     return;
   }
 
-  // - / = — toggle the step direction (no Shift needed; the two keys left of Backspace).
-  // Their shifted forms _ / + toggle too, since they're the same physical keys. Goes through
-  // setDirection so the on-screen #dirToggle label always matches (FR-013).
-  if(e.key === '-' || e.key === '_' || e.key === '=' || e.key === '+'){
+  // - / = — force the step direction (no Shift needed; the two keys left of Backspace).
+  // Their shifted forms _ / + force it too, since they're the same physical keys. Each key
+  // sets direction to its own sign directly rather than toggling, so repeated presses of the
+  // same key are no-ops. Goes through setDirection so the on-screen #dirToggle label always
+  // matches (FR-013).
+  if(e.key === '-' || e.key === '_'){
     e.preventDefault();
-    setDirection(direction === '+' ? '-' : '+');
+    setDirection('-');
+    return;
+  }
+  if(e.key === '=' || e.key === '+'){
+    e.preventDefault();
+    setDirection('+');
     return;
   }
 
