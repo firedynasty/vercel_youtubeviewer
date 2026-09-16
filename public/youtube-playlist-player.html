@@ -286,6 +286,44 @@
     }
     #loop-pause-btn:not(:disabled) { opacity: 1; }
 
+    #loop2-ts-input {
+      width: 72px;
+      padding: 3px 5px;
+      border: 1px solid #555;
+      border-radius: 5px;
+      background: #1a1a1a;
+      color: #ddd;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      outline: none;
+    }
+    #loop2-ts-input:focus { border-color: #c9a84c; }
+
+    #loop2-btn {
+      padding: 5px 12px;
+      border: none;
+      border-radius: 5px;
+      background: linear-gradient(45deg, #ab47bc, #8e24aa);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    #loop2-pause-btn {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 5px;
+      background: #546e7a;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      opacity: 0.35;
+    }
+    #loop2-pause-btn:not(:disabled) { opacity: 1; }
+
     #loop-status {
       font-size: 11px;
       color: #888;
@@ -455,6 +493,10 @@
              title="Loop back to this timestamp (HH:MM:SS)" spellcheck="false">
       <button id="loop-btn" title="Play 30s, rewind, repeat x40">⏱️ 30s</button>
       <button id="loop-pause-btn" title="Pause loop" disabled>⏸</button>
+      <input id="loop2-ts-input" type="text" value="00:00:00" placeholder="00:00:00"
+             title="Loop back to this timestamp (HH:MM:SS)" spellcheck="false">
+      <button id="loop2-btn" title="Play 3m, rewind, repeat x8">⏱️ 3m</button>
+      <button id="loop2-pause-btn" title="Pause loop" disabled>⏸</button>
       <span id="loop-status"></span>
     </div>
   </div>
@@ -499,6 +541,9 @@
   const loopTsInput    = document.getElementById('loop-ts-input');
   const loopBtn        = document.getElementById('loop-btn');
   const loopPauseBtn   = document.getElementById('loop-pause-btn');
+  const loop2TsInput   = document.getElementById('loop2-ts-input');
+  const loop2Btn       = document.getElementById('loop2-btn');
+  const loop2PauseBtn  = document.getElementById('loop2-pause-btn');
   const loopStatusEl   = document.getElementById('loop-status');
 
   // ── YouTube IFrame Player API ─────────────────────────────────────────────────
@@ -754,6 +799,80 @@
     }
   }
 
+  // ── Loop engine (3m × 8, ported from yt-controls) ────────────────────────────
+  const T4_DURATION_MS = 3 * 60 * 1000; // 3 minutes
+  const T4_TOTAL_LOOPS = 8;
+
+  let t4Timeout        = null;
+  let t4LoopsRemaining = 0;
+  let t4Generation     = 0;
+  let t4Paused         = false;
+
+  function runT4Loop(gen) {
+    const currentLoop = T4_TOTAL_LOOPS - t4LoopsRemaining + 1;
+    loop2Btn.textContent = `⏹️ ${currentLoop}/${T4_TOTAL_LOOPS}`;
+    setLoopStatus(`3m loop ${currentLoop}/${T4_TOTAL_LOOPS}`, '#ab47bc');
+
+    t4Timeout = setTimeout(() => {
+      if (gen !== t4Generation) return;
+      t4LoopsRemaining--;
+      ytSeekTo(parseHMS(loop2TsInput.value));
+      if (t4LoopsRemaining > 0) {
+        runT4Loop(gen);
+      } else {
+        t4Timeout = null;
+        loop2Btn.textContent           = '⏱️ 3m';
+        loop2Btn.style.background      = 'linear-gradient(45deg,#ab47bc,#8e24aa)';
+        loop2PauseBtn.disabled         = true;
+        loop2PauseBtn.textContent      = '⏸';
+        loop2PauseBtn.style.background = '#546e7a';
+        t4Paused = false;
+        flashLoopStatus(`3m complete (${T4_TOTAL_LOOPS}/${T4_TOTAL_LOOPS})`, '#2ecc71');
+      }
+    }, T4_DURATION_MS);
+  }
+
+  function cancelT4() {
+    t4Generation++;
+    if (t4Timeout) { clearTimeout(t4Timeout); t4Timeout = null; }
+    t4Paused = false;
+    loop2Btn.textContent           = '⏱️ 3m';
+    loop2Btn.style.background      = 'linear-gradient(45deg,#ab47bc,#8e24aa)';
+    loop2PauseBtn.disabled         = true;
+    loop2PauseBtn.textContent      = '⏸';
+    loop2PauseBtn.style.background = '#546e7a';
+    flashLoopStatus('Timer cancelled', '#e74c3c');
+  }
+
+  function toggleT4() {
+    if (t4Timeout || t4Paused) { cancelT4(); return; }
+    if (!activeYoutubeId) { flashLoopStatus('No video loaded', '#e74c3c'); return; }
+    loop2TsInput.value             = secsToHMS(ytGetCurrentTime());
+    t4LoopsRemaining               = T4_TOTAL_LOOPS;
+    t4Paused                       = false;
+    t4Generation++;
+    loop2PauseBtn.disabled         = false;
+    loop2PauseBtn.textContent      = '⏸';
+    loop2PauseBtn.style.background = '#546e7a';
+    runT4Loop(t4Generation);
+  }
+
+  function toggleT4Pause() {
+    t4Paused = !t4Paused;
+    if (t4Paused) {
+      if (t4Timeout) { clearTimeout(t4Timeout); t4Timeout = null; }
+      loop2PauseBtn.textContent     = '▶ resume';
+      loop2PauseBtn.style.background = '#f57f17';
+      setLoopStatus('Loop paused', '#ffb300');
+    } else {
+      loop2PauseBtn.textContent     = '⏸';
+      loop2PauseBtn.style.background = '#546e7a';
+      loop2TsInput.value = secsToHMS(ytGetCurrentTime());
+      t4Generation++;
+      runT4Loop(t4Generation);
+    }
+  }
+
   // ── Live time clock ───────────────────────────────────────────────────────────
   let _clockInterval = null;
   function fmtTime(sec) {
@@ -816,6 +935,10 @@
   loopPauseBtn.addEventListener('click', toggleT3Pause);
   // Prevent arrow-key navigation from firing while user edits the timestamp
   loopTsInput.addEventListener('keydown', e => e.stopPropagation());
+
+  loop2Btn.addEventListener('click', toggleT4);
+  loop2PauseBtn.addEventListener('click', toggleT4Pause);
+  loop2TsInput.addEventListener('keydown', e => e.stopPropagation());
 
   // ── Sidebar render ────────────────────────────────────────────────────────────
   function renderSidebar(data) {
