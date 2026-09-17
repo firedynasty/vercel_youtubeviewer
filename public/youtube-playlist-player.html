@@ -331,6 +331,31 @@
       margin-left: 2px;
     }
 
+    /* ── Toast ───────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      left: 50%;
+      bottom: 28px;
+      transform: translateX(-50%) translateY(10px);
+      background: #2c2c44;
+      color: #e0e0e0;
+      border: 1px solid rgba(229, 115, 115, 0.4);
+      border-left: 3px solid #e57373;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s, transform .2s;
+      z-index: 999;
+      max-width: 90vw;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
     /* ── Track list (right pane) ─────────────────────────── */
     #track-list {
       display: flex;
@@ -501,6 +526,9 @@
     </div>
   </div>
 
+  <!-- Toast -->
+  <div id="toast"></div>
+
   <!-- Track list (right pane) -->
   <div id="track-list">
     <div id="track-list-header">
@@ -545,20 +573,42 @@
   const loop2Btn       = document.getElementById('loop2-btn');
   const loop2PauseBtn  = document.getElementById('loop2-pause-btn');
   const loopStatusEl   = document.getElementById('loop-status');
+  const toastEl        = document.getElementById('toast');
+
+  let _toastTimer = null;
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    if (_toastTimer) clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => toastEl.classList.remove('show'), 4000);
+  }
 
   // ── YouTube IFrame Player API ─────────────────────────────────────────────────
   let ytPlayer = null;
   let ytReady  = false;
 
+  const YT_ERROR_MEANINGS = {
+    2: 'Invalid videoId (malformed parameter)',
+    5: 'HTML5 player error',
+    100: 'Video not found (removed or private)',
+    101: 'Owner disabled embedding on other sites',
+    150: 'Owner disabled embedding on other sites (same as 101)'
+  };
+
+  console.log('[YT] injecting iframe_api script tag');
+
   window.onYouTubeIframeAPIReady = function () {
+    console.log('[YT] onYouTubeIframeAPIReady fired, YT global:', typeof YT, YT && YT.loaded);
     ytPlayer = new YT.Player('yt-player', {
       width: '100%',
       height: '100%',
       playerVars: { rel: 0, modestbranding: 1 },
       events: {
         onReady: function () {
+          console.log('[YT] player onReady, pendingVideo=', pendingVideo);
           ytReady = true;
           if (pendingVideo) {
+            console.log('[YT] loading pending video', pendingVideo);
             ytPlayer.loadVideoById(pendingVideo);
             ytPlayerDiv.style.display = 'block';
             pendingVideo = null;
@@ -566,9 +616,19 @@
           startTimeClock();
         },
         onStateChange: function (e) {
+          console.log('[YT] onStateChange, state=', e.data, '(-1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued)');
           if (window._ytOnStateChange) window._ytOnStateChange(e);
         },
-        onError: function (e) { console.warn('YT player error:', e.data); }
+        onError: function (e) {
+          console.error('[YT] player onError, code=', e.data, '-', YT_ERROR_MEANINGS[e.data] || 'unknown error');
+          if (e.data === 101 || e.data === 150) {
+            showToast('Embedding disabled for "' + (playerHeader.textContent || 'this video') + '" — watch it on YouTube instead');
+          } else if (e.data === 100) {
+            showToast('Video unavailable (removed or private): ' + (playerHeader.textContent || ''));
+          } else {
+            showToast('Playback error (code ' + e.data + ') for ' + (playerHeader.textContent || 'this video'));
+          }
+        }
       }
     });
   };
@@ -577,13 +637,24 @@
   (function () {
     const tag = document.createElement('script');
     tag.src = 'https://www.youtube.com/iframe_api';
+    tag.onerror = () => console.error('[YT] failed to load iframe_api script (blocked? offline? adblock?)');
+    tag.onload = () => console.log('[YT] iframe_api script tag loaded (onYouTubeIframeAPIReady should fire next)');
     document.head.appendChild(tag);
   })();
 
+  // Fallback: warn if the API never calls back within 8s
+  setTimeout(() => {
+    if (!ytReady) {
+      console.warn('[YT] still not ready 8s after page load — onYouTubeIframeAPIReady never fired, or player onReady never fired. Check network tab for youtube.com/iframe_api and an adblocker/CSP blocking it.');
+    }
+  }, 8000);
+
   // YT player helpers
   function ytLoadVideo(videoId, startSeconds) {
+    console.log('[YT] ytLoadVideo called, videoId=', videoId, 'startSeconds=', startSeconds, 'ytReady=', ytReady);
     const params = { videoId, startSeconds: startSeconds || 0 };
     if (!ytPlayer || !ytReady) {
+      console.log('[YT] player not ready yet, queueing as pendingVideo');
       pendingVideo = params;
       return;
     }
@@ -1010,9 +1081,11 @@
     const youtubeId = albumEl.dataset.youtubeId;
     const name      = albumEl.dataset.name || '';
     const tracks    = JSON.parse(albumEl.dataset.tracks || '[]');
+    console.log('[album] selected', { name, youtubeId, trackCount: tracks.length });
     playerHeader.innerHTML = name ? `<span>${name}</span>` : 'Playlist Player';
     activeYoutubeId = youtubeId;
     if (!youtubeId) {
+      console.warn('[album] no youtubeId on this album — showing "no video" state. Check playlists.json for this entry.');
       showOnly(noVideoMsg);
       renderTrackList([]);
       return;
