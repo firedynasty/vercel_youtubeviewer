@@ -522,6 +522,7 @@
              title="Loop back to this timestamp (HH:MM:SS)" spellcheck="false">
       <button id="loop2-btn" title="Play 3m, rewind, repeat x8">⏱️ 3m</button>
       <button id="loop2-pause-btn" title="Pause loop" disabled>⏸</button>
+      <a id="ytAnchor" href="#" target="_blank" rel="noopener" style="display:none; color:#FF4040; font-size:11px; text-decoration:none; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">&#9654; YouTube</a>
       <span id="loop-status"></span>
     </div>
   </div>
@@ -573,6 +574,7 @@
   const loop2Btn       = document.getElementById('loop2-btn');
   const loop2PauseBtn  = document.getElementById('loop2-pause-btn');
   const loopStatusEl   = document.getElementById('loop-status');
+  const ytAnchorEl     = document.getElementById('ytAnchor');
   const toastEl        = document.getElementById('toast');
 
   let _toastTimer = null;
@@ -1086,10 +1088,13 @@
     activeYoutubeId = youtubeId;
     if (!youtubeId) {
       console.warn('[album] no youtubeId on this album — showing "no video" state. Check playlists.json for this entry.');
+      ytAnchorEl.style.display = 'none';
       showOnly(noVideoMsg);
       renderTrackList([]);
       return;
     }
+    ytAnchorEl.href = `https://www.youtube.com/watch?v=${youtubeId}`;
+    ytAnchorEl.style.display = '';
     ytLoadVideo(youtubeId, 0);
     showOnly(ytPlayerDiv);
     renderTrackList(tracks);
