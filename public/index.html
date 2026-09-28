@@ -1954,6 +1954,13 @@ https://youtube.com/watch?v=...
                 <button id="metTapBeatBtn" style="flex:1; padding:15px 0; border-radius:14px; border:none; cursor:pointer; font-size:18px; letter-spacing:1px; background:#C9A24B; color:#1e1e1e; font-family:inherit;">Tap the beat</button>
             </div>
 
+            <!-- Remote control via Dropbox -->
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:#8C7E63; margin-bottom:4px;">
+                <input type="checkbox" id="metRemoteToggle" style="accent-color:#C9A24B;">
+                <span>Remote: F9 sends #</span>
+                <span id="metRemoteStatus" style="margin-left:auto; font-style:italic;"></span>
+            </label>
+
             <!-- Beat Detection -->
             <div style="border-top:1px solid rgba(255,255,255,0.1); margin-top:14px; padding-top:14px;">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
@@ -11465,7 +11472,6 @@ renderPmSections();
     var NOTES = { C:130.81, D:146.83, E:164.81, F:174.61, G:196.0, A:220.0, B:246.94 };
     var PRESETS = {
         'ba ba ba da': ['ba','ba','ba','da'],
-        'da ba ba ba': ['da','ba','ba','ba'],
         'waltz (da ba ba)': ['da','ba','ba'],
         'march (da ba)': ['da','ba']
     };
@@ -11958,6 +11964,41 @@ renderPmSections();
             metVolume = +this.value;
             if (metMaster && metCtx) {
                 metMaster.gain.setTargetAtTime(metVolume, metCtx.currentTime, 0.01);
+            }
+        });
+
+        // Remote control: poll a Dropbox file every 2.5s; a number sets BPM and starts, 0 stops
+        var MET_REMOTE_PATH = '/blob_vercel_replacement/metronome_bpm.txt';
+        var metRemoteTimer = null, metRemoteLast = null, metRemoteBusy = false;
+        function metRemoteStatus(t) { document.getElementById('metRemoteStatus').textContent = t; }
+        async function metRemotePoll() {
+            if (metRemoteBusy || document.hidden || !window.dropboxDownloadFile) return;
+            if (!window.getDropboxAccessToken()) { metRemoteStatus('sign in to Dropbox'); return; }
+            metRemoteBusy = true;
+            try {
+                var txt = await window.dropboxDownloadFile(MET_REMOTE_PATH);
+                var n = parseInt((txt || '').trim(), 10);
+                if (isNaN(n)) { metRemoteStatus('bad value'); return; }
+                metRemoteStatus(n + '');
+                if (n === metRemoteLast) return; // only act on changes so manual controls still work
+                metRemoteLast = n;
+                if (n <= 0) { if (metIsPlaying) metStop(); }
+                else { clampBpm(n); if (!metIsPlaying) metStart(); }
+            } catch (e) {
+                metRemoteStatus('file not found');
+            } finally {
+                metRemoteBusy = false;
+            }
+        }
+        document.getElementById('metRemoteToggle').addEventListener('change', function() {
+            clearInterval(metRemoteTimer);
+            metRemoteTimer = null;
+            metRemoteLast = null;
+            metRemoteStatus('');
+            if (this.checked) {
+                ensureAudio(); // enabling is a user gesture, so audio is allowed to start later
+                metRemotePoll();
+                metRemoteTimer = setInterval(metRemotePoll, 2500);
             }
         });
 
