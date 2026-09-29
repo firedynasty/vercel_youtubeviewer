@@ -11976,8 +11976,18 @@ renderPmSections();
             if (!window.getDropboxAccessToken()) { metRemoteStatus('sign in to Dropbox'); return; }
             metRemoteBusy = true;
             try {
-                var txt = await window.dropboxDownloadFile(MET_REMOTE_PATH);
-                var n = parseInt((txt || '').trim(), 10);
+                var resp = await fetch('https://content.dropboxapi.com/2/files/download', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: 'Bearer ' + window.getDropboxAccessToken(),
+                        'Dropbox-API-Arg': JSON.stringify({ path: MET_REMOTE_PATH }),
+                    },
+                });
+                if (!resp.ok) {
+                    metRemoteStatus(resp.status === 401 ? 'token expired, sign in again' : resp.status === 409 ? 'file not found' : 'Dropbox error ' + resp.status);
+                    return;
+                }
+                var n = parseInt((await resp.text()).trim(), 10);
                 if (isNaN(n)) { metRemoteStatus('bad value'); return; }
                 metRemoteStatus(n + '');
                 if (n === metRemoteLast) return; // only act on changes so manual controls still work
@@ -11985,7 +11995,7 @@ renderPmSections();
                 if (n <= 0) { if (metIsPlaying) metStop(); }
                 else { clampBpm(n); if (!metIsPlaying) metStart(); }
             } catch (e) {
-                metRemoteStatus('file not found');
+                metRemoteStatus('error: ' + e.message);
             } finally {
                 metRemoteBusy = false;
             }
