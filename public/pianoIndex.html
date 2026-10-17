@@ -1171,16 +1171,17 @@
       };
 
       // Modal open/close
+      window.DBX_START_PATH = '/songs/suno_enhanced_songs_piano_index';
       window.openDbxModal = function(startPath) {
         document.getElementById('dbxOverlay').classList.add('open');
         const token = window.getDropboxAccessToken && window.getDropboxAccessToken();
         if (!token) {
           document.getElementById('dbxList').innerHTML =
-            '<button class="dbx-signin-btn" onclick="(async()=>{await window.dropboxSignInPopup(()=>dbxBrowse(\'/\'));})()">Sign in with Dropbox</button>';
+            '<button class="dbx-signin-btn" onclick="(async()=>{await window.dropboxSignInPopup(()=>dbxBrowse(window.DBX_START_PATH));})()">Sign in with Dropbox</button>';
           document.getElementById('dbxStatus').textContent = 'Not signed in';
           return;
         }
-        dbxBrowse(startPath || localStorage.getItem(DBX_LAST_PATH_KEY) || '/');
+        dbxBrowse(startPath || window.DBX_START_PATH);
       };
       window.closeDbxModal = function() {
         document.getElementById('dbxOverlay').classList.remove('open');
