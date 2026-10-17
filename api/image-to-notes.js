@@ -25,8 +25,9 @@ Rules:
 - "triplet" is true for notes under a triplet bracket or marked with a 3.
 - Every beam group in a triplet passage is a triplet even when the "3" is printed only over some of the groups, so flag all of them.
 - Notes stacked on one stem (or sharing a stem) are a chord: list every pitch of it in "pitches".
+- A dot printed right after a notehead makes the note 1.5 times longer ("dots":1). Check every quarter and half note for one.
 - Before answering, check that each bar's values add up to the time signature, and fix your reading if they don't.
-- "lyric": if words are printed under a staff (a vocal line), give each note the syllable printed under it, taken left to right in order. Keep a trailing hyphen on a syllable that continues into the next note ("dark-", "ness"). Leave it "" for a note with no syllable of its own (for example a note held under a slur). Rests have no lyric. If the page has no lyrics, use "" for every note.
+- "lyric": if words are printed under a staff (a vocal line), give each note the syllable printed under it, taken left to right in order. Keep a trailing hyphen on a syllable that continues into the next note ("dark-", "ness"). Leave it "" for a note with no syllable of its own (for example a note held under a slur). A hyphen or dash printed between two syllables is a separator, never a syllable of its own: do not give it a note. Rests have no lyric. If the page has no lyrics, use "" for every note.
 - Ignore fingering numbers, titles, tempo text and dynamics.`;
 
 // Models the page may request; anything else falls back to the default
@@ -125,6 +126,16 @@ function staffToSequence(staff, fifths, timeSignature) {
       const acc = key in barAcc ? barAcc[key] : keyMap[p.letter] || 'n';
       tokens.push(`${p.letter}${acc === '#' ? '#' : acc === 'b' ? 'b' : ''}${p.octave}:${beats}`);
       lyrics.push(cleanLyric(ev.lyric));
+    }
+  }
+  // A lone "-" between syllables is a separator the model sometimes gives its own note. Drop that entry so the
+  // later syllables move back up onto their notes (the last note is left without a syllable).
+  for (let i = 0; i < lyrics.length; i++) {
+    if (/^[-–—_]+$/.test(lyrics[i])) {
+      lyrics.splice(i, 1);
+      lyrics.push('');
+      warnings.push(`removed a stray "-" lyric at note ${i + 1}; later syllables moved up one note`);
+      i--;
     }
   }
   const noteCount = tokens.filter((t) => !t.startsWith('_:')).length;
