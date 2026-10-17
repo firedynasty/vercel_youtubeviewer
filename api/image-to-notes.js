@@ -29,7 +29,7 @@ Rules:
 - Ignore fingering numbers, lyrics, titles, tempo text and dynamics.`;
 
 // Models the page may request; anything else falls back to the default
-const ALLOWED_MODELS = ['gpt-4o-mini', 'gpt-4.1', 'gpt-5.4-mini', 'gpt-5.4', 'gpt-5.5'];
+const ALLOWED_MODELS = ['gpt-4o-mini', 'gpt-4.1', 'gpt-5.4-mini', 'gpt-5.4', 'gpt-5.5', 'gpt-6-astra'];
 const DEFAULT_MODEL = process.env.OPENAI_MODEL || 'gpt-5.4';
 
 const VALUE_BEATS = { whole: 4, half: 2, quarter: 1, eighth: 0.5, sixteenth: 0.25 };
