@@ -272,6 +272,15 @@
       <button class="action" id="loadPdfBtn" onclick="document.getElementById('pdfFileInput').click()">Load PDF</button>
       <input type="file" id="pdfFileInput" accept="application/pdf" style="display:none;">
     </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:13px;color:var(--muted);">
+      <button class="action primary" id="readNotesBtn" title="Send the loaded image (or PDF page) to OpenAI and fill Output with the notes it reads">Read notes (AI)</button>
+      <select id="readStaff" style="padding:6px;border-radius:8px;border:1px solid var(--border);font-size:13px;">
+        <option value="treble">Treble staff</option>
+        <option value="bass">Bass staff</option>
+      </select>
+      <label>PDF page <input type="number" id="readPdfPage" value="1" min="1" style="width:52px;padding:6px;border-radius:8px;border:1px solid var(--border);font-size:13px;"></label>
+    </div>
+    <div id="readNotesStatus" style="font-size:12px;color:var(--accent);margin-top:5px;min-height:18px;"></div>
     <div id="imagePreviewContainer" style="display:none; margin-top:10px; position:relative;">
       <img id="imagePreview" style="max-width:100%; max-height:150px; border-radius:8px; cursor:pointer; display:block;" onclick="toggleImageSize()">
       <button onclick="closeImagePreview()" style="position:absolute; top:4px; right:4px; background:rgba(0,0,0,0.6); color:#fff; border:none; border-radius:50%; width:24px; height:24px; cursor:pointer; font-size:16px; line-height:1;">×</button>
@@ -316,6 +325,7 @@
     style="margin-top:8px;width:100%;min-height:56px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;padding:10px;border-radius:8px;border:1px solid var(--border);resize:vertical;background:#fbfbfa;display:none;"></textarea>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 const rows = [
   {name:'D6', y:20},
@@ -695,6 +705,75 @@ function closePdfPreview() {
   document.getElementById('pdfFileInput').value = '';
   if (pdfBlobUrl) { URL.revokeObjectURL(pdfBlobUrl); pdfBlobUrl = null; }
 }
+
+// ---- Read notes (AI): send the loaded image / PDF page to /api/image-to-notes ----
+const READ_MAX_SIDE = 2000; // keep the upload well under Vercel's 4.5 MB body limit
+
+function canvasToDataUrl(srcW, srcH, draw) {
+  const scale = Math.min(1, READ_MAX_SIDE / Math.max(srcW, srcH));
+  const c = document.createElement('canvas');
+  c.width = Math.round(srcW * scale);
+  c.height = Math.round(srcH * scale);
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#fff'; // JPEG has no alpha; sheet music is black on white
+  ctx.fillRect(0, 0, c.width, c.height);
+  draw(ctx, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.92);
+}
+
+async function pdfPageToDataUrl(page) {
+  if (!window.pdfjsLib) throw new Error('PDF reader (pdf.js) did not load');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const pdf = await pdfjsLib.getDocument(pdfBlobUrl).promise;
+  if (page < 1 || page > pdf.numPages) throw new Error('PDF has ' + pdf.numPages + ' page(s)');
+  const pg = await pdf.getPage(page);
+  const base = pg.getViewport({ scale: 1 });
+  const vp = pg.getViewport({ scale: READ_MAX_SIDE / Math.max(base.width, base.height) });
+  const c = document.createElement('canvas');
+  c.width = Math.round(vp.width);
+  c.height = Math.round(vp.height);
+  await pg.render({ canvasContext: c.getContext('2d'), viewport: vp, background: '#fff' }).promise;
+  return c.toDataURL('image/jpeg', 0.92);
+}
+
+async function loadedSourceToDataUrl() {
+  const pdfOpen = document.getElementById('pdfPreviewContainer').style.display !== 'none' && pdfBlobUrl;
+  const imgOpen = document.getElementById('imagePreviewContainer').style.display !== 'none';
+  if (pdfOpen) return pdfPageToDataUrl(parseInt(document.getElementById('readPdfPage').value, 10) || 1);
+  if (imgOpen) {
+    const img = document.getElementById('imagePreview');
+    return canvasToDataUrl(img.naturalWidth, img.naturalHeight, (ctx, w, h) => ctx.drawImage(img, 0, 0, w, h));
+  }
+  throw new Error('Load an image or PDF first');
+}
+
+document.getElementById('readNotesBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('readNotesBtn');
+  const status = document.getElementById('readNotesStatus');
+  btn.disabled = true;
+  status.textContent = 'Preparing image…';
+  try {
+    const image = await loadedSourceToDataUrl();
+    status.textContent = 'Reading notes (can take 30s+)…';
+    const res = await fetch('/api/image-to-notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image, staff: document.getElementById('readStaff').value })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Request failed (' + res.status + ')');
+    const ta = document.getElementById('melodyOut');
+    ta.value = ta.value.trim() ? ta.value.trim() + ', ' + data.sequence : data.sequence;
+    ta.dispatchEvent(new Event('input')); // programmatic edits don't fire it; refreshes strip + rhythm
+    const ks = data.keySignature;
+    const keyTxt = ks === 0 ? 'no sharps/flats' : Math.abs(ks) + (ks > 0 ? ' sharp(s)' : ' flat(s)');
+    status.textContent = 'Added ' + data.bars + ' bars · key: ' + keyTxt + (data.timeSignature ? ' · ' + data.timeSignature : '') + ' — check it against the score.';
+  } catch (e) {
+    status.textContent = 'Error: ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 // Key hint labels shown on the staff — dynamic, tracks currentOctave
 function getNoteKeyHints(){
