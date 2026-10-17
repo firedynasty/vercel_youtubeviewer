@@ -17,16 +17,17 @@ Return JSON:
 }
 List every staff once (a piano grand staff is two staves: the upper one, then the lower one). Go left to right, system by system, top to bottom; "measures" holds one array per bar, in order.
 Each event is one of:
-  {"type":"note","letter":"A-G","octave":integer (middle C = C4),"accidental":"#"|"b"|"n"|"","value":"whole"|"half"|"quarter"|"eighth"|"sixteenth","dots":0|1,"triplet":true|false}
+  {"type":"note","letter":"A-G","octave":integer (middle C = C4),"accidental":"#"|"b"|"n"|"","value":"whole"|"half"|"quarter"|"eighth"|"sixteenth","dots":0|1,"triplet":true|false,"lyric":string}
   {"type":"rest","value":"whole"|"half"|"quarter"|"eighth"|"sixteenth","dots":0|1,"triplet":true|false}
-  {"type":"chord","pitches":[{"letter":"A-G","octave":integer,"accidental":"#"|"b"|"n"|""}, ...],"value":...,"dots":...,"triplet":...}
+  {"type":"chord","pitches":[{"letter":"A-G","octave":integer,"accidental":"#"|"b"|"n"|""}, ...],"value":...,"dots":...,"triplet":...,"lyric":string}
 Rules:
 - "accidental" is ONLY an accidental drawn next to that note; never put the key signature's sharps or flats there. Use "" when none is drawn.
 - "triplet" is true for notes under a triplet bracket or marked with a 3.
 - Every beam group in a triplet passage is a triplet even when the "3" is printed only over some of the groups, so flag all of them.
 - Notes stacked on one stem (or sharing a stem) are a chord: list every pitch of it in "pitches".
 - Before answering, check that each bar's values add up to the time signature, and fix your reading if they don't.
-- Ignore fingering numbers, lyrics, titles, tempo text and dynamics.`;
+- "lyric": if words are printed under a staff (a vocal line), give each note the syllable printed under it, taken left to right in order. Keep a trailing hyphen on a syllable that continues into the next note ("dark-", "ness"). Leave it "" for a note with no syllable of its own (for example a note held under a slur). Rests have no lyric. If the page has no lyrics, use "" for every note.
+- Ignore fingering numbers, titles, tempo text and dynamics.`;
 
 // Models the page may request; anything else falls back to the default
 const ALLOWED_MODELS = ['gpt-4o-mini', 'gpt-4.1', 'gpt-5.4-mini', 'gpt-5.4', 'gpt-5.5', 'gpt-6-astra'];
@@ -93,13 +94,15 @@ function staffToSequence(staff, fifths, timeSignature) {
   const keyMap = keySignatureMap(fifths);
   const expected = beatsPerBar(timeSignature);
   const tokens = [];
+  const lyrics = []; // one per token, aligned with tokens (rests and unsung notes get "")
   const warnings = [];
   for (let b = 0; b < staff.measures.length; b++) {
     if (!Array.isArray(staff.measures[b])) return null;
     if (staff.measures[b].some((ev) => beatsOf(ev) === null)) return null;
     const bar = repairBar(staff.measures[b], expected);
     const total = Math.round(barTotal(bar) * 1000) / 1000;
-    if (expected !== null && Math.abs(total - expected) >= 0.02) {
+    // A short first bar is a pickup (anacrusis), not a mistake
+    if (expected !== null && Math.abs(total - expected) >= 0.02 && !(b === 0 && total < expected)) {
       warnings.push(`bar ${b + 1} adds up to ${total} beats, expected ${expected}`);
     }
     const barAcc = {}; // letter+octave -> accidental, lasts until the barline
@@ -107,6 +110,7 @@ function staffToSequence(staff, fifths, timeSignature) {
       const beats = beatsOf(ev);
       if (ev.type === 'rest') {
         tokens.push(`_:${beats}`);
+        lyrics.push('');
         continue;
       }
       let p;
@@ -120,9 +124,12 @@ function staffToSequence(staff, fifths, timeSignature) {
       if (p.accidental === '#' || p.accidental === 'b' || p.accidental === 'n') barAcc[key] = p.accidental;
       const acc = key in barAcc ? barAcc[key] : keyMap[p.letter] || 'n';
       tokens.push(`${p.letter}${acc === '#' ? '#' : acc === 'b' ? 'b' : ''}${p.octave}:${beats}`);
+      lyrics.push(cleanLyric(ev.lyric));
     }
   }
-  return { sequence: tokens.join(', '), warnings };
+  const noteCount = tokens.filter((t) => !t.startsWith('_:')).length;
+  const lyricCount = lyrics.filter(Boolean).length;
+  return { sequence: tokens.join(', '), lyrics: lyricCount ? lyrics : [], noteCount, lyricCount, warnings };
 }
 
 // Each call spends OpenAI credit, so it needs the shared ACCESS_CODE. Fails closed if it isn't configured.
@@ -141,6 +148,11 @@ function checkAccessCode(req, res) {
   return true;
 }
 
+// Lyrics must survive the "lyric:note:beats" format, so drop its separators and printed punctuation
+function cleanLyric(v) {
+  return String(v == null ? '' : v).replace(/[,:;.!?"“”()[\]\n\r]/g, '').trim().slice(0, 40);
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -153,11 +165,15 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'OPENAI_API_KEY not configured' });
   }
 
-  const { image, model, staff } = req.body || {};
+  const { image, model, staff, pageText } = req.body || {};
   if (typeof image !== 'string' || !image.startsWith('data:image/')) {
     return res.status(400).json({ error: 'Expected "image" as a data:image/... URL' });
   }
   const wantClef = staff === 'bass' ? 'bass' : 'treble';
+  // Text extracted from a PDF's text layer, if any: a spelling reference for lyrics only (order may be scrambled)
+  const hint = typeof pageText === 'string' && pageText.trim()
+    ? `\n\nText found on this page by the PDF reader, for spelling reference only (its order may be scrambled; the notes and lyric order come from the image):\n<<<\n${pageText.trim().slice(0, 4000)}\n>>>`
+    : '';
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -173,7 +189,7 @@ export default async function handler(req, res) {
           {
             role: 'user',
             content: [
-              { type: 'text', text: PROMPT },
+              { type: 'text', text: PROMPT + hint },
               { type: 'image_url', image_url: { url: image, detail: 'high' } }
             ]
           }
@@ -201,6 +217,9 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       sequence: result.sequence,
+      lyrics: result.lyrics,
+      noteCount: result.noteCount,
+      lyricCount: result.lyricCount,
       warnings: result.warnings,
       keySignature: fifths,
       timeSignature: parsed.timeSignature || null,

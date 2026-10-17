@@ -764,7 +764,10 @@ async function pdfPageToDataUrl(page) {
   c.width = Math.round(vp.width);
   c.height = Math.round(vp.height);
   await pg.render({ canvasContext: c.getContext('2d'), viewport: vp, background: '#fff' }).promise;
-  return c.toDataURL('image/jpeg', 0.92);
+  // The PDF's own text layer (lyrics etc.), sent only as a spelling hint; empty for scanned PDFs
+  let text = '';
+  try{ text = (await pg.getTextContent()).items.map(i => i.str).join(' ').replace(/\s+/g, ' ').trim(); }catch(e){}
+  return { image: c.toDataURL('image/jpeg', 0.92), text };
 }
 
 async function loadedSourceToDataUrl() {
@@ -773,7 +776,7 @@ async function loadedSourceToDataUrl() {
   if (pdfOpen) return pdfPageToDataUrl(parseInt(document.getElementById('readPdfPage').value, 10) || 1);
   if (imgOpen) {
     const img = document.getElementById('imagePreview');
-    return canvasToDataUrl(img.naturalWidth, img.naturalHeight, (ctx, w, h) => ctx.drawImage(img, 0, 0, w, h));
+    return { image: canvasToDataUrl(img.naturalWidth, img.naturalHeight, (ctx, w, h) => ctx.drawImage(img, 0, 0, w, h)), text: '' };
   }
   throw new Error('Load an image or PDF first');
 }
@@ -798,12 +801,12 @@ document.getElementById('readNotesBtn').addEventListener('click', async () => {
   try {
     const code = readAccessCode();
     if (!code) throw new Error('Access code required');
-    const image = await loadedSourceToDataUrl();
+    const { image, text } = await loadedSourceToDataUrl();
     status.textContent = 'Reading notes (can take 30s+)…';
     const res = await fetch('/api/image-to-notes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Access-Code': code },
-      body: JSON.stringify({ image, staff: document.getElementById('readStaff').value, model: document.getElementById('readModel').value })
+      body: JSON.stringify({ image, pageText: text, staff: document.getElementById('readStaff').value, model: document.getElementById('readModel').value })
     });
     if (res.status === 401) {
       try { localStorage.removeItem('notes_access_code'); } catch (e) {}
@@ -815,9 +818,10 @@ document.getElementById('readNotesBtn').addEventListener('click', async () => {
     document.getElementById('clearBtn').click(); // replace, don't append: same reset as "Clear all"
     ta.value = data.sequence;
     ta.dispatchEvent(new Event('input')); // programmatic edits don't fire it; refreshes strip + rhythm
+    if(data.lyrics && data.lyrics.length){ cardLyrics = data.lyrics.slice(); renderNoteStrip(); } // one entry per note card
     const ks = data.keySignature;
     const keyTxt = ks === 0 ? 'no sharps/flats' : Math.abs(ks) + (ks > 0 ? ' sharp(s)' : ' flat(s)');
-    status.textContent = 'Added ' + data.bars + ' bars (' + data.model + ') · key: ' + keyTxt + (data.timeSignature ? ' · ' + data.timeSignature : '') + ' — check it against the score.' +
+    status.textContent = 'Added ' + data.bars + ' bars (' + data.model + ') · key: ' + keyTxt + (data.timeSignature ? ' · ' + data.timeSignature : '') + (data.lyricCount ? ' · lyrics on ' + data.lyricCount + ' of ' + data.noteCount + ' notes' : '') + ' — check it against the score.' +
       (data.warnings && data.warnings.length ? ' ⚠ ' + data.warnings.join('; ') + '.' : '');
   } catch (e) {
     status.textContent = 'Error: ' + e.message;
