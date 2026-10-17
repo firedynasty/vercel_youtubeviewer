@@ -973,8 +973,8 @@ document.getElementById('sunoBtn').addEventListener('click', async () => {
       status.textContent = 'Suno is working… ' + Math.round((Date.now() - began) / 1000) + 's';
       const poll = await fetch('/api/suno-enhance?id=' + encodeURIComponent(job.request_id), { headers: { 'X-Access-Code': code } });
       const data = await poll.json();
-      if(!poll.ok) throw new Error(data.error || 'Status check failed');
-      if(data.state === 'error') throw new Error(data.error);
+      if(!poll.ok) throw new Error((data.error || 'Status check failed') + (data.detail ? ' — ' + JSON.stringify(data.detail).slice(0, 300) : '') + ' (job ' + job.request_id + ')');
+      if(data.state === 'error') throw new Error(data.error + ' (job ' + job.request_id + ')');
       if(data.state === 'completed'){
         status.textContent = 'Done — ' + data.tracks.length + ' version(s).';
         showSunoResults(data.tracks, blob);
