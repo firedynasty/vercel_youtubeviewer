@@ -69,8 +69,22 @@ const barTotal = (bar) => bar.reduce((t, ev) => t + (beatsOf(ev) || 0), 0);
 // plain eighth notes are treated as triplets, take that reading; otherwise leave the bar as read.
 function repairBar(bar, expected) {
   if (expected === null || Math.abs(barTotal(bar) - expected) < 0.02) return bar;
+  const fits = (b) => Math.abs(barTotal(b) - expected) < 0.02;
   const tripled = bar.map((ev) => (ev.type !== 'rest' && ev.value === 'eighth' && !ev.dots && !ev.triplet ? { ...ev, triplet: true } : ev));
-  return Math.abs(barTotal(tripled) - expected) < 0.02 ? tripled : bar;
+  if (fits(tripled)) return tripled;
+  // Still over: a rest is often read one step too long (a triplet eighth rest seen as a quarter rest).
+  // Try shrinking a single rest by one step, with or without the triplet flag, and keep a fit.
+  const SMALLER = { whole: 'half', half: 'quarter', quarter: 'eighth', eighth: 'sixteenth' };
+  for (const base of [tripled, bar]) {
+    for (let i = 0; i < base.length; i++) {
+      if (base[i].type !== 'rest' || !SMALLER[base[i].value]) continue;
+      for (const triplet of [true, false]) {
+        const trial = base.map((ev, j) => (j === i ? { ...ev, value: SMALLER[ev.value], dots: 0, triplet } : ev));
+        if (fits(trial)) return trial;
+      }
+    }
+  }
+  return bar;
 }
 
 // Turn the model's report into "E4:1, _:0.5, F#4:0.333" for one staff.

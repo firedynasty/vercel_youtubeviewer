@@ -278,6 +278,13 @@
         <option value="treble">Treble staff</option>
         <option value="bass">Bass staff</option>
       </select>
+      <select id="readModel" title="OpenAI model used to read the page" style="padding:6px;border-radius:8px;border:1px solid var(--border);font-size:13px;">
+        <option value="">Default model</option>
+        <option value="gpt-5.5">gpt-5.5</option>
+        <option value="gpt-5.4">gpt-5.4</option>
+        <option value="gpt-5.4-mini">gpt-5.4-mini</option>
+        <option value="gpt-4.1">gpt-4.1</option>
+      </select>
       <label>PDF page <input type="number" id="readPdfPage" value="1" min="1" style="width:52px;padding:6px;border-radius:8px;border:1px solid var(--border);font-size:13px;"></label>
     </div>
     <div id="readNotesStatus" style="font-size:12px;color:var(--accent);margin-top:5px;min-height:18px;"></div>
@@ -772,7 +779,7 @@ document.getElementById('readNotesBtn').addEventListener('click', async () => {
     const res = await fetch('/api/image-to-notes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Access-Code': code },
-      body: JSON.stringify({ image, staff: document.getElementById('readStaff').value })
+      body: JSON.stringify({ image, staff: document.getElementById('readStaff').value, model: document.getElementById('readModel').value })
     });
     if (res.status === 401) {
       try { localStorage.removeItem('notes_access_code'); } catch (e) {}
@@ -785,7 +792,7 @@ document.getElementById('readNotesBtn').addEventListener('click', async () => {
     ta.dispatchEvent(new Event('input')); // programmatic edits don't fire it; refreshes strip + rhythm
     const ks = data.keySignature;
     const keyTxt = ks === 0 ? 'no sharps/flats' : Math.abs(ks) + (ks > 0 ? ' sharp(s)' : ' flat(s)');
-    status.textContent = 'Added ' + data.bars + ' bars · key: ' + keyTxt + (data.timeSignature ? ' · ' + data.timeSignature : '') + ' — check it against the score.' +
+    status.textContent = 'Added ' + data.bars + ' bars (' + data.model + ') · key: ' + keyTxt + (data.timeSignature ? ' · ' + data.timeSignature : '') + ' — check it against the score.' +
       (data.warnings && data.warnings.length ? ' ⚠ ' + data.warnings.join('; ') + '.' : '');
   } catch (e) {
     status.textContent = 'Error: ' + e.message;
