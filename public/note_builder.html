@@ -333,6 +333,21 @@
     style="margin-top:8px;width:100%;min-height:56px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;padding:10px;border-radius:8px;border:1px solid var(--border);resize:vertical;background:#fbfbfa;display:none;"></textarea>
 </div>
 
+<!-- ---- Enhance with Suno ---- -->
+<div class="panel" style="max-width:1100px;margin:16px auto 0;">
+  <h2 style="margin:0 0 6px;">Enhance with Suno</h2>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Renders the melody above as a simple piano mp3 (using the BPM in the strip), sends it to Suno as an instrumental remix and gives you two mp3s back. Each run is a paid job (about $0.10) and takes a minute or two.</div>
+  <textarea id="sunoStyle" style="width:100%;min-height:56px;font-size:13px;padding:10px;border-radius:8px;border:1px solid var(--border);resize:vertical;background:#fbfbfa;font-family:inherit;">cinematic orchestral arrangement of a piano piece, warm strings, soft pad, gentle drums, no vocals, keeps the melody</textarea>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:13px;color:var(--muted);">
+    <label>Title <input type="text" id="sunoTitle" value="Piano piece" maxlength="80" style="width:150px;padding:6px;border-radius:8px;border:1px solid var(--border);font-size:13px;"></label>
+    <label title="How closely Suno follows your melody (0 to 1)">Follow melody <input type="number" id="sunoWeight" value="0.8" min="0" max="1" step="0.1" style="width:58px;padding:6px;border-radius:8px;border:1px solid var(--border);font-size:13px;"></label>
+    <button class="action primary" id="sunoBtn">Enhance with Suno</button>
+  </div>
+  <div id="sunoStatus" style="font-size:12px;color:var(--accent);margin-top:6px;min-height:18px;"></div>
+  <div id="sunoResults" style="margin-top:8px;"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 const rows = [
@@ -799,6 +814,177 @@ document.getElementById('readNotesBtn').addEventListener('click', async () => {
   } catch (e) {
     status.textContent = 'Error: ' + e.message;
   } finally {
+    btn.disabled = false;
+  }
+});
+
+// ---- Enhance with Suno: render the melody to an mp3, send it, poll, show the results ----
+const SUNO_MAX_B64_BYTES = 3.2 * 1024 * 1024; // Vercel request bodies top out at 4.5 MB; base64 adds a third
+const FLAT_TO_SHARP = { Db:'C#', Eb:'D#', Gb:'F#', Ab:'G#', Bb:'A#' };
+
+function normalizeNoteName(name){
+  const m = /^([A-G])(b?)(#?)(\d)$/.exec(name);
+  if(!m) return name;
+  const flat = m[1] + (m[2] ? 'b' : '');
+  return (m[2] ? FLAT_TO_SHARP[flat] || flat : m[1] + (m[3] ? '#' : '')) + m[4];
+}
+
+// Piano-ish voice: a triangle plus a quiet octave sine, fast attack, exponential decay
+async function renderMelodyToBuffer(notes, bpm){
+  const spb = 60 / bpm, sr = 44100;
+  const total = notes.reduce((s, n) => s + n.dur * spb, 0) + 2;
+  const ctx = new OfflineAudioContext(1, Math.ceil(total * sr), sr);
+  const master = ctx.createGain();
+  master.gain.value = 0.3;
+  master.connect(ctx.destination);
+  let t = 0.05;
+  for(const n of notes){
+    const dur = n.dur * spb;
+    const freq = NOTE_FREQS[normalizeNoteName(n.note)];
+    if(n.note !== '_' && freq){
+      const g = ctx.createGain();
+      g.connect(master);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(1, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.001, t + Math.max(dur * 1.1, 0.25));
+      [['triangle', freq, 1], ['sine', freq * 2, 0.25]].forEach(([type, f, level]) => {
+        const o = ctx.createOscillator(), og = ctx.createGain();
+        o.type = type; o.frequency.value = f; og.gain.value = level;
+        o.connect(og); og.connect(g);
+        o.start(t); o.stop(t + Math.max(dur * 1.1, 0.25) + 0.05);
+      });
+    }
+    t += dur;
+  }
+  return ctx.startRendering();
+}
+
+function encodeMp3(audioBuffer, kbps){
+  if(!window.lamejs) throw new Error('mp3 encoder (lamejs) did not load');
+  const f32 = audioBuffer.getChannelData(0);
+  const pcm = new Int16Array(f32.length);
+  for(let i = 0; i < f32.length; i++){
+    const s = Math.max(-1, Math.min(1, f32[i]));
+    pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  }
+  const enc = new lamejs.Mp3Encoder(1, audioBuffer.sampleRate, kbps);
+  const parts = [];
+  for(let i = 0; i < pcm.length; i += 1152){
+    const chunk = enc.encodeBuffer(pcm.subarray(i, i + 1152));
+    if(chunk.length) parts.push(new Uint8Array(chunk));
+  }
+  const end = enc.flush();
+  if(end.length) parts.push(new Uint8Array(end));
+  return new Blob(parts, { type: 'audio/mpeg' });
+}
+
+function blobToDataUrl(blob){
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+
+async function saveRemote(url, name){
+  try{
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(await res.blob());
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  }catch(e){
+    window.open(url, '_blank'); // host may not allow cross-site fetches; open it so it can be saved from there
+  }
+}
+
+function showSunoResults(tracks, sentBlob){
+  const box = document.getElementById('sunoResults');
+  box.innerHTML = '';
+  const title = (document.getElementById('sunoTitle').value || 'piano').trim().replace(/[^\w-]+/g, '_');
+  const add = (label, src, saveName) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0;font-size:13px;';
+    const lab = document.createElement('span');
+    lab.textContent = label;
+    lab.style.minWidth = '110px';
+    const audio = document.createElement('audio');
+    audio.controls = true; audio.src = src;
+    row.append(lab, audio);
+    if(saveName){
+      const btn = document.createElement('button');
+      btn.className = 'action'; btn.textContent = 'Download mp3';
+      btn.addEventListener('click', () => saveRemote(src, saveName));
+      row.append(btn);
+    }
+    box.append(row);
+  };
+  tracks.forEach((u, i) => add('Suno version ' + (i + 1), u, title + '_suno_' + (i + 1) + '.mp3'));
+  if(sentBlob) add('What was sent', URL.createObjectURL(sentBlob), null);
+}
+
+document.getElementById('sunoBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('sunoBtn');
+  const status = document.getElementById('sunoStatus');
+  const notes = parseMelody();
+  if(!notes.some(n => n.note !== '_')){ status.textContent = 'Build or read a melody first.'; return; }
+  if(!confirm('Send this to Suno? It is a paid job (about $0.10) and takes a minute or two.')) return;
+  const code = readAccessCode();
+  if(!code){ status.textContent = 'Access code required'; return; }
+
+  btn.disabled = true;
+  document.getElementById('sunoResults').innerHTML = '';
+  try{
+    status.textContent = 'Rendering audio…';
+    const bpm = parseFloat(document.getElementById('bpmInput').value) || 100;
+    const buf = await renderMelodyToBuffer(notes, bpm);
+    let blob = null, dataUrl = '';
+    for(const kbps of [128, 96, 64]){
+      blob = encodeMp3(buf, kbps);
+      dataUrl = await blobToDataUrl(blob);
+      if(dataUrl.length <= SUNO_MAX_B64_BYTES) break;
+    }
+    if(dataUrl.length > SUNO_MAX_B64_BYTES) throw new Error('Piece is too long to send (about ' + Math.round(buf.duration) + 's). Try a shorter section.');
+
+    status.textContent = 'Uploading to Suno (' + Math.round(blob.size / 1024) + ' KB)…';
+    const headers = { 'Content-Type': 'application/json', 'X-Access-Code': code };
+    const start = await fetch('/api/suno-enhance', {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        audio: dataUrl,
+        style: document.getElementById('sunoStyle').value,
+        title: document.getElementById('sunoTitle').value,
+        weight: parseFloat(document.getElementById('sunoWeight').value)
+      })
+    });
+    if(start.status === 401){
+      try{ localStorage.removeItem('notes_access_code'); }catch(e){}
+      throw new Error('Wrong access code: try again');
+    }
+    const job = await start.json();
+    if(!start.ok) throw new Error(job.error + (job.detail ? ' — ' + JSON.stringify(job.detail).slice(0, 200) : ''));
+
+    const began = Date.now();
+    for(let i = 0; i < 45; i++){ // up to ~6 minutes
+      await new Promise(r => setTimeout(r, 8000));
+      status.textContent = 'Suno is working… ' + Math.round((Date.now() - began) / 1000) + 's';
+      const poll = await fetch('/api/suno-enhance?id=' + encodeURIComponent(job.request_id), { headers: { 'X-Access-Code': code } });
+      const data = await poll.json();
+      if(!poll.ok) throw new Error(data.error || 'Status check failed');
+      if(data.state === 'error') throw new Error(data.error);
+      if(data.state === 'completed'){
+        status.textContent = 'Done — ' + data.tracks.length + ' version(s).';
+        showSunoResults(data.tracks, blob);
+        return;
+      }
+    }
+    throw new Error('Timed out after 6 minutes. The job id is ' + job.request_id + ' if you want to check it later.');
+  }catch(e){
+    status.textContent = 'Error: ' + e.message;
+  }finally{
     btn.disabled = false;
   }
 });
