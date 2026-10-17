@@ -785,7 +785,8 @@ document.getElementById('readNotesBtn').addEventListener('click', async () => {
     ta.dispatchEvent(new Event('input')); // programmatic edits don't fire it; refreshes strip + rhythm
     const ks = data.keySignature;
     const keyTxt = ks === 0 ? 'no sharps/flats' : Math.abs(ks) + (ks > 0 ? ' sharp(s)' : ' flat(s)');
-    status.textContent = 'Added ' + data.bars + ' bars · key: ' + keyTxt + (data.timeSignature ? ' · ' + data.timeSignature : '') + ' — check it against the score.';
+    status.textContent = 'Added ' + data.bars + ' bars · key: ' + keyTxt + (data.timeSignature ? ' · ' + data.timeSignature : '') + ' — check it against the score.' +
+      (data.warnings && data.warnings.length ? ' ⚠ ' + data.warnings.join('; ') + '.' : '');
   } catch (e) {
     status.textContent = 'Error: ' + e.message;
   } finally {

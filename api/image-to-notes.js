@@ -23,6 +23,9 @@ Each event is one of:
 Rules:
 - "accidental" is ONLY an accidental drawn next to that note; never put the key signature's sharps or flats there. Use "" when none is drawn.
 - "triplet" is true for notes under a triplet bracket or marked with a 3.
+- Every beam group in a triplet passage is a triplet even when the "3" is printed only over some of the groups, so flag all of them.
+- Notes stacked on one stem (or sharing a stem) are a chord: list every pitch of it in "pitches".
+- Before answering, check that each bar's values add up to the time signature, and fix your reading if they don't.
 - Ignore fingering numbers, lyrics, titles, tempo text and dynamics.`;
 
 // Models the page may request; anything else falls back to the default
@@ -54,17 +57,40 @@ function validPitch(p) {
   return p && /^[A-G]$/.test(p.letter) && Number.isInteger(p.octave) && p.octave >= 0 && p.octave <= 8;
 }
 
+// "3/4" -> 3 beats (quarter = 1); null when unreadable
+function beatsPerBar(timeSignature) {
+  const m = /^(\d+)\s*\/\s*(\d+)$/.exec(String(timeSignature || ''));
+  return m && +m[2] > 0 ? (+m[1] * 4) / +m[2] : null;
+}
+
+const barTotal = (bar) => bar.reduce((t, ev) => t + (beatsOf(ev) || 0), 0);
+
+// Models often forget the triplet flag on some groups. If a bar doesn't add up but does once its
+// plain eighth notes are treated as triplets, take that reading; otherwise leave the bar as read.
+function repairBar(bar, expected) {
+  if (expected === null || Math.abs(barTotal(bar) - expected) < 0.02) return bar;
+  const tripled = bar.map((ev) => (ev.type !== 'rest' && ev.value === 'eighth' && !ev.dots && !ev.triplet ? { ...ev, triplet: true } : ev));
+  return Math.abs(barTotal(tripled) - expected) < 0.02 ? tripled : bar;
+}
+
 // Turn the model's report into "E4:1, _:0.5, F#4:0.333" for one staff.
 // The key signature and per-bar accidentals are applied here, not by the model.
-function staffToSequence(staff, fifths) {
+function staffToSequence(staff, fifths, timeSignature) {
   const keyMap = keySignatureMap(fifths);
+  const expected = beatsPerBar(timeSignature);
   const tokens = [];
-  for (const bar of staff.measures) {
-    if (!Array.isArray(bar)) return null;
+  const warnings = [];
+  for (let b = 0; b < staff.measures.length; b++) {
+    if (!Array.isArray(staff.measures[b])) return null;
+    if (staff.measures[b].some((ev) => beatsOf(ev) === null)) return null;
+    const bar = repairBar(staff.measures[b], expected);
+    const total = Math.round(barTotal(bar) * 1000) / 1000;
+    if (expected !== null && Math.abs(total - expected) >= 0.02) {
+      warnings.push(`bar ${b + 1} adds up to ${total} beats, expected ${expected}`);
+    }
     const barAcc = {}; // letter+octave -> accidental, lasts until the barline
     for (const ev of bar) {
       const beats = beatsOf(ev);
-      if (beats === null) return null;
       if (ev.type === 'rest') {
         tokens.push(`_:${beats}`);
         continue;
@@ -82,7 +108,7 @@ function staffToSequence(staff, fifths) {
       tokens.push(`${p.letter}${acc === '#' ? '#' : acc === 'b' ? 'b' : ''}${p.octave}:${beats}`);
     }
   }
-  return tokens.join(', ');
+  return { sequence: tokens.join(', '), warnings };
 }
 
 // Each call spends OpenAI credit, so it needs the shared ACCESS_CODE. Fails closed if it isn't configured.
@@ -154,13 +180,14 @@ export default async function handler(req, res) {
       return res.status(422).json({ error: `No ${wantClef}-clef staff found in the model's reply`, raw: parsed });
     }
 
-    const sequence = staffToSequence(chosen, fifths);
-    if (!sequence) {
+    const result = staffToSequence(chosen, fifths, parsed.timeSignature);
+    if (!result) {
       return res.status(422).json({ error: 'Model returned an invalid note', raw: chosen });
     }
 
     return res.status(200).json({
-      sequence,
+      sequence: result.sequence,
+      warnings: result.warnings,
       keySignature: fifths,
       timeSignature: parsed.timeSignature || null,
       bars: chosen.measures.length,
