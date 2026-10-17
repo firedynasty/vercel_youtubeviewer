@@ -789,7 +789,8 @@ document.getElementById('readNotesBtn').addEventListener('click', async () => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Request failed (' + res.status + ')');
     const ta = document.getElementById('melodyOut');
-    ta.value = ta.value.trim() ? ta.value.trim() + ', ' + data.sequence : data.sequence;
+    document.getElementById('clearBtn').click(); // replace, don't append: same reset as "Clear all"
+    ta.value = data.sequence;
     ta.dispatchEvent(new Event('input')); // programmatic edits don't fire it; refreshes strip + rhythm
     const ks = data.keySignature;
     const keyTxt = ks === 0 ? 'no sharps/flats' : Math.abs(ks) + (ks > 0 ? ' sharp(s)' : ' flat(s)');
