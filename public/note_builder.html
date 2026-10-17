@@ -747,19 +747,37 @@ async function loadedSourceToDataUrl() {
   throw new Error('Load an image or PDF first');
 }
 
+// The endpoint needs the server's ACCESS_CODE: asked once, kept in localStorage.
+// A wrong code is forgotten so the next click asks again.
+function readAccessCode() {
+  let code = '';
+  try { code = localStorage.getItem('notes_access_code') || ''; } catch (e) {}
+  if (!code) {
+    code = (prompt('Access code:') || '').trim();
+    if (code) { try { localStorage.setItem('notes_access_code', code); } catch (e) {} }
+  }
+  return code;
+}
+
 document.getElementById('readNotesBtn').addEventListener('click', async () => {
   const btn = document.getElementById('readNotesBtn');
   const status = document.getElementById('readNotesStatus');
   btn.disabled = true;
   status.textContent = 'Preparing image…';
   try {
+    const code = readAccessCode();
+    if (!code) throw new Error('Access code required');
     const image = await loadedSourceToDataUrl();
     status.textContent = 'Reading notes (can take 30s+)…';
     const res = await fetch('/api/image-to-notes', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Access-Code': code },
       body: JSON.stringify({ image, staff: document.getElementById('readStaff').value })
     });
+    if (res.status === 401) {
+      try { localStorage.removeItem('notes_access_code'); } catch (e) {}
+      throw new Error('Wrong access code: try again');
+    }
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Request failed (' + res.status + ')');
     const ta = document.getElementById('melodyOut');

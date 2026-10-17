@@ -1,3 +1,5 @@
+import { timingSafeEqual } from 'node:crypto';
+
 const PROMPT = `You are reading a page of printed sheet music. Transcribe it literally, exactly as engraved.
 Report only what is visible; do not guess, do not "fix" the music, do not invent notes.
 Return JSON:
@@ -83,11 +85,28 @@ function staffToSequence(staff, fifths) {
   return tokens.join(', ');
 }
 
+// Each call spends OpenAI credit, so it needs the shared ACCESS_CODE. Fails closed if it isn't configured.
+function checkAccessCode(req, res) {
+  const expected = process.env.ACCESS_CODE;
+  if (!expected) {
+    res.status(500).json({ error: 'ACCESS_CODE not set on server.' });
+    return false;
+  }
+  const given = String(req.headers['x-access-code'] || '');
+  const a = Buffer.from(given), b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    res.status(401).json({ error: 'Wrong access code' });
+    return false;
+  }
+  return true;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  if (!checkAccessCode(req, res)) return;
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
