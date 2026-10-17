@@ -337,6 +337,14 @@
 <div class="panel" style="max-width:1100px;margin:16px auto 0;">
   <h2 style="margin:0 0 6px;">Enhance with Suno</h2>
   <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Renders the melody above as a simple piano mp3 (using the BPM in the strip), sends it to Suno as an instrumental remix and gives you two mp3s back. Each run is a paid job (about $0.10) and takes a minute or two.</div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:10px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;">
+    <div style="font-weight:600;color:var(--ink);margin-bottom:4px;">Follow melody</div>
+    <div><b>0.8</b> — <span>Stays close to your melody, rhythm and structure. Jesu Joy stays obviously Jesu Joy, but there's less room for the style to change much.</span></div>
+    <div style="margin-top:3px;"><b>0.5</b> — <span>Takes your piece as a loose starting point. The style text has more say, so the arrangement can differ more, and the tune may drift, change notes or wander. <b>Use this if it returns an error because the audio matches a recording in Suno's catalog.</b></span></div>
+    <div style="font-weight:600;color:var(--ink);margin:8px 0 4px;">Styles <span style="font-weight:400;color:var(--muted);">(click one to use it)</span></div>
+    <div><span class="suno-style-ref" tabindex="0" style="cursor:pointer;text-decoration:underline dotted;">electronic ambient, soft evolving synth pads, slow arpeggiated synth pulse, warm sub bass, spacious reverb, gentle texture, modern classical crossover, no vocals, keeps the melody</span></div>
+    <div style="margin-top:3px;"><span class="suno-style-ref" tabindex="0" style="cursor:pointer;text-decoration:underline dotted;">cinematic orchestral arrangement of a piano piece, warm strings, soft pad, gentle drums, no vocals, keeps the melody</span></div>
+  </div>
   <textarea id="sunoStyle" style="width:100%;min-height:56px;font-size:13px;padding:10px;border-radius:8px;border:1px solid var(--border);resize:vertical;background:#fbfbfa;font-family:inherit;">cinematic orchestral arrangement of a piano piece, warm strings, soft pad, gentle drums, no vocals, keeps the melody</textarea>
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:13px;color:var(--muted);">
     <label>Title <input type="text" id="sunoTitle" value="Piano piece" maxlength="80" style="width:150px;padding:6px;border-radius:8px;border:1px solid var(--border);font-size:13px;"></label>
@@ -925,6 +933,13 @@ function showSunoResults(tracks, sentBlob){
   tracks.forEach((u, i) => add('Suno version ' + (i + 1), u, title + '_suno_' + (i + 1) + '.mp3'));
   if(sentBlob) add('What was sent', URL.createObjectURL(sentBlob), null);
 }
+
+// Click (or Enter/Space on) a reference style to copy it into the style box
+document.querySelectorAll('.suno-style-ref').forEach(el => {
+  const use = () => { document.getElementById('sunoStyle').value = el.textContent.trim(); };
+  el.addEventListener('click', use);
+  el.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); use(); } });
+});
 
 document.getElementById('sunoBtn').addEventListener('click', async () => {
   const btn = document.getElementById('sunoBtn');

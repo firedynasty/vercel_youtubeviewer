@@ -84,7 +84,14 @@ async function checkJob(req, res, apiKey) {
 
   const poll = await fetch(`${BASE_URL}/predictions/${id}/result`, { headers: { 'x-api-key': apiKey } });
   const status = await poll.json().catch(() => ({}));
-  if (!poll.ok) return res.status(502).json({ error: `Suno status check failed (${poll.status})`, detail: status });
+  if (!poll.ok) {
+    // muapi reports a failed job as HTTP 400 with {"detail":{"status":"failed","error":"..."}}
+    const d = status.detail && typeof status.detail === 'object' ? status.detail : status;
+    if (d.status === 'failed' || d.status === 'error' || d.error) {
+      return res.status(200).json({ state: 'error', error: `Suno rejected it: ${String(d.error || 'job failed')}` });
+    }
+    return res.status(502).json({ error: `Suno status check failed (${poll.status})`, detail: status });
+  }
   const state = status.status;
   if (state === 'failed' || state === 'error' || status.error) {
     return res.status(200).json({ state: 'error', error: String(status.error || 'Suno job failed') });
