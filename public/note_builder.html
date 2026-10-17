@@ -344,6 +344,7 @@
     <div style="font-weight:600;color:var(--ink);margin:8px 0 4px;">Styles <span style="font-weight:400;color:var(--muted);">(click one to use it)</span></div>
     <div><span class="suno-style-ref" tabindex="0" style="cursor:pointer;text-decoration:underline dotted;">electronic ambient, soft evolving synth pads, slow arpeggiated synth pulse, warm sub bass, spacious reverb, gentle texture, modern classical crossover, no vocals, keeps the melody</span></div>
     <div style="margin-top:3px;"><span class="suno-style-ref" tabindex="0" style="cursor:pointer;text-decoration:underline dotted;">cinematic orchestral arrangement of a piano piece, warm strings, soft pad, gentle drums, no vocals, keeps the melody</span></div>
+    <div style="margin-top:3px;"><span class="suno-style-ref" tabindex="0" style="cursor:pointer;text-decoration:underline dotted;">instrumental worship, warm evolving synth pads, soft piano carrying the melody, shimmering ambient guitar swells, gentle strings, slow and reverent, spacious reverb, no vocals, keeps the melody</span></div>
   </div>
   <textarea id="sunoStyle" style="width:100%;min-height:56px;font-size:13px;padding:10px;border-radius:8px;border:1px solid var(--border);resize:vertical;background:#fbfbfa;font-family:inherit;">cinematic orchestral arrangement of a piano piece, warm strings, soft pad, gentle drums, no vocals, keeps the melody</textarea>
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:13px;color:var(--muted);">
@@ -353,6 +354,37 @@
   </div>
   <div id="sunoStatus" style="font-size:12px;color:var(--accent);margin-top:6px;min-height:18px;"></div>
   <div id="sunoResults" style="margin-top:8px;"></div>
+</div>
+
+<!-- ---- Tap to time lyrics -> .srt ---- -->
+<div class="panel" style="max-width:1100px;margin:16px auto 0;" id="tapPanel">
+  <h2 style="margin:0 0 6px;">Tap to time lyrics (karaoke .srt)</h2>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Load a song (or click <b>Time lyrics</b> on a Suno result), press <b>Start tapping</b>, and hit <b>Space</b> when each lyric line should appear. <b>B</b> = clear the text (a gap), <b>Backspace</b> = undo. The lines repeat in order, so just keep tapping through repeats. Then <b>Export .srt</b> and run <code>python visualize.py song.mp3 --srt song.srt</code>.</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--muted);">
+    <button class="action" id="tapLoadBtn" type="button">Load audio</button>
+    <input type="file" id="tapFile" accept="audio/*" style="display:none;">
+    <span id="tapAudioName" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+    <label>Speed <select id="tapRate" style="padding:6px;border-radius:8px;border:1px solid var(--border);font-size:13px;"><option value="1">1×</option><option value="0.75">0.75×</option><option value="0.5">0.5×</option></select></label>
+    <label title="Seconds to subtract from every tap, for the delay between hearing a line and pressing the key">Reaction offset (s) <input type="number" id="tapOffset" value="0.15" min="0" max="1" step="0.05" style="width:60px;padding:6px;border-radius:8px;border:1px solid var(--border);font-size:13px;"></label>
+  </div>
+  <audio id="tapAudio" controls style="width:100%;margin-top:8px;"></audio>
+  <div style="font-size:12px;color:var(--muted);margin:10px 0 4px;">Lyric lines, one per line <button class="action" id="tapFill" type="button" style="padding:2px 8px;font-size:12px;">Fill from note cards</button></div>
+  <textarea id="tapLines" style="width:100%;min-height:90px;font-size:13px;padding:10px;border-radius:8px;border:1px solid var(--border);resize:vertical;background:#fbfbfa;font-family:inherit;"></textarea>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;">
+    <button class="action primary" id="tapStart" type="button">Start tapping</button>
+    <button class="action" id="tapBtn" type="button" tabindex="-1">Tap (Space)</button>
+    <button class="action" id="tapGap" type="button" tabindex="-1">Gap (B)</button>
+    <button class="action" id="tapUndo" type="button" tabindex="-1">Undo (Backspace)</button>
+    <button class="action danger" id="tapClear" type="button">Clear taps</button>
+  </div>
+  <div id="tapNext" style="font-size:14px;margin-top:8px;min-height:20px;"></div>
+  <div id="tapCaption" style="margin-top:6px;padding:10px;border-radius:8px;background:#1c1c1e;color:#fff;text-align:center;font-size:16px;min-height:22px;"></div>
+  <div id="tapList" style="margin-top:8px;font-size:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;"></div>
+  <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <button class="action primary" id="tapExport" type="button">Export .srt</button>
+    <span id="tapStatus" style="font-size:12px;color:var(--accent);"></span>
+  </div>
+  <textarea id="tapSrt" readonly style="display:none;margin-top:8px;width:100%;min-height:120px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;padding:10px;border-radius:8px;border:1px solid var(--border);background:#fbfbfa;"></textarea>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
@@ -931,6 +963,11 @@ function showSunoResults(tracks, sentBlob){
       btn.className = 'action'; btn.textContent = 'Download mp3';
       btn.addEventListener('click', () => saveRemote(src, saveName));
       row.append(btn);
+      const timeBtn = document.createElement('button');
+      timeBtn.className = 'action'; timeBtn.textContent = 'Time lyrics';
+      timeBtn.title = 'Open this version in the Tap to time panel';
+      timeBtn.addEventListener('click', () => window.tapLoadAudio(src, saveName));
+      row.append(timeBtn);
     }
     box.append(row);
   };
@@ -1007,6 +1044,158 @@ document.getElementById('sunoBtn').addEventListener('click', async () => {
     btn.disabled = false;
   }
 });
+
+// ---- Tap to time lyrics -> .srt ----
+// Pure helpers first (top level, easy to test), then the DOM wiring.
+function tapFmtSrt(sec){
+  const ms = Math.max(0, Math.round(sec * 1000));
+  const p = (n, w) => String(n).padStart(w, '0');
+  return p(Math.floor(ms / 3600000), 2) + ':' + p(Math.floor(ms % 3600000 / 60000), 2) + ':' + p(Math.floor(ms % 60000 / 1000), 2) + ',' + p(ms % 1000, 3);
+}
+
+// taps: [{t: seconds, line: index into lines, or -1 for a gap}]. A line shows from its tap until the next tap
+// (a gap tap or the next line); the last one runs to the end of the audio. Reaction offset is subtracted.
+function tapBuildSrt(taps, lines, offset, duration){
+  const sorted = taps.slice().sort((a, b) => a.t - b.t);
+  const adj = t => Math.max(0, t - offset);
+  const out = [];
+  sorted.forEach((tp, i) => {
+    if(tp.line < 0 || !lines[tp.line]) return;
+    const start = adj(tp.t);
+    let end = sorted[i + 1] ? adj(sorted[i + 1].t) : (duration && isFinite(duration) ? duration : start + 4);
+    if(end <= start) end = start + 0.5;
+    out.push((out.length + 1) + '\n' + tapFmtSrt(start) + ' --> ' + tapFmtSrt(end) + '\n' + lines[tp.line] + '\n');
+  });
+  return out.join('\n');
+}
+
+// Lyric lines from the note cards: a trailing "-" joins a syllable to the next, rests end a line, and so
+// does a long note followed by a short pickup note once the line has 6+ words.
+function lyricsFromCards(){
+  const notes = parseMelody();
+  const lines = [];
+  let words = [], pending = '';
+  const endLine = () => { if(pending){ words.push(pending); pending = ''; } if(words.length){ lines.push(words.join(' ')); words = []; } };
+  notes.forEach((n, i) => {
+    if(n.note === '_'){ endLine(); return; }
+    const lyric = (cardLyrics[i] || '').trim();
+    if(lyric){
+      if(lyric.endsWith('-')) pending += lyric.slice(0, -1);
+      else { words.push(pending + lyric); pending = ''; }
+    }
+    const next = notes[i + 1];
+    if(!pending && next && next.note !== '_' && n.dur >= 1 && next.dur <= 0.5 && words.length >= 6) endLine();
+  });
+  endLine();
+  return lines.join('\n');
+}
+
+(function(){
+  const $ = id => document.getElementById(id);
+  const audio = $('tapAudio');
+  let taps = [], tapping = false, rafId = 0, baseName = 'song';
+
+  const lines = () => $('tapLines').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const offset = () => { const v = parseFloat($('tapOffset').value); return isNaN(v) ? 0 : v; };
+  const say = t => { $('tapStatus').textContent = t; };
+  const nextLine = () => { const L = lines(); return L.length ? taps.filter(x => x.line >= 0).length % L.length : -1; };
+  const short = t => Math.floor(t / 60) + ':' + (t % 60).toFixed(1).padStart(4, '0');
+
+  function render(){
+    const L = lines(), ni = nextLine();
+    $('tapNext').innerHTML = !audio.src ? '<span style="color:var(--muted)">Load audio to begin.</span>'
+      : ni < 0 ? '<span style="color:var(--muted)">Add lyric lines first.</span>'
+      : (tapping ? '<b>Tap now for:</b> ' : '<b>Next line:</b> ') + (ni + 1) + '. ' + L[ni];
+    $('tapList').innerHTML = taps.map((tp, i) => '<div>' + (i + 1) + '. ' + short(tp.t) + ' &nbsp; ' + (tp.line < 0 ? '<i>(gap)</i>' : (L[tp.line] || '')) + '</div>').join('');
+  }
+
+  function tap(gap){
+    if(!audio.src){ say('Load audio first'); return; }
+    if(!gap && !lines().length){ say('Add lyric lines first'); return; }
+    taps.push({ t: audio.currentTime, line: gap ? -1 : nextLine() });
+    say('');
+    render();
+  }
+  function undo(){ taps.pop(); render(); }
+
+  function caption(){
+    const t = audio.currentTime + offset();
+    const sorted = taps.slice().sort((a, b) => a.t - b.t);
+    let cur = null;
+    sorted.forEach(tp => { if(tp.t <= t) cur = tp; });
+    $('tapCaption').textContent = cur && cur.line >= 0 ? (lines()[cur.line] || '') : '';
+    rafId = audio.paused ? 0 : requestAnimationFrame(caption);
+  }
+  audio.addEventListener('play', () => { cancelAnimationFrame(rafId); rafId = requestAnimationFrame(caption); });
+  audio.addEventListener('seeked', caption);
+
+  function startStop(on){
+    tapping = on;
+    $('tapStart').textContent = on ? 'Stop tapping' : 'Start tapping';
+    if(on){
+      if(!lines().length && lyricsFromCards()) $('tapLines').value = lyricsFromCards();
+      if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      audio.playbackRate = parseFloat($('tapRate').value) || 1;
+      if(audio.src) audio.play();
+    }
+    render();
+  }
+
+  // Capture phase so the page's note-entry shortcuts (letters, Tab, /) don't fire while tapping
+  document.addEventListener('keydown', e => {
+    if(!tapping || ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+    if(e.key === ' ') { if(!e.repeat) tap(false); }
+    else if(e.key === 'b' || e.key === 'B') { if(!e.repeat) tap(true); }
+    else if(e.key === 'Backspace') undo();
+    else return;
+    e.preventDefault(); e.stopImmediatePropagation();
+  }, true);
+  document.addEventListener('keyup', e => { if(tapping && e.key === ' ') e.preventDefault(); }, true);
+
+  $('tapStart').addEventListener('click', () => startStop(!tapping));
+  $('tapBtn').addEventListener('pointerdown', e => { e.preventDefault(); tap(false); });
+  $('tapGap').addEventListener('pointerdown', e => { e.preventDefault(); tap(true); });
+  $('tapUndo').addEventListener('click', undo);
+  $('tapClear').addEventListener('click', () => { taps = []; $('tapSrt').style.display = 'none'; say(''); render(); caption(); });
+  $('tapFill').addEventListener('click', () => { $('tapLines').value = lyricsFromCards(); render(); });
+  $('tapLines').addEventListener('input', render);
+  $('tapRate').addEventListener('change', () => { audio.playbackRate = parseFloat($('tapRate').value) || 1; });
+  $('tapLoadBtn').addEventListener('click', () => $('tapFile').click());
+
+  function loadAudio(src, name){
+    if(audio.dataset.blob) URL.revokeObjectURL(audio.dataset.blob);
+    audio.dataset.blob = src.startsWith('blob:') ? src : '';
+    audio.src = src;
+    audio.load();
+    audio.playbackRate = parseFloat($('tapRate').value) || 1;
+    baseName = (name || 'song').replace(/\.[a-z0-9]+$/i, '').replace(/[^\w-]+/g, '_') || 'song';
+    $('tapAudioName').textContent = name || '';
+    taps = [];
+    $('tapSrt').style.display = 'none';
+    say('');
+    render();
+  }
+  window.tapLoadAudio = (src, name) => { loadAudio(src, name); $('tapPanel').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  $('tapFile').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if(f) loadAudio(URL.createObjectURL(f), f.name);
+  });
+
+  $('tapExport').addEventListener('click', () => {
+    const srt = tapBuildSrt(taps, lines(), offset(), audio.duration);
+    if(!srt){ say('Tap at least one line first.'); return; }
+    const box = $('tapSrt');
+    box.value = srt; box.style.display = 'block';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([srt], { type: 'text/plain' }));
+    a.download = baseName + '.srt';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    say('Saved ' + baseName + '.srt — run: python visualize.py ' + baseName + '.mp3 --srt ' + baseName + '.srt');
+  });
+
+  render();
+})();
 
 // Key hint labels shown on the staff — dynamic, tracks currentOctave
 function getNoteKeyHints(){
@@ -1271,8 +1460,25 @@ document.getElementById('playStripBtn').addEventListener('click', ()=>{
 
 document.getElementById('stopStripBtn').addEventListener('click', stopPlayback);
 
+// Output holds "note:beats". If "lyric:note:beats" text is pasted (e.g. from Export combined or a hymn
+// sheet read), pull the lyrics out onto the note cards and leave plain notes behind, so renders for
+// Suno only ever see the notes.
+function splitLyricsFromOutput(){
+  const ta = document.getElementById('melodyOut');
+  const toks = ta.value.split(',').map(s=>s.trim()).filter(Boolean);
+  if(!toks.some(t => t.split(':').length >= 3)) return;
+  const lyrics = [];
+  ta.value = toks.map(t=>{
+    const p = t.split(':');
+    if(p.length >= 3){ lyrics.push(p[0].trim()); return p.slice(1).join(':'); }
+    lyrics.push('');
+    return t;
+  }).join(', ');
+  cardLyrics = lyrics;
+}
+
 // Re-render strip live as the melody changes.
-document.getElementById('melodyOut').addEventListener('input', ()=>{ renderNoteStrip(); syncRhythmInput(); });
+document.getElementById('melodyOut').addEventListener('input', ()=>{ splitLyricsFromOutput(); renderNoteStrip(); syncRhythmInput(); });
 
 // Click or keyboard-activate (Enter/Space) a note-card to open its inline lyric edit spot.
 document.getElementById('noteStrip').addEventListener('click', (e)=>{
