@@ -412,7 +412,7 @@
       <!-- Sequence input -->
       <div class="sequence-container">
         <div class="input-container">
-          <textarea class="sequence-input" id="sequenceInput" placeholder="do:D4:1, you:D4:1, hear:E4:1, them:F4:1&#10;next line continues here…"></textarea>
+          <textarea class="sequence-input" id="sequenceInput" placeholder="do:D4:1, you:D4:1, hear:E4:1, them:F4:1&#10;next line continues here…">D5:1, G4:0.5, A4:0.5, B4:0.5, C5:0.5, D5:1, G4:1, G4:1, E5:1, C5:0.5, D5:0.5, E5:0.5, F#5:0.5, G5:1, G4:1, G4:1, C5:1, D5:0.5, C5:0.5, B4:0.5, A4:0.5, B4:1, C5:0.5, B4:0.5, A4:0.5, G4:0.5, F#4:1, G4:0.5, A4:0.5, B4:0.5, G4:0.5, B4:1, A4:2, D5:1, G4:0.5, A4:0.5, B4:0.5, C5:0.5, D5:1, G4:1, G4:1, E5:1, C5:0.5, D5:0.5, E5:0.5, F#5:0.5, G5:1, G4:1, G4:1, C5:1, D5:0.5, C5:0.5, B4:0.5, A4:0.5, B4:1, C5:0.5, B4:0.5, A4:0.5, G4:0.5, A4:1, B4:1, A4:0.5, G4:0.5, G4:3, B5:1, G5:0.5, A5:0.5, B5:0.5, G5:0.5, A5:1, D5:0.5, E5:0.5, F#5:0.5, D5:0.5, G5:1, E5:0.5, F#5:0.5, G5:0.5, D5:0.5, C#5:1, B4:0.5, C#5:0.5, A4:1, A4:0.5, B4:0.5, C#5:0.5, D5:0.5, E5:0.5, F#5:0.5, G5:1, F#5:1, E5:1, F#5:1, A4:1, C#5:1, D5:3, D5:1, G4:1, F#4:1, G4:1, E5:1, G4:1, D5:1, C5:1, B4:1, A4:0.5, G4:0.5, F#4:0.5, G4:0.5, A4:1, D4:0.5, E4:0.5, F#4:0.5, G4:0.5, A4:0.5, B4:0.5, C5:1, B4:1, A4:1, B4:0.5, D5:0.5, G4:1, F#4:1, G4:3</textarea>
         </div>
         <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
           <label for="volumeSlider" style="color:#aaa; font-size:14px;">Vol</label>
@@ -428,11 +428,11 @@
         </div>
         <div style="display:flex; align-items:center; gap:10px; margin-top:8px; flex-wrap:wrap;">
           <button class="play-btn" id="playSequence">&#9654; Play</button>
-          <button class="play-btn" id="seqRepeatBtn" onclick="toggleSeqRepeat()" style="background:#0e6b3a;">🔁 5× on</button>
+          <button class="play-btn" id="seqRepeatBtn" onclick="toggleSeqRepeat()" style="background:#1a4a7a;">🔁 5×</button>
           <label style="color:#aaa; font-size:14px;">BPM</label>
           <input type="number" id="bpmInput" value="60" min="40" max="300"
             style="width:58px; padding:6px; border-radius:6px; border:1px solid #333; background:#111; color:#eee; font-size:13px;">
-          <input type="number" id="repeatInput" value="5" min="1" max="99" style="display:none;">
+          <input type="number" id="repeatInput" value="1" min="1" max="99" style="display:none;">
           <button class="play-btn" id="stopStripBtn" style="display:none; background:#b3261e;">&#9632; Stop</button>
           <button class="play-btn" onclick="openDbxModal()" style="font-size:15px; background:linear-gradient(45deg,#0061ff,#004bb5);">📂 Dropbox</button>
         </div>
@@ -880,7 +880,9 @@
       input.value = isOn ? '1' : '5';
       btn.style.background = isOn ? '#1a4a7a' : '#0e6b3a';
       btn.textContent = isOn ? '🔁 5×' : '🔁 5× on';
+      try { localStorage.setItem('piano_repeat5', isOn ? '0' : '1'); } catch (e) {}
     }
+    try { if (localStorage.getItem('piano_repeat5') === '1') toggleSeqRepeat(); } catch (e) {}
 
     // Play button — parse, render strip, start from beginning
     playSequenceBtn.addEventListener("click", function() {
@@ -1282,7 +1284,7 @@
         }
       };
 
-      setMode(store.get('piano_view', 'keys') === 'staff' ? 'staff' : 'keys');
+      setMode(store.get('piano_view', 'staff') === 'keys' ? 'keys' : 'staff'); // staff unless Keys was chosen last
     })();
 
     // Image picker
