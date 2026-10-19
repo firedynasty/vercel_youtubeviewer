@@ -938,12 +938,14 @@ async function renderMelodyToBuffer(notes, bpm){
   let t = 0.05;
   for(const n of notes){
     const dur = n.dur * spb;
-    const freq = NOTE_FREQS[normalizeNoteName(n.note)];
-    if(n.note !== '_' && freq){
+    // "E3+G3+B3" is a chord: every note sounds together, a little quieter each
+    const freqs = n.note === '_' ? [] : n.note.split('+').map((x) => NOTE_FREQS[normalizeNoteName(x.trim())]).filter(Boolean);
+    const lvl = 1 / Math.sqrt(freqs.length || 1);
+    for(const freq of freqs){
       const g = ctx.createGain();
       g.connect(master);
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(1, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(lvl, t + 0.008);
       g.gain.exponentialRampToValueAtTime(0.001, t + Math.max(dur * 1.1, 0.25));
       [['triangle', freq, 1], ['sine', freq * 2, 0.25]].forEach(([type, f, level]) => {
         const o = ctx.createOscillator(), og = ctx.createGain();

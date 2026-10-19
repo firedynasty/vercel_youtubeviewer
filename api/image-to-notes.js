@@ -115,17 +115,22 @@ function staffToSequence(staff, fifths, timeSignature) {
         lyrics.push('');
         continue;
       }
-      let p;
-      if (ev.type === 'note') p = ev;
-      else if (ev.type === 'chord' && Array.isArray(ev.pitches) && ev.pitches.length) {
-        // The sequence format is one note at a time: keep the top note of a chord
-        p = ev.pitches.reduce((hi, c) => (validPitch(c) && c.octave * 7 + 'CDEFGAB'.indexOf(c.letter) > hi.octave * 7 + 'CDEFGAB'.indexOf(hi.letter) ? c : hi), ev.pitches[0]);
-      } else return null;
-      if (!validPitch(p)) return null;
-      const key = p.letter + p.octave;
-      if (p.accidental === '#' || p.accidental === 'b' || p.accidental === 'n') barAcc[key] = p.accidental;
-      const acc = key in barAcc ? barAcc[key] : keyMap[p.letter] || 'n';
-      tokens.push(`${p.letter}${acc === '#' ? '#' : acc === 'b' ? 'b' : ''}${p.octave}:${beats}`);
+      let pitches;
+      if (ev.type === 'note') pitches = [ev];
+      else if (ev.type === 'chord' && Array.isArray(ev.pitches) && ev.pitches.length) pitches = ev.pitches;
+      else return null;
+      if (!pitches.every(validPitch)) return null;
+      // A chord becomes "E3+G3+B3", lowest note first; each pitch gets the key signature / bar accidentals
+      const names = pitches
+        .slice()
+        .sort((x, y) => x.octave * 7 + 'CDEFGAB'.indexOf(x.letter) - (y.octave * 7 + 'CDEFGAB'.indexOf(y.letter)))
+        .map((q) => {
+          const key = q.letter + q.octave;
+          if (q.accidental === '#' || q.accidental === 'b' || q.accidental === 'n') barAcc[key] = q.accidental;
+          const acc = key in barAcc ? barAcc[key] : keyMap[q.letter] || 'n';
+          return `${q.letter}${acc === '#' ? '#' : acc === 'b' ? 'b' : ''}${q.octave}`;
+        });
+      tokens.push(`${names.join('+')}:${beats}`);
       lyrics.push(cleanLyric(ev.lyric));
     }
   }
