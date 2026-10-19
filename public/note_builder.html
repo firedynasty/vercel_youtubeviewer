@@ -321,6 +321,28 @@
 
 </div>
 
+<!-- ---- Staff ---- -->
+<div class="panel" style="max-width:1100px;margin:16px auto 0;">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <h2 style="margin:0;">Staff</h2>
+    <span style="font-size:12px;color:var(--muted);">Output is the treble staff, the Bass box is the bass staff — check them against the score</span>
+    <label style="font-size:13px;color:var(--muted);">Bar
+      <select id="staffBeats" style="padding:6px;border-radius:8px;border:1px solid var(--border);font-size:13px;">
+        <option value="2">2 beats (2/4)</option>
+        <option value="3">3 beats (3/4)</option>
+        <option value="4" selected>4 beats (4/4)</option>
+        <option value="5">5 beats</option>
+        <option value="6">6 beats</option>
+        <option value="0">no bar lines</option>
+      </select>
+    </label>
+    <label style="font-size:13px;color:var(--muted);">Pickup beats
+      <input type="number" id="staffPickup" value="0" min="0" max="8" step="0.5" style="width:58px;padding:6px;border-radius:8px;border:1px solid var(--border);font-size:13px;">
+    </label>
+  </div>
+  <div id="staffScroll" style="overflow-x:auto;background:#111;border-radius:8px;margin-top:10px;padding:6px 0;"></div>
+</div>
+
 <!-- ---- Lyrics + Note Strip ---- -->
 <div class="panel" style="max-width:1100px;margin:16px auto 0;">
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
@@ -396,6 +418,7 @@
   <textarea id="tapSrt" readonly style="display:none;margin-top:8px;width:100%;min-height:120px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;padding:10px;border-radius:8px;border:1px solid var(--border);background:#fbfbfa;"></textarea>
 </div>
 
+<script src="staff.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
@@ -707,6 +730,7 @@ document.getElementById('clearBtn').addEventListener('click', ()=>{
   cardLyrics = [];   // reset per-card lyrics (003-note-card-lyrics-load FR data-model Reset)
   document.getElementById('bassOut').value = '';
   document.getElementById('bassWrap').style.display = 'none';
+  refreshStaff();
   document.getElementById('outTitle').textContent = 'Output';
 });
 
@@ -905,6 +929,7 @@ document.getElementById('readNotesBtn').addEventListener('click', async () => {
     try {
       const second = await readOneStaff('bass', image, text, code);
       bassOut.value = second.sequence;
+      refreshStaff();
       status.textContent = firstLabel + readSummary(first) + ' | Bass: ' + readSummary(second) + ' — check both against the score.';
     } catch (e) {
       status.textContent = firstLabel + readSummary(first) + ' | Bass read failed: ' + e.message + ' (treble is kept).';
@@ -915,6 +940,21 @@ document.getElementById('readNotesBtn').addEventListener('click', async () => {
     btn.disabled = false;
   }
 });
+
+// ---- Staff: Output (treble) and the Bass box drawn together; the drawing itself is in staff.js ----
+var staffViewObj = null;
+function refreshStaff(){
+  if(!staffViewObj) staffViewObj = StaffView.create({ scroller: document.getElementById('staffScroll') });
+  staffViewObj.render(
+    StaffView.parseSequence(document.getElementById('melodyOut').value),
+    StaffView.parseSequence(document.getElementById('bassOut').value),
+    { beatsPerBar: document.getElementById('staffBeats').value, pickup: document.getElementById('staffPickup').value }
+  );
+}
+['melodyOut', 'bassOut'].forEach(id => document.getElementById(id).addEventListener('input', refreshStaff));
+document.getElementById('staffBeats').addEventListener('change', refreshStaff);
+document.getElementById('staffPickup').addEventListener('input', refreshStaff);
+refreshStaff();
 
 // ---- Enhance with Suno: render the melody to an mp3, send it, poll, show the results ----
 const SUNO_MAX_B64_BYTES = 3.2 * 1024 * 1024; // Vercel request bodies top out at 4.5 MB; base64 adds a third
@@ -1393,6 +1433,7 @@ function reconcileCardLyrics(n){
 let editingCard = null;
 
 function renderNoteStrip(){
+  refreshStaff();
   const notes = parseMelody();
   reconcileCardLyrics(notes.length);
   const strip = document.getElementById('noteStrip');
