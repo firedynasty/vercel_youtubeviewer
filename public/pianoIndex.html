@@ -1124,11 +1124,30 @@
         try { localStorage.setItem('piano_bass_open', open ? '1' : '0'); } catch (e) {}
         if (window.staffRefresh) window.staffRefresh();
       }
+      window.setBassOpen = setOpen;
       btn.addEventListener('click', () => setOpen(document.getElementById('bassBox').style.display === 'none'));
       let saved = null;
       try { saved = localStorage.getItem('piano_bass_open'); } catch (e) {}
       if (saved === '1') setOpen(true);
     })();
+
+    // A line of ==== splits text into two voices: above it is the treble (top box), below it the bass (bottom box).
+    // Used for Dropbox files and pasted text. The top part always replaces the top box; the bottom part replaces the
+    // bass box (and opens it) only when it isn't empty, so a plain one-voice file leaves the bass alone.
+    const VOICE_SPLIT = /^[ \t]*={3,}[ \t]*$/m;
+    window.loadVoices = function (text) {
+      const m = VOICE_SPLIT.exec(text);
+      const top = (m ? text.slice(0, m.index) : text).trim();
+      const bottom = m ? text.slice(m.index + m[0].length).trim() : '';
+      sequenceInput.value = top;
+      if (bottom) {
+        document.getElementById('bassInput').value = bottom;
+        if (window.setBassOpen) window.setBassOpen(true);
+      }
+      if (window.staffRefresh) window.staffRefresh();
+      return !!m;
+    };
+    sequenceInput.addEventListener('input', () => { if (VOICE_SPLIT.test(sequenceInput.value)) window.loadVoices(sequenceInput.value); });
 
     // Image picker
     let imageSizeState = 'small';
@@ -1454,9 +1473,8 @@
             window.closeDbxModal();
           } else {
             const text = await window.dropboxDownloadText(path);
-            document.getElementById('sequenceInput').value = text.trim();
-            if (window.staffRefresh) window.staffRefresh();
-            document.getElementById('dbxStatus').textContent = '✅ '+name+' loaded — pick an image or close';
+            const split = window.loadVoices(text);
+            document.getElementById('dbxStatus').textContent = '✅ '+name+' loaded'+(split ? ' (top + bass)' : '')+' — pick an image or close';
             closeAudioPlayer();
           }
         } catch(err) {

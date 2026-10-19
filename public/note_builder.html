@@ -315,6 +315,7 @@
       <textarea id="bassOut" placeholder="Left hand: paste notes here, or choose &quot;Both hands&quot; and Read notes (AI) to fill this and Output together"></textarea>
       <div class="copy-row">
         <button class="action" id="copyBassBtn">Copy</button>
+        <button class="action" id="copyBothBtn" title="Copies Output, a line of ====, then the Bass box: paste it into one Dropbox .txt for the piano page">Copy both (top ==== bottom)</button>
         <span id="copyBassStatus"></span>
       </div>
     </div>
@@ -1838,7 +1839,30 @@ function splitLyricsFromOutput(){
 }
 
 // Re-render strip live as the melody changes.
-document.getElementById('melodyOut').addEventListener('input', ()=>{ splitLyricsFromOutput(); renderNoteStrip(); syncRhythmInput(); });
+// A line of ==== splits pasted text into two voices: above it stays in Output (treble), below it goes to the Bass box.
+const VOICE_SPLIT = /^[ \t]*={3,}[ \t]*$/m;
+function splitVoicesFromOutput(){
+  const ta = document.getElementById('melodyOut');
+  const m = VOICE_SPLIT.exec(ta.value);
+  if(!m) return;
+  const top = ta.value.slice(0, m.index).trim(), bottom = ta.value.slice(m.index + m[0].length).trim();
+  ta.value = top;
+  if(bottom){
+    const bo = document.getElementById('bassOut');
+    bo.value = bottom;
+    bo.dispatchEvent(new Event('input'));
+  }
+}
+document.getElementById('melodyOut').addEventListener('input', ()=>{ splitVoicesFromOutput(); splitLyricsFromOutput(); renderNoteStrip(); syncRhythmInput(); });
+document.getElementById('copyBothBtn').addEventListener('click', ()=>{
+  const top = document.getElementById('melodyOut').value.trim(), bottom = document.getElementById('bassOut').value.trim();
+  const text = bottom ? top + '\n====\n' + bottom : top;
+  const status = document.getElementById('copyBassStatus');
+  navigator.clipboard.writeText(text).then(()=>{
+    status.textContent = bottom ? 'Copied both!' : 'Copied (no bass yet)';
+    setTimeout(()=>status.textContent='',1800);
+  }).catch(()=>{ status.textContent = 'Could not copy'; setTimeout(()=>status.textContent='',2000); });
+});
 
 // Click or keyboard-activate (Enter/Space) a note-card to open its inline lyric edit spot.
 document.getElementById('noteStrip').addEventListener('click', (e)=>{
