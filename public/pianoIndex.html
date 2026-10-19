@@ -1130,14 +1130,11 @@
         document.getElementById('bassBox').style.display = open ? 'block' : 'none';
         document.getElementById('trebleLabel').style.display = open ? 'block' : 'none';
         btn.classList.toggle('view-on', open);
-        try { localStorage.setItem('piano_bass_open', open ? '1' : '0'); } catch (e) {}
         if (window.staffRefresh) window.staffRefresh();
       }
       window.setBassOpen = setOpen;
       btn.addEventListener('click', () => setOpen(document.getElementById('bassBox').style.display === 'none'));
-      let saved = null;
-      try { saved = localStorage.getItem('piano_bass_open'); } catch (e) {}
-      if (saved !== '0') setOpen(true);   // open by default: the sample piece is a two-hand duet
+      setOpen(true);   // always open on load: the page starts with a two-hand sample and both boxes filled
     })();
 
     // A line of ==== splits text into two voices: above it is the treble (top box), below it the bass (bottom box).
