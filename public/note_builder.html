@@ -208,6 +208,7 @@
   .nc-lyric{font-size:12px;color:var(--ink);margin-top:5px;white-space:nowrap;}
   .note-card.playing .nc-dur,
   .note-card.playing .nc-lyric{color:rgba(255,255,255,.8);}
+  #staffScroll:not(.editing) .staff-note{cursor:default !important;}
 </style>
 </head>
 <body>
@@ -309,9 +310,9 @@
       <button class="action" id="copyBtn">Copy</button>
       <span id="copyStatus"></span>
     </div>
-    <div id="bassWrap" style="display:none;">
+    <div id="bassWrap">
       <h2 style="margin-top:14px;">Bass (left hand)</h2>
-      <textarea id="bassOut" placeholder="Filled by &quot;Both hands&quot; after the treble read finishes"></textarea>
+      <textarea id="bassOut" placeholder="Left hand: paste notes here, or choose &quot;Both hands&quot; and Read notes (AI) to fill this and Output together"></textarea>
       <div class="copy-row">
         <button class="action" id="copyBassBtn">Copy</button>
         <span id="copyBassStatus"></span>
@@ -324,8 +325,10 @@
 <!-- ---- Staff ---- -->
 <div class="panel" style="max-width:1100px;margin:16px auto 0;">
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-    <h2 style="margin:0;">Staff</h2>
+    <h2 style="margin:0;">Score</h2>
     <span style="font-size:12px;color:var(--muted);">Output is the treble staff, the Bass box is the bass staff — check them against the score</span>
+    <button class="action" id="editToggleBtn" type="button">✏️ Edit</button>
+    <button class="action" id="editUndoBtn" type="button" disabled>↶ Undo</button>
     <label style="font-size:13px;color:var(--muted);">Bar
       <select id="staffBeats" style="padding:6px;border-radius:8px;border:1px solid var(--border);font-size:13px;">
         <option value="2">2 beats (2/4)</option>
@@ -341,6 +344,39 @@
     </label>
   </div>
   <div id="staffScroll" style="overflow-x:auto;background:#111;border-radius:8px;margin-top:10px;padding:6px 0;"></div>
+  <div id="editBar" style="display:none;margin-top:10px;">
+    <div id="editInfo" style="font-size:13px;margin-bottom:8px;"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px;">
+      <span style="font-size:12px;color:var(--muted);width:52px;">Pitch</span>
+      <button class="action" data-edit="up" title="Up a step (↑)">▲ step</button>
+      <button class="action" data-edit="down" title="Down a step (↓)">▼ step</button>
+      <button class="action" data-edit="sharp">♯</button>
+      <button class="action" data-edit="flat">♭</button>
+      <button class="action" data-edit="natural">♮</button>
+      <button class="action" data-edit="oct-up" title="Octave up (Shift+↑)">8va ▲</button>
+      <button class="action" data-edit="oct-down" title="Octave down (Shift+↓)">8va ▼</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px;">
+      <span style="font-size:12px;color:var(--muted);width:52px;">Length</span>
+      <button class="action" data-edit="whole">Whole</button>
+      <button class="action" data-edit="half">Half</button>
+      <button class="action" data-edit="quarter">Quarter</button>
+      <button class="action" data-edit="eighth">Eighth</button>
+      <button class="action" data-edit="sixteenth">16th</button>
+      <button class="action" data-edit="dot">Dot</button>
+      <button class="action" data-edit="triplet">Triplet</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      <span style="font-size:12px;color:var(--muted);width:52px;">Note</span>
+      <button class="action" data-edit="rest">Rest ⇄ note</button>
+      <button class="action" data-edit="dup" title="Adds a copy of this note right after it: same pitch, same length (Enter)">Insert note after</button>
+      <button class="action" data-edit="insrest">Insert rest after</button>
+      <button class="action" data-edit="addnote">+ note above</button>
+      <button class="action" data-edit="rmnote">− this note</button>
+      <button class="action danger" data-edit="del" title="Delete (Delete key)">Delete</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:8px;">Click a note to select it; click one notehead of a chord to pick just that note. Keys: ↑ ↓ step, Shift+↑↓ octave, ← → previous / next note, Enter insert note after (same pitch and length, then step it with ↑ ↓), Delete, Ctrl/⌘+Z undo. Editing rewrites the Output / Bass box.</div>
+  </div>
 </div>
 
 <!-- ---- Lyrics + Note Strip ---- -->
@@ -729,7 +765,6 @@ document.getElementById('clearBtn').addEventListener('click', ()=>{
   setSpot('C4');     // reset the spot (FR-015)
   cardLyrics = [];   // reset per-card lyrics (003-note-card-lyrics-load FR data-model Reset)
   document.getElementById('bassOut').value = '';
-  document.getElementById('bassWrap').style.display = 'none';
   refreshStaff();
   document.getElementById('outTitle').textContent = 'Output';
 });
@@ -913,6 +948,12 @@ document.getElementById('readNotesBtn').addEventListener('click', async () => {
 
     status.textContent = (both ? 'Reading treble (1 of 2, can take 30s+)…' : 'Reading notes (can take 30s+)…');
     const first = await readOneStaff(both ? 'treble' : choice, image, text, code);
+    if (choice === 'bass') { // a bass-only read goes to the Bass box and leaves Output (treble) alone
+      bassOut.value = first.sequence;
+      refreshStaff();
+      status.textContent = 'Bass: ' + readSummary(first) + ' — check it against the score.';
+      return;
+    }
     document.getElementById('clearBtn').click(); // replace, don't append: same reset as "Clear all"
     ta.value = first.sequence;
     ta.dispatchEvent(new Event('input')); // programmatic edits don't fire it; refreshes strip + rhythm
@@ -943,18 +984,240 @@ document.getElementById('readNotesBtn').addEventListener('click', async () => {
 
 // ---- Staff: Output (treble) and the Bass box drawn together; the drawing itself is in staff.js ----
 var staffViewObj = null;
+function staffSettings(){
+  return { beatsPerBar: document.getElementById('staffBeats').value, pickup: document.getElementById('staffPickup').value };
+}
 function refreshStaff(){
-  if(!staffViewObj) staffViewObj = StaffView.create({ scroller: document.getElementById('staffScroll') });
+  if(!staffViewObj) staffViewObj = StaffView.create({ scroller: document.getElementById('staffScroll'), onNoteClick: onStaffNoteClick });
   staffViewObj.render(
     StaffView.parseSequence(document.getElementById('melodyOut').value),
     StaffView.parseSequence(document.getElementById('bassOut').value),
-    { beatsPerBar: document.getElementById('staffBeats').value, pickup: document.getElementById('staffPickup').value }
+    staffSettings()
   );
+  if(editSel && !editParse(editSel.voice)[editSel.i]) editSel = null;   // the note it pointed at is gone
+  staffViewObj.select(editSel);
+  updateEditUi();
 }
 ['melodyOut', 'bassOut'].forEach(id => document.getElementById(id).addEventListener('input', refreshStaff));
 document.getElementById('staffBeats').addEventListener('change', refreshStaff);
 document.getElementById('staffPickup').addEventListener('input', refreshStaff);
 refreshStaff();
+
+// ---- Score editing: click a note, change it with the buttons or the keyboard. The text boxes stay the source
+// of truth: every edit rewrites Output (treble) or the Bass box, so copy/paste and Suno keep working. ----
+var editOn = false, editSel = null;   // editSel = { voice: 'treble'|'bass', i, head }  (head null = the whole note/chord)
+var editUndoStack = [];   // var: refreshStaff() can run (and reach updateEditUi) before this line executes
+const EDIT_LETTERS = 'CDEFGAB';
+const EDIT_LEN = { whole: 4, half: 2, quarter: 1, eighth: 0.5, sixteenth: 0.25 };
+
+const editBox = voice => document.getElementById(voice === 'bass' ? 'bassOut' : 'melodyOut');
+const editParse = voice => StaffView.parseSequence(editBox(voice).value);
+const fmtBeats = b => String(+(+b).toFixed(3));
+
+function editSerialize(items){
+  const lines = []; let cur = [];
+  items.forEach(it => {
+    if(it.type === 'section'){ if(cur.length) lines.push(cur.join(', ')); cur = []; lines.push('[' + it.label + ']'); return; }
+    cur.push((it.lyric ? it.lyric + ':' : '') + it.note + ':' + fmtBeats(it.beats));
+  });
+  if(cur.length) lines.push(cur.join(', '));
+  return lines.join('\n');
+}
+
+// "Bb4" -> { L:'B', acc:'b', oct:4 }; null if it isn't a plain note name
+function parseName(str){
+  const m = /^([A-Ga-g])([#bB]?)(\d)$/.exec(String(str).trim());
+  return m ? { L: m[1].toUpperCase(), acc: m[2] === '#' ? '#' : m[2] ? 'b' : '', oct: +m[3] } : null;
+}
+const nameOf = p => p.L + p.acc + p.oct;
+const pitchD = p => p.oct * 7 + EDIT_LETTERS.indexOf(p.L);
+function stepName(p, dir){
+  const d = pitchD(p) + dir;
+  return { L: EDIT_LETTERS[((d % 7) + 7) % 7], acc: p.acc, oct: Math.floor(d / 7) };
+}
+// the notes of an item, lowest first (the same order the staff numbers a chord's noteheads); null if any isn't a plain name
+function noteHeads(item){
+  if(!item || item.note === '_') return null;
+  const ps = item.note.split('+').map(parseName);
+  if(!ps.length || ps.some(p => !p)) return null;
+  return ps.sort((a, b) => pitchD(a) - pitchD(b));
+}
+// Change the chosen notehead (or every note of the chord when head is null); returns the changed note's new head number
+function changeHeads(item, head, fn){
+  const ps = noteHeads(item);
+  if(!ps || (head != null && head >= ps.length)) return null;
+  const marked = ps.map((p, k) => (head == null || k === head) ? { p: fn(p), hit: true } : { p, hit: false });
+  marked.sort((a, b) => pitchD(a.p) - pitchD(b.p));
+  item.note = marked.map(m => nameOf(m.p)).join('+');
+  return marked.findIndex(m => m.hit);
+}
+
+function editSnapshot(){ return { t: editBox('treble').value, b: editBox('bass').value, lyrics: cardLyrics.slice() }; }
+function setEditInfo(html){ document.getElementById('editInfo').innerHTML = html; }
+
+function updateEditUi(){
+  document.getElementById('editUndoBtn').disabled = !(editUndoStack && editUndoStack.length);
+  if(!editOn) return;
+  if(!editSel){ setEditInfo('<span style="color:var(--muted);">Click a note on the score to select it.</span>'); return; }
+  const items = editParse(editSel.voice), item = items[editSel.i];
+  if(!item){ setEditInfo(''); return; }
+  const what = item.note === '_' ? 'rest' : item.note.split('+').join(' + ');
+  const head = editSel.head != null && item.note.includes('+') ? ' (note ' + (editSel.head + 1) + ' of the chord selected)' : '';
+  let barTxt = '';
+  const bi = StaffView.barInfo(items, editSel.i, staffSettings());
+  if(bi){
+    const ok = Math.abs(bi.total - bi.expected) < 0.02;
+    barTxt = ' · ' + (bi.pickup ? 'pickup bar' : 'bar ' + bi.bar) + ': <b style="color:' + (ok ? '#1a7a3a' : '#c0561a') + ';">' + fmtBeats(bi.total) + ' of ' + fmtBeats(bi.expected) + ' beats</b>';
+  }
+  setEditInfo((editSel.voice === 'bass' ? 'Bass' : 'Treble') + ' note ' + (editSel.i + 1) + ': <b>' + what + '</b> · ' + fmtBeats(item.beats) + ' beats' + head + barTxt);
+}
+
+// A short beep of the note(s) so a change can be heard
+function auditionItem(item, head){
+  if(!item || item.note === '_') return;
+  let names = (noteHeads(item) || []).map(p => normalizeNoteName(nameOf(p)));
+  if(head != null && names[head]) names = [names[head]];
+  const ctx = getCtx();
+  if(ctx.state === 'suspended') ctx.resume();
+  const bpm = parseFloat(document.getElementById('bpmInput').value) || 100;
+  const dur = Math.min(Math.max(item.beats * 60 / bpm, 0.25), 1.2);
+  const t = ctx.currentTime + 0.02, level = 0.25 / Math.sqrt(names.length || 1);
+  names.forEach(n => {
+    const f = NOTE_FREQS[n];
+    if(!f) return;
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.type = 'triangle'; osc.frequency.value = f;
+    g.gain.setValueAtTime(level, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(t); osc.stop(t + dur + 0.05);
+  });
+}
+
+function onStaffNoteClick(c){
+  if(!editOn) return;
+  editSel = { voice: c.voice, i: c.i, head: c.head == null ? null : c.head };
+  staffViewObj.select(editSel);
+  updateEditUi();
+  auditionItem(editParse(c.voice)[c.i], editSel.head);
+}
+
+function isDotted(b){ return [0.375, 0.75, 1.5, 3, 6].some(v => Math.abs(b - v) < 0.002); }
+function isTriplet(b){ return [1/6, 1/3, 2/3, 4/3].some(v => Math.abs(b - v) < 0.002); }
+function guessNoteFor(items, i, voice){
+  const near = [...items.slice(0, i).reverse(), ...items.slice(i + 1)].find(it => it.note && it.note !== '_');
+  const ps = near && noteHeads(near);
+  return ps ? nameOf(ps[0]) : (voice === 'bass' ? 'D3' : 'B4');
+}
+
+function editOp(op){
+  if(!editSel){ setEditInfo('<span style="color:#c0561a;">Click a note on the score first.</span>'); return; }
+  const voice = editSel.voice, items = editParse(voice), item = items[editSel.i];
+  if(!item){ editSel = null; updateEditUi(); return; }
+  const before = editSnapshot();
+  const i = editSel.i, head = editSel.head;
+  let sel = { ...editSel }, lyricOp = null, sounded = item;
+  const pitchOp = fn => { const r = changeHeads(item, head, fn); if(r === null) return false; if(head != null) sel.head = r; return true; };
+
+  switch(op){
+    case 'up': case 'down': if(!pitchOp(p => stepName(p, op === 'up' ? 1 : -1))) return; break;
+    case 'oct-up': case 'oct-down': if(!pitchOp(p => ({ ...p, oct: p.oct + (op === 'oct-up' ? 1 : -1) }))) return; break;
+    case 'sharp': if(!pitchOp(p => ({ ...p, acc: '#' }))) return; break;
+    case 'flat': if(!pitchOp(p => ({ ...p, acc: 'b' }))) return; break;
+    case 'natural': if(!pitchOp(p => ({ ...p, acc: '' }))) return; break;
+    case 'whole': case 'half': case 'quarter': case 'eighth': case 'sixteenth': item.beats = EDIT_LEN[op]; break;
+    case 'dot': item.beats = +(isDotted(item.beats) ? item.beats / 1.5 : item.beats * 1.5).toFixed(3); break;
+    case 'triplet': item.beats = +(isTriplet(item.beats) ? item.beats * 1.5 : item.beats * 2 / 3).toFixed(3); break;
+    case 'rest':
+      item.note = item.note === '_' ? guessNoteFor(items, i, voice) : '_';
+      sel.head = null;
+      break;
+    case 'dup': items.splice(i + 1, 0, { ...item }); sel = { voice, i: i + 1, head: null }; lyricOp = ['ins', i + 1]; break;
+    case 'insrest': items.splice(i + 1, 0, { note: '_', beats: 1 }); sel = { voice, i: i + 1, head: null }; lyricOp = ['ins', i + 1]; sounded = null; break;
+    case 'del':
+      items.splice(i, 1);
+      lyricOp = ['del', i];
+      sel = items.length ? { voice, i: Math.min(i, items.length - 1), head: null } : null;
+      sounded = null;
+      break;
+    case 'addnote': {
+      const ps = noteHeads(item);
+      if(!ps) return;
+      const top = ps[ps.length - 1], added = { ...stepName(top, 2), acc: '' };
+      item.note = ps.concat(added).sort((a, b) => pitchD(a) - pitchD(b)).map(nameOf).join('+');
+      sel.head = noteHeads(item).findIndex(p => nameOf(p) === nameOf(added));
+      break;
+    }
+    case 'rmnote': {
+      const ps = noteHeads(item);
+      if(!ps || ps.length < 2) { setEditInfo('<span style="color:#c0561a;">A single note can\'t be removed this way: use Delete or Rest.</span>'); return; }
+      const k = head == null ? ps.length - 1 : head;
+      ps.splice(k, 1);
+      item.note = ps.map(nameOf).join('+');
+      sel.head = null;
+      break;
+    }
+    default: return;
+  }
+
+  editUndoStack.push(before);
+  if(editUndoStack.length > 100) editUndoStack.shift();
+  if(voice === 'treble' && lyricOp && cardLyrics.length){
+    if(lyricOp[0] === 'ins') cardLyrics.splice(lyricOp[1], 0, '');
+    else cardLyrics.splice(lyricOp[1], 1);
+  }
+  editSel = sel;
+  const box = editBox(voice);
+  box.value = editSerialize(items);
+  box.dispatchEvent(new Event('input'));   // redraws the score, the note cards and the rhythm plan
+  if(sounded) auditionItem(sounded, sel && sel.head);
+}
+
+function editUndo(){
+  const snap = editUndoStack.pop();
+  if(!snap) return;
+  editBox('treble').value = snap.t;
+  editBox('bass').value = snap.b;
+  cardLyrics = snap.lyrics;
+  editBox('bass').dispatchEvent(new Event('input'));
+  editBox('treble').dispatchEvent(new Event('input'));
+}
+
+function setEditMode(on){
+  editOn = on;
+  document.getElementById('editBar').style.display = on ? 'block' : 'none';
+  const btn = document.getElementById('editToggleBtn');
+  btn.classList.toggle('primary', on);
+  btn.textContent = on ? '✏️ Editing' : '✏️ Edit';
+  document.getElementById('staffScroll').classList.toggle('editing', on);
+  if(!on) editSel = null;
+  refreshStaff();
+}
+document.getElementById('editToggleBtn').addEventListener('click', () => setEditMode(!editOn));
+document.getElementById('editUndoBtn').addEventListener('click', editUndo);
+document.getElementById('editBar').addEventListener('click', e => {
+  const b = e.target.closest('[data-edit]');
+  if(b) editOp(b.dataset.edit);
+});
+document.addEventListener('keydown', e => {
+  if(!editOn) return;
+  const tag = e.target.tagName;
+  if(tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT' || e.target.isContentEditable) return;
+  if((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')){ e.preventDefault(); editUndo(); return; }
+  if(e.metaKey || e.ctrlKey || e.altKey || !editSel) return;
+  if(e.key === 'ArrowUp' || e.key === 'ArrowDown'){ e.preventDefault(); editOp(e.shiftKey ? (e.key === 'ArrowUp' ? 'oct-up' : 'oct-down') : (e.key === 'ArrowUp' ? 'up' : 'down')); }
+  else if(e.key === 'Enter'){ e.preventDefault(); editOp('dup'); }
+  else if(e.key === 'Delete' || e.key === 'Backspace'){ e.preventDefault(); editOp('del'); }
+  else if(e.key === 'ArrowLeft' || e.key === 'ArrowRight'){
+    e.preventDefault();
+    const n = editParse(editSel.voice).length, next = editSel.i + (e.key === 'ArrowRight' ? 1 : -1);
+    if(next < 0 || next >= n) return;
+    editSel = { voice: editSel.voice, i: next, head: null };
+    staffViewObj.select(editSel);
+    updateEditUi();
+    auditionItem(editParse(editSel.voice)[next], null);
+  }
+  else if(e.key === 'Escape'){ editSel = null; staffViewObj.select(null); updateEditUi(); }
+});
 
 // ---- Enhance with Suno: render the melody to an mp3, send it, poll, show the results ----
 const SUNO_MAX_B64_BYTES = 3.2 * 1024 * 1024; // Vercel request bodies top out at 4.5 MB; base64 adds a third

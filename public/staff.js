@@ -24,7 +24,7 @@
     if (document.getElementById('staff-view-style')) return;
     const st = document.createElement('style');
     st.id = 'staff-view-style';
-    st.textContent = '.staff-note{color:#ddd}.staff-note.playing{transform:none;box-shadow:none}.staff-note .play-dot{display:none}.staff-note.playing .play-dot{display:inline}';
+    st.textContent = '.staff-note{color:#ddd}.staff-note.playing{transform:none;box-shadow:none}.staff-note .play-dot{display:none}.staff-note.playing .play-dot{display:inline}.staff-note.selected{color:#4aa3ff}.staff-note .sel-ring{display:none}.staff-note .sel-ring.on{display:inline}';
     document.head.appendChild(st);
   }
 
@@ -202,10 +202,17 @@
     all.forEach(e => {
       const isBass = e.voice === 'bass';
       const g = el('g', { class: 'staff-note ' + (isBass ? 'b' : 't'), 'data-voice': isBass ? 'bass' : 'treble', 'data-i': e.i, 'data-x': e.col.cx, stroke: 'currentColor', fill: 'currentColor' }, svg);
-      el('rect', { x: e.col.x, y: 0, width: Math.max(e.col.w, 20), height: H, fill: 'transparent', stroke: 'none' }, g);
+      // each voice's clickable area is limited to its own staff, so the two voices in one column don't steal each other's clicks
+      const splitY = needBass ? (trebleBottom + B0) / 2 : H;
+      const onBassStaff = staffOf(e) === 'bass';
+      el('rect', { x: e.col.x, y: onBassStaff ? splitY : 0, width: Math.max(e.col.w, 20), height: onBassStaff ? H - splitY : splitY, fill: 'transparent', stroke: 'none' }, g);
       if (opts.onNoteClick) {
         g.style.cursor = 'pointer';
-        g.addEventListener('click', () => opts.onNoteClick({ voice: e.voice, i: e.i, tick: e.tick }));
+        // a click right on a notehead also says which note of a chord it was (head); otherwise head is null
+        g.addEventListener('click', ev => {
+          const hk = ev.target && ev.target.getAttribute ? ev.target.getAttribute('data-head') : null;
+          opts.onNoteClick({ voice: e.voice, i: e.i, tick: e.tick, head: hk === null ? null : +hk });
+        });
       }
       if (e.lyric) text(e.lyric, { x: e.col.cx, y: lyricY, 'text-anchor': 'middle', 'font-size': 12, fill: 'currentColor', stroke: 'none', 'font-family': 'sans-serif' }, g);
 
@@ -214,6 +221,7 @@
         const bassRest = staffOf(e) === 'bass';
         const mid = bassRest ? yBass(22) : yTreble(34), k = e.dur.kind, cx = e.col.cx;
         el('circle', { class: 'play-dot', cx, cy: mid, r: 3.4, fill: '#ff9f1c', stroke: 'none' }, g);
+        el('circle', { class: 'sel-ring', 'data-head': 0, cx, cy: mid, r: 11, fill: 'none', stroke: '#4aa3ff', 'stroke-width': 1.5 }, g);
         if (k === 'whole') el('rect', { x: cx - 6, y: mid - SP, width: 12, height: 5, stroke: 'none' }, g);
         else if (k === 'half') el('rect', { x: cx - 6, y: mid - 5, width: 12, height: 5, stroke: 'none' }, g);
         else if (k === 'quarter') el('path', { d: `M${cx - 2},${mid - 13} l6,7 l-6,7 l6,7 c-6,-2 -7,3 -2,7`, fill: 'none', 'stroke-width': 2.2 }, g);
@@ -254,8 +262,9 @@
       const dotX = cx + 10 + (!down && shifted.size ? 11.6 : 0);
       heads.forEach((h, k) => {
         const hy = yAtD(e, h.d), hx = cx + (shifted.has(k) ? side : 0);
-        el('ellipse', { cx: hx, cy: hy, rx: 6.2, ry: 4.6, transform: `rotate(-20 ${hx} ${hy})`, fill: open ? 'none' : 'currentColor', 'stroke-width': 1.6 }, g);
-        el('circle', { class: 'play-dot', cx: hx, cy: hy, r: 3, fill: '#ff9f1c', stroke: 'none' }, g);
+        el('ellipse', { cx: hx, cy: hy, rx: 6.2, ry: 4.6, transform: `rotate(-20 ${hx} ${hy})`, fill: open ? 'none' : 'currentColor', 'stroke-width': 1.6, 'data-head': k }, g);
+        el('circle', { class: 'play-dot', cx: hx, cy: hy, r: 3, fill: '#ff9f1c', stroke: 'none', 'data-head': k }, g);
+        el('circle', { class: 'sel-ring', 'data-head': k, cx: hx, cy: hy, r: 9, fill: 'none', stroke: '#4aa3ff', 'stroke-width': 1.5 }, g);
         if (e.dur.dots) el('circle', { cx: dotX, cy: h.d % 2 === 0 ? hy - SP / 2 : hy, r: 1.8, stroke: 'none' }, g);
       });
       if (e.dur.kind === 'whole') return;
@@ -341,11 +350,29 @@
   // mark('treble'|'bass', i) puts the orange dot on that voice's note i (i < 0 clears) and scrolls to it.
   function create(config) {
     const scroller = config.scroller;
+    let sel = null;   // { voice, i, head } — drawn in blue, with a ring on the chosen notehead
     injectStyle();
+    function applySelection() {
+      scroller.querySelectorAll('.staff-note.selected').forEach(n => n.classList.remove('selected'));
+      scroller.querySelectorAll('.sel-ring.on').forEach(r => r.classList.remove('on'));
+      if (!sel) return;
+      const n = scroller.querySelector('.staff-note[data-voice="' + sel.voice + '"][data-i="' + sel.i + '"]');
+      if (!n) return;
+      n.classList.add('selected');
+      n.querySelectorAll('.sel-ring').forEach(r => { if (sel.head == null || +r.getAttribute('data-head') === sel.head) r.classList.add('on'); });
+      if (scroller.offsetParent !== null) {
+        const x = +n.getAttribute('data-x');
+        if (x < scroller.scrollLeft + 30 || x > scroller.scrollLeft + scroller.clientWidth - 30) {
+          scroller.scrollTo({ left: Math.max(0, x - scroller.clientWidth / 2), behavior: 'smooth' });
+        }
+      }
+    }
     return {
       render(treble, bass, settings) {
         render(scroller, treble || [], bass || [], { beatsPerBar: settings && settings.beatsPerBar, pickup: settings && settings.pickup, onNoteClick: config.onNoteClick });
+        applySelection();
       },
+      select(next) { sel = next || null; applySelection(); },
       mark(voice, i) {
         scroller.querySelectorAll('.staff-note[data-voice="' + voice + '"].playing').forEach(n => n.classList.remove('playing'));
         if (i < 0) return;
@@ -359,5 +386,28 @@
     };
   }
 
-  global.StaffView = { TICKS_PER_BEAT, toTicks, parseSequence, create };
+  // How full is the bar that holds item `index`? { bar, pickup, total, expected } in beats, or null when there are no bar lines.
+  function barInfo(parsed, index, settings) {
+    const bpbT = Math.round((parseFloat(settings && settings.beatsPerBar) || 0) * TICKS_PER_BEAT);
+    if (!bpbT) return null;
+    const pickupT = Math.min(Math.round((parseFloat(settings && settings.pickup) || 0) * TICKS_PER_BEAT), bpbT - 1);
+    const shift = pickupT > 0 ? bpbT - pickupT : 0;
+    let t = 0;
+    const spans = parsed.map(item => {
+      if (item && item.type === 'section') return null;
+      const dt = toTicks(item && typeof item === 'object' ? (item.beats || 1) : 1);
+      const span = { t, dt };
+      t += dt;
+      return span;
+    });
+    const me = spans[index];
+    if (!me) return null;
+    const bar = Math.floor((me.t + shift) / bpbT);
+    let total = 0;
+    spans.forEach(sp => { if (sp && Math.floor((sp.t + shift) / bpbT) === bar) total += sp.dt; });
+    const isPickup = pickupT > 0 && bar === 0;
+    return { bar: pickupT > 0 ? bar : bar + 1, pickup: isPickup, total: total / TICKS_PER_BEAT, expected: (isPickup ? pickupT : bpbT) / TICKS_PER_BEAT };
+  }
+
+  global.StaffView = { TICKS_PER_BEAT, toTicks, parseSequence, barInfo, create };
 })(window);
