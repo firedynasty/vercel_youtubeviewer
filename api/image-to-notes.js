@@ -28,11 +28,12 @@ Rules:
 - A dot printed right after a notehead makes the note 1.5 times longer ("dots":1). Check every quarter and half note for one.
 - Before answering, check that each bar's values add up to the time signature, and fix your reading if they don't.
 - "lyric": if words are printed under a staff (a vocal line), give each note the syllable printed under it, taken left to right in order. Keep a trailing hyphen on a syllable that continues into the next note ("dark-", "ness"). Leave it "" for a note with no syllable of its own (for example a note held under a slur). A hyphen or dash printed between two syllables is a separator, never a syllable of its own: do not give it a note. Rests have no lyric. If the page has no lyrics, use "" for every note.
+- Grace notes (small notes, often with a slash through the stem) take no time: leave them out entirely so the bar still adds up.
 - Ignore fingering numbers, titles, tempo text and dynamics.`;
 
 // Models the page may request; anything else falls back to the default
 const ALLOWED_MODELS = ['gpt-4o-mini', 'gpt-4.1', 'gpt-5.4-mini', 'gpt-5.4', 'gpt-5.5', 'gpt-6-astra'];
-const DEFAULT_MODEL = process.env.OPENAI_MODEL || 'gpt-5.4';
+const DEFAULT_MODEL = process.env.OPENAI_MODEL || 'gpt-6-astra';
 
 const VALUE_BEATS = { whole: 4, half: 2, quarter: 1, eighth: 0.5, sixteenth: 0.25 };
 const SHARP_ORDER = ['F', 'C', 'G', 'D', 'A', 'E', 'B'];
