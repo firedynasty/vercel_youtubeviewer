@@ -2196,9 +2196,11 @@ https://youtube.com/watch?v=...
                     <button id="ytcVolUpBtn" title="Volume up 10%" style="padding: 5px 12px; border: none; border-radius: 5px; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; background: #37474f;">🔊</button>
                     <button id="halfSpeedBtn" onclick="toggleHalfSpeed(this)" title="Toggle 0.5x / 1x speed" style="padding: 5px 12px; border: none; border-radius: 5px; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; background: linear-gradient(45deg, #7E57C2, #5E35B1);">1x</button>
                     <input type="text" id="ytcPillInput" placeholder="1:00" title="Type a time (m:ss or h:mm:ss) and press Enter to add a pill you can click to jump there" style="width: 62px; padding: 3px 5px; border: 1px solid #555; border-radius: 5px; background: #1a1a1a; color: #ddd; font-size: 11px; font-family: monospace;">
+                    <button id="ytcPillAddBtn" title="Add a pill for the time in the box" style="padding: 5px 12px; border: none; border-radius: 5px; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; background: #1a6b3a;">+ Pill</button>
                     <span id="ytcPillBox" style="display: inline-flex; flex-wrap: wrap; gap: 5px; align-items: center;"></span>
                     <input type="text" id="loopStartTime" class="time-input" placeholder="0:01" value="0:01" title="Loop back to this timestamp. Edit it while a timer runs to change the next rewind." style="width: 68px; padding: 3px 5px; border: 1px solid #555; border-radius: 5px; background: #1a1a1a; color: #ddd; font-size: 11px; font-family: monospace; text-align: left;">
                     <button id="timer3minBtn" class="jump-btn" title="Play 3m, rewind, repeat x8" style="background: linear-gradient(45deg, #ab47bc, #8e24aa); padding: 5px 12px; font-size: 12px; font-weight: 700;">⏱️ 3m</button>
+                    <button id="ytcPlayPauseBtn" title="Play / pause" style="padding: 5px 12px; border: none; border-radius: 5px; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; background: #37474f;">⏯</button>
                 </div>
                 <!-- Previous controls, hidden but kept so existing getElementById wiring keeps working -->
                 <div id="ctdLegacy" style="display: none;">
@@ -2289,6 +2291,27 @@ https://youtube.com/watch?v=...
                 document.getElementById('ytcVolDownBtn').addEventListener('click', function () { bump(-10); });
                 document.getElementById('ytcVolUpBtn').addEventListener('click', function () { bump(10); });
 
+                // play / pause toggle (YouTube, video, audio)
+                var ppBtn = document.getElementById('ytcPlayPauseBtn');
+                function isPlaying() {
+                    if (playerType === 'youtube' && player && typeof player.getPlayerState === 'function') return player.getPlayerState() === 1;
+                    var ap = getActivePlayer();
+                    return !!ap && !ap.paused;
+                }
+                function syncPP() { ppBtn.textContent = isPlaying() ? '\u23F8' : '\u25B6'; }
+                ppBtn.addEventListener('click', function () {
+                    if (playerType === 'youtube') {
+                        if (!player || !playerReady) { showStatus('No media loaded', 'error'); return; }
+                        if (isPlaying()) player.pauseVideo(); else player.playVideo();
+                    } else {
+                        var ap = getActivePlayer();
+                        if (!ap) { showStatus('No media loaded', 'error'); return; }
+                        if (ap.paused) ap.play(); else ap.pause();
+                    }
+                    setTimeout(syncPP, 200);
+                });
+                setInterval(function () { try { syncPP(); } catch (e) {} }, 1000);
+
                 // timestamp pills (per video, localStorage array of seconds)
                 var pills = [];
                 var box = document.getElementById('ytcPillBox');
@@ -2324,8 +2347,7 @@ https://youtube.com/watch?v=...
                     pills = Array.isArray(arr) ? arr.filter(function (n) { return typeof n === 'number' && isFinite(n); }) : [];
                     render();
                 }
-                pillInput.addEventListener('keydown', function (e) {
-                    if (e.key !== 'Enter') return;
+                function addPill() {
                     var t = pillInput.value.trim();
                     // colon required: m:ss or h:mm:ss
                     var sec = /^\d+(?::\d+){1,2}$/.test(t) ? parseTimeToSeconds(t) : null;
@@ -2335,7 +2357,9 @@ https://youtube.com/watch?v=...
                     save();
                     render();
                     pillInput.value = '';
-                });
+                }
+                pillInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') addPill(); });
+                document.getElementById('ytcPillAddBtn').addEventListener('click', addPill);
                 stopKeys(pillInput);
                 load();
                 // reload pills when the video/media changes
