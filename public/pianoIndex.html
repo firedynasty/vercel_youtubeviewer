@@ -411,8 +411,15 @@
 
       <!-- Sequence input -->
       <div class="sequence-container">
+        <div id="trebleLabel" style="display:none; color:#aaa; font-size:13px; margin-bottom:4px;">🎼 Treble (right hand)</div>
         <div class="input-container">
           <textarea class="sequence-input" id="sequenceInput" placeholder="do:D4:1, you:D4:1, hear:E4:1, them:F4:1&#10;next line continues here…">D5:1, G4:0.5, A4:0.5, B4:0.5, C5:0.5, D5:1, G4:1, G4:1, E5:1, C5:0.5, D5:0.5, E5:0.5, F#5:0.5, G5:1, G4:1, G4:1, C5:1, D5:0.5, C5:0.5, B4:0.5, A4:0.5, B4:1, C5:0.5, B4:0.5, A4:0.5, G4:0.5, F#4:1, G4:0.5, A4:0.5, B4:0.5, G4:0.5, B4:1, A4:2, D5:1, G4:0.5, A4:0.5, B4:0.5, C5:0.5, D5:1, G4:1, G4:1, E5:1, C5:0.5, D5:0.5, E5:0.5, F#5:0.5, G5:1, G4:1, G4:1, C5:1, D5:0.5, C5:0.5, B4:0.5, A4:0.5, B4:1, C5:0.5, B4:0.5, A4:0.5, G4:0.5, A4:1, B4:1, A4:0.5, G4:0.5, G4:3, B5:1, G5:0.5, A5:0.5, B5:0.5, G5:0.5, A5:1, D5:0.5, E5:0.5, F#5:0.5, D5:0.5, G5:1, E5:0.5, F#5:0.5, G5:0.5, D5:0.5, C#5:1, B4:0.5, C#5:0.5, A4:1, A4:0.5, B4:0.5, C#5:0.5, D5:0.5, E5:0.5, F#5:0.5, G5:1, F#5:1, E5:1, F#5:1, A4:1, C#5:1, D5:3, D5:1, G4:1, F#4:1, G4:1, E5:1, G4:1, D5:1, C5:1, B4:1, A4:0.5, G4:0.5, F#4:0.5, G4:0.5, A4:1, D4:0.5, E4:0.5, F#4:0.5, G4:0.5, A4:0.5, B4:0.5, C5:1, B4:1, A4:1, B4:0.5, D5:0.5, G4:1, F#4:1, G4:3</textarea>
+        </div>
+        <div id="bassBox" style="display:none; margin-top:8px;">
+          <div style="color:#aaa; font-size:13px; margin-bottom:4px;">🎼 Bass (left hand) — plays together with the box above, both from beat 0</div>
+          <div class="input-container">
+            <textarea class="sequence-input" id="bassInput" placeholder="_:1, E3:0.5, E3:0.5, E3:0.5 …  (use _ rests so it lines up with the treble)"></textarea>
+          </div>
         </div>
         <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
           <label for="volumeSlider" style="color:#aaa; font-size:14px;">Vol</label>
@@ -466,6 +473,7 @@
       <div id="viewBar" class="sequence-container" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px;">
         <button class="play-btn" id="viewKeysBtn" style="font-size:15px;">🎹 Keys</button>
         <button class="play-btn" id="viewStaffBtn" style="font-size:15px;">🎼 Staff</button>
+        <button class="play-btn" id="bassToggleBtn" style="font-size:15px; background:#6b3fa0;" title="Add a second box for the left hand that plays together with the first">➕ Bass hand</button>
         <span id="staffOpts" style="display:none; align-items:center; gap:8px; flex-wrap:wrap;">
           <label for="staffBeats" style="color:#aaa; font-size:14px;">Bar</label>
           <select id="staffBeats">
@@ -716,6 +724,16 @@
     let allTimers = [];
     let activeSources = [];
     let lastParsed = [];
+    let lastBass = [];   // bass-voice parse used by the last Play (empty when the bass box is closed)
+    // Playback and the staff both count time in whole ticks (1/24 beat) so triplets never drift between the two voices
+    const TICKS_PER_BEAT = 24;
+    function toTicks(beats) { return Math.max(1, Math.round(beats * TICKS_PER_BEAT)); }
+    function getBassParsed() {
+      const box = document.getElementById('bassBox');
+      if (!box || box.style.display === 'none') return [];
+      const s = document.getElementById('bassInput').value.trim();
+      return s ? parseNoteSequence(s).filter(it => !(it && it.type === 'section')) : [];
+    }
     let remainingRepeats = 0;
 
     // ---- fade-loop helpers (mirrors bach-player pattern) ----
@@ -813,13 +831,18 @@
       activeSources = [];
       document.querySelectorAll('.note-card.playing').forEach(c => c.classList.remove('playing'));
       if (window.staffMark) window.staffMark(-1);
+      if (window.staffMarkBass) window.staffMarkBass(-1);
       document.getElementById('stopStripBtn').style.display = 'none';
     }
 
-    function startPlaybackFrom(parsed, startIdx) {
+    // Plays the treble list and (if the bass box is open) the bass list from one clock. startTick, when given,
+    // is the moment to start from (so a click on either staff starts both voices together); otherwise the
+    // start of treble note startIdx.
+    function startPlaybackFrom(parsed, startIdx, startTick) {
       stopStripPlayback();
-      if (!parsed.length) return;
-      if (startIdx === 0) {
+      const bass = lastBass;
+      if (!parsed.length && !bass.length) return;
+      if ((startIdx === 0 && startTick == null) || startTick === 0) {
         // instant jump — #noteStrip has scroll-behavior:smooth in CSS, which would
         // otherwise animate this reset and lag behind the first note's audio
         const strip = document.getElementById('noteStrip');
@@ -832,13 +855,26 @@
       const bpm = parseFloat(document.getElementById('bpmInput').value) || 100;
       const msPerBeat = 60000 / bpm;
 
-      let t = 0;
-      parsed.slice(startIdx).forEach((item, offset) => {
-        const i = startIdx + offset;
+      const timeline = list => {
+        let t = 0;
+        return list.map(item => {
+          const beats = item && typeof item === 'object' ? item.beats : 1;
+          const e = { item, beats, tick: t };
+          t += toTicks(beats);
+          return e;
+        });
+      };
+      const endTick = tl => tl.length ? tl[tl.length - 1].tick + toTicks(tl[tl.length - 1].beats) : 0;
+      const tlT = timeline(parsed), tlB = timeline(bass);
+      const from = startTick != null ? startTick : (tlT[startIdx] ? tlT[startIdx].tick : 0);
+      const at = tick => (tick - from) * msPerBeat / TICKS_PER_BEAT;
+
+      tlT.forEach((e, i) => {
+        if (e.tick < from) return;
+        const item = e.item;
         const isSection = item && item.type === 'section';
         const noteStr = isSection ? '_' : (item && typeof item === 'object' ? item.note : item);
-        const beats   = item && typeof item === 'object' ? item.beats : 1;
-        const durSec  = (msPerBeat * beats) / 1000;
+        const durSec = (msPerBeat * e.beats) / 1000;
 
         allTimers.push(setTimeout(() => {
           document.querySelectorAll('.note-card.playing').forEach(c => c.classList.remove('playing'));
@@ -849,8 +885,17 @@
           }
           if (window.staffMark) window.staffMark(i);
           if (!isSection) playNoteByChar(noteStr, durSec);
-        }, t));
-        t += msPerBeat * beats;
+        }, at(e.tick)));
+      });
+
+      tlB.forEach((e, j) => {
+        if (e.tick < from) return;
+        const noteStr = e.item && typeof e.item === 'object' ? e.item.note : e.item;
+        const durSec = (msPerBeat * e.beats) / 1000;
+        allTimers.push(setTimeout(() => {
+          if (window.staffMarkBass) window.staffMarkBass(j);
+          playNoteByChar(noteStr, durSec);
+        }, at(e.tick)));
       });
 
       allTimers.push(setTimeout(() => {
@@ -860,7 +905,7 @@
         } else {
           stopStripPlayback();
         }
-      }, t));
+      }, at(Math.max(endTick(tlT), endTick(tlB)))));
     }
 
     document.getElementById('stopStripBtn').addEventListener('click', stopStripPlayback);
@@ -887,8 +932,9 @@
     // Play button — parse, render strip, start from beginning
     playSequenceBtn.addEventListener("click", function() {
       const sequence = sequenceInput.value.trim();
-      if (!sequence) return;
-      lastParsed = parseNoteSequence(sequence);
+      lastBass = getBassParsed();
+      if (!sequence && !lastBass.length) return;
+      lastParsed = sequence ? parseNoteSequence(sequence) : [];
       renderNoteStrip(lastParsed);
       startPlaybackFrom(lastParsed, 0);
       // set AFTER startPlaybackFrom — it calls stopStripPlayback() which resets remainingRepeats to 0
@@ -994,8 +1040,12 @@
     }  // end parseNoteTokens
 
     // ---- staff view (Keys / Staff toggle) ----
-    // Draws lastParsed as notation: treble staff, plus a bass staff only when a note is below middle C.
-    // No key signature in the sequence format, so every ♯/♭ is written as an accidental (repeats within a bar are dropped).
+    // Draws the treble voice (and the optional bass voice) as notation. Both voices share one set of columns,
+    // one per note onset on a 1/24-beat grid, so bar lines and simultaneous notes line up and a voice that is
+    // out by a beat shows as a bar line that doesn't match. With one voice the staff is treble, plus a bass
+    // staff only when a note is below middle C. With two voices the treble box is always the upper staff and
+    // the bass box the lower. No key signature in the sequence format, so every ♯/♭ is written as an
+    // accidental (repeats within a bar are dropped).
     (function () {
       const NS = 'http://www.w3.org/2000/svg';
       const SP = 10;                       // one staff space in px
@@ -1009,7 +1059,7 @@
       const beatsSel = document.getElementById('staffBeats');
       const pickupIn = document.getElementById('staffPickup');
       const MID_C = 28;                    // diatonic index of C4
-      let staffParsed = [];
+      let staffParsed = [], staffBass = [];
 
       const store = {
         get(k, d) { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } },
@@ -1040,63 +1090,89 @@
         return { kind: best[1], dots: best[2], triplet: !!best[3] };
       }
 
-      function layout(parsed) {
-        const bpb = parseFloat(beatsSel.value) || 0;
-        const pickup = Math.min(Math.max(parseFloat(pickupIn.value) || 0, 0), Math.max(bpb - 0.1, 0));
-        let pos = bpb && pickup ? bpb - pickup : 0;
-        let bar = 0, x = 48, acc = {};
-        const evs = [], bars = [];
+      // One voice's events with integer start ticks (1/24 beat), so triplet sums never drift between voices
+      function buildVoice(parsed, voice, bpbT, shift) {
+        const evs = [], marks = [];
+        let t = 0, acc = {}, accBar = -1;
         parsed.forEach((item, i) => {
-          if (item && item.type === 'section') {
-            const w = 24 + String(item.label).length * 7;
-            evs.push({ i, section: true, label: item.label, x, w });
-            x += w; pos = bpb && pickup ? bpb - pickup : 0; acc = {}; bar++;
-            return;
-          }
+          if (item && item.type === 'section') { marks.push({ tick: t, label: String(item.label) }); return; }
           const noteStr = item && typeof item === 'object' ? item.note : item;
           const beats = item && typeof item === 'object' ? (item.beats || 1) : 1;
-          const lyric = (item && item.lyric) || '';
           const p = noteStr === '_' ? null : pitchOf(noteStr);
-          const ev = { i, beats, lyric, rest: noteStr === '_', p, bar, bi: Math.floor(pos + 0.02), x, dur: classify(beats) };
+          const ev = { voice, i, beats, tick: t, dt: toTicks(beats), lyric: (item && item.lyric) || '', rest: noteStr === '_', p, dur: classify(beats) };
+          ev.bar = bpbT ? Math.floor((t + shift) / bpbT) : 0;
+          ev.bi = Math.floor((t + shift) / TICKS_PER_BEAT);
           if (p) {
+            if (ev.bar !== accBar) { acc = {}; accBar = ev.bar; }
             ev.d = p.oct * 7 + LETTER[p.letter];
             const key = p.letter + p.oct;
             const prev = acc[key] || 0;
             ev.accidental = prev !== p.acc ? (p.acc === 1 ? '♯' : p.acc === -1 ? '♭' : '♮') : '';
             acc[key] = p.acc;
           }
-          const lyricW = lyric ? lyric.length * 6.5 + 8 : 0;
-          const base = Math.max(26 + 14 * Math.min(beats, 4) + (ev.dur.dots ? 6 : 0), lyricW);
-          ev.pad = ev.accidental ? 12 : 0;
-          ev.w = base + ev.pad;
-          ev.cx = x + ev.pad + 10;
+          t += ev.dt;
           evs.push(ev);
-          x += ev.w;
-          pos += beats;
-          if (bpb && pos >= bpb - 0.02) {
-            bars.push(x + 2);
-            x += 10; pos = Math.max(pos - bpb, 0); if (pos < 0.02) pos = 0; bar++; acc = {};
-          }
         });
-        return { evs, bars, width: x + 30 };
+        return { evs, marks, total: t };
       }
 
-      function render(parsed) {
-        staffParsed = parsed;
+      function layout(trebleParsed, bassParsed) {
+        const bpb = parseFloat(beatsSel.value) || 0;
+        const bpbT = Math.round(bpb * TICKS_PER_BEAT);
+        const pickupT = bpbT ? Math.min(Math.round((parseFloat(pickupIn.value) || 0) * TICKS_PER_BEAT), bpbT - 1) : 0;
+        const shift = pickupT > 0 ? bpbT - pickupT : 0;
+        const v1 = buildVoice(trebleParsed, 'treble', bpbT, shift);
+        const v2 = buildVoice(bassParsed, 'bass', bpbT, shift);
+        const total = Math.max(v1.total, v2.total);
+
+        const colMap = new Map();
+        const colAt = tick => { let c = colMap.get(tick); if (!c) { c = { tick, evs: [], labels: [] }; colMap.set(tick, c); } return c; };
+        [v1, v2].forEach(v => {
+          v.evs.forEach(e => { const c = colAt(e.tick); c.evs.push(e); e.col = c; });
+          v.marks.forEach(m => colAt(m.tick).labels.push(m.label));
+        });
+        const cols = [...colMap.values()].sort((a, b) => a.tick - b.tick);
+        cols.forEach((c, k) => {
+          const next = k + 1 < cols.length ? cols[k + 1].tick : c.tick + Math.max(0, ...c.evs.map(e => e.dt));
+          const dBeats = (next - c.tick) / TICKS_PER_BEAT;
+          c.pad = c.evs.some(e => e.accidental) ? 12 : 0;
+          const lyricW = Math.max(0, ...c.evs.map(e => e.lyric ? e.lyric.length * 6.5 + 8 : 0));
+          c.labW = c.labels.reduce((s, l) => s + 24 + l.length * 7, 0);
+          c.w = c.evs.length ? Math.max(26 + 14 * Math.min(dBeats, 4) + (c.evs.some(e => e.dur.dots) ? 6 : 0), lyricW) + c.pad : 0;
+        });
+
+        let x = 48, nextBar = bpbT ? (pickupT || bpbT) : Infinity;
+        const bars = [];
+        cols.forEach(c => {
+          while (nextBar <= c.tick) { bars.push(x + 2); x += 10; nextBar += bpbT; }
+          c.labX = x;
+          c.x = x + c.labW;
+          c.cx = c.x + c.pad + 10;
+          x = c.x + c.w;
+        });
+        while (bpbT && nextBar <= total) { bars.push(x + 2); x += 10; nextBar += bpbT; }
+        return { v1, v2, cols, bars, width: x + 30, twoVoice: v2.evs.length > 0 };
+      }
+
+      function render(trebleParsed, bassParsed) {
+        staffParsed = trebleParsed; staffBass = bassParsed;
         scroller.innerHTML = '';
-        if (!parsed.length) {
+        if (!trebleParsed.length && !bassParsed.length) {
           scroller.innerHTML = '<div style="color:#555;font-size:13px;padding:16px;">Enter a sequence — the staff appears here.</div>';
           return;
         }
-        const L = layout(parsed);
-        const notes = L.evs.filter(e => e.p);
-        const needBass = notes.some(e => e.d < MID_C);
-        const maxD = Math.max(38, ...notes.filter(e => e.d >= MID_C).map(e => e.d));
-        const minD = Math.min(18, ...notes.map(e => e.d));
-        const hasLyrics = L.evs.some(e => e.lyric);
+        const L = layout(trebleParsed, bassParsed);
+        const twoVoice = L.twoVoice;
+        const all = [...L.v1.evs, ...L.v2.evs];
+        const notes = all.filter(e => e.p);
+        const needBass = twoVoice || notes.some(e => e.d < MID_C);
+        const staffOf = e => twoVoice ? (e.voice === 'bass' ? 'bass' : 'treble') : (needBass && e.d < MID_C ? 'bass' : 'treble');
+        const maxD = Math.max(38, ...notes.filter(e => staffOf(e) === 'treble').map(e => e.d));
+        const minD = Math.min(18, ...notes.filter(e => staffOf(e) === 'bass').map(e => e.d));
+        const hasLyrics = all.some(e => e.lyric);
         const T = 4 * SP + Math.max(0, (maxD - 38) / 2) * SP;
         const trebleBottom = T + 4 * SP;
-        const B0 = T + 10 * SP;
+        const B0 = T + (twoVoice ? 12 : 10) * SP;
         const bottomLine = needBass ? B0 + 4 * SP : trebleBottom;
         const lowest = bottomLine + (needBass ? Math.max(0, (18 - minD) / 2) * SP : 0) + 4 * SP;
         const lyricY = lowest + SP;
@@ -1107,9 +1183,8 @@
         // d → y on each staff (treble bottom line E4 = 30, bass bottom line G2 = 18)
         const yTreble = d => trebleBottom - (d - 30) * SP / 2;
         const yBass = d => B0 + 4 * SP - (d - 18) * SP / 2;
-        const staffOf = d => (needBass && d < MID_C) ? 'bass' : 'treble';
-        const yOf = d => staffOf(d) === 'bass' ? yBass(d) : yTreble(d);
-        const midOf = d => staffOf(d) === 'bass' ? 22 : 34;
+        const yOf = e => staffOf(e) === 'bass' ? yBass(e.d) : yTreble(e.d);
+        const midOf = e => staffOf(e) === 'bass' ? 22 : 34;
 
         const lines = el('g', { stroke: '#777', 'stroke-width': 1 }, svg);
         for (let k = 0; k < 5; k++) {
@@ -1126,67 +1201,78 @@
           el('line', { x1: bx, x2: bx, y1: T, y2: needBass ? B0 + 4 * SP : trebleBottom, stroke: '#777', 'stroke-width': 1 }, svg);
         });
 
-        // beam groups: consecutive flagged notes inside one beat of one bar
+        // beam groups, per voice: consecutive flagged notes inside one beat of one bar
         const flagged = e => e.p && (e.dur.kind === 'eighth' || e.dur.kind === 'sixteenth');
         const groups = [];
-        let cur = null;
-        L.evs.forEach(e => {
-          if (flagged(e) && cur && cur[0].bar === e.bar && cur[0].bi === e.bi) cur.push(e);
-          else if (flagged(e)) { cur = [e]; groups.push(cur); }
-          else cur = null;
+        [L.v1.evs, L.v2.evs].forEach(list => {
+          let cur = null;
+          list.forEach(e => {
+            if (flagged(e) && cur && cur[0].bar === e.bar && cur[0].bi === e.bi) cur.push(e);
+            else if (flagged(e)) { cur = [e]; groups.push(cur); }
+            else cur = null;
+          });
         });
         const groupOf = new Map();
         groups.forEach(g => g.forEach(e => groupOf.set(e, g)));
         groups.forEach(g => {
-          const avg = g.reduce((s, e) => s + (e.d - midOf(e.d)), 0) / g.length;
+          const avg = g.reduce((s, e) => s + (e.d - midOf(e)), 0) / g.length;
           g.down = avg >= 0;
         });
 
         const neutral = el('g', { stroke: '#ddd', fill: '#ddd' }, svg);
 
-        L.evs.forEach(e => {
-          if (e.section) {
-            el('line', { x1: e.x + 4, x2: e.x + 4, y1: T - 2, y2: bottomLine + 2, stroke: '#4caf50', 'stroke-width': 2 }, svg);
-            text(e.label, { x: e.x + 10, y: T - 10, 'font-size': 12, fill: '#4caf50', 'font-family': 'sans-serif' }, svg);
-            return;
-          }
-          const g = el('g', { class: 'staff-note', id: 'sn-' + e.i, 'data-x': e.cx, stroke: 'currentColor', fill: 'currentColor' }, svg);
+        L.cols.forEach(c => {
+          let lx = c.labX;
+          c.labels.forEach(label => {
+            el('line', { x1: lx + 4, x2: lx + 4, y1: T - 2, y2: bottomLine + 2, stroke: '#4caf50', 'stroke-width': 2 }, svg);
+            text(label, { x: lx + 10, y: T - 10, 'font-size': 12, fill: '#4caf50', 'font-family': 'sans-serif' }, svg);
+            lx += 24 + label.length * 7;
+          });
+        });
+
+        all.forEach(e => {
+          const isBass = e.voice === 'bass';
+          const g = el('g', { class: 'staff-note ' + (isBass ? 'b' : 't'), id: (isBass ? 'sb-' : 'sn-') + e.i, 'data-x': e.col.cx, stroke: 'currentColor', fill: 'currentColor' }, svg);
           g.style.cursor = 'pointer';
-          el('rect', { x: e.x, y: 0, width: e.w, height: H, fill: 'transparent', stroke: 'none' }, g);
+          el('rect', { x: e.col.x, y: 0, width: Math.max(e.col.w, 20), height: H, fill: 'transparent', stroke: 'none' }, g);
           g.addEventListener('click', () => {
             lastParsed = staffParsed;
+            lastBass = staffBass;
             renderNoteStrip(lastParsed);
-            startPlaybackFrom(lastParsed, e.i);
+            // both voices start together from this note's moment, whichever staff it was clicked on
+            startPlaybackFrom(lastParsed, isBass ? 0 : e.i, e.tick);
           });
-          if (e.lyric) text(e.lyric, { x: e.cx, y: lyricY, 'text-anchor': 'middle', 'font-size': 12, fill: 'currentColor', stroke: 'none', 'font-family': 'sans-serif' }, g);
+          if (e.lyric) text(e.lyric, { x: e.col.cx, y: lyricY, 'text-anchor': 'middle', 'font-size': 12, fill: 'currentColor', stroke: 'none', 'font-family': 'sans-serif' }, g);
 
           if (!e.p) { // rest (or unreadable token — leave blank)
             if (!e.rest) return;
-            const y34 = yTreble(34), k = e.dur.kind;
-            el('circle', { class: 'play-dot', cx: e.cx, cy: y34, r: 3.4, fill: '#ff9f1c', stroke: 'none' }, g);
-            if (k === 'whole') el('rect', { x: e.cx - 6, y: yTreble(36), width: 12, height: 5, stroke: 'none' }, g);
-            else if (k === 'half') el('rect', { x: e.cx - 6, y: y34 - 5, width: 12, height: 5, stroke: 'none' }, g);
-            else if (k === 'quarter') el('path', { d: `M${e.cx - 2},${y34 - 13} l6,7 l-6,7 l6,7 c-6,-2 -7,3 -2,7`, fill: 'none', 'stroke-width': 2.2 }, g);
+            const bassRest = staffOf(e) === 'bass';
+            const mid = bassRest ? yBass(22) : yTreble(34), k = e.dur.kind, cx = e.col.cx;
+            el('circle', { class: 'play-dot', cx, cy: mid, r: 3.4, fill: '#ff9f1c', stroke: 'none' }, g);
+            if (k === 'whole') el('rect', { x: cx - 6, y: mid - SP, width: 12, height: 5, stroke: 'none' }, g);
+            else if (k === 'half') el('rect', { x: cx - 6, y: mid - 5, width: 12, height: 5, stroke: 'none' }, g);
+            else if (k === 'quarter') el('path', { d: `M${cx - 2},${mid - 13} l6,7 l-6,7 l6,7 c-6,-2 -7,3 -2,7`, fill: 'none', 'stroke-width': 2.2 }, g);
             else { // eighth / sixteenth rest: dot(s) with a slanted stem
               const n = k === 'eighth' ? 1 : 2;
               for (let r = 0; r < n; r++) {
-                el('circle', { cx: e.cx - 3, cy: y34 - 8 + r * 7, r: 2.2, stroke: 'none' }, g);
-                el('path', { d: `M${e.cx - 3},${y34 - 8 + r * 7} q4,0 6,-3`, fill: 'none', 'stroke-width': 1.5 }, g);
+                el('circle', { cx: cx - 3, cy: mid - 8 + r * 7, r: 2.2, stroke: 'none' }, g);
+                el('path', { d: `M${cx - 3},${mid - 8 + r * 7} q4,0 6,-3`, fill: 'none', 'stroke-width': 1.5 }, g);
               }
-              el('line', { x1: e.cx + 3, y1: y34 - 11, x2: e.cx - 2 - (n - 1) * 1, y2: y34 + 7 + (n - 1) * 7, 'stroke-width': 1.6 }, g);
+              el('line', { x1: cx + 3, y1: mid - 11, x2: cx - 2 - (n - 1) * 1, y2: mid + 7 + (n - 1) * 7, 'stroke-width': 1.6 }, g);
             }
-            if (e.dur.dots) el('circle', { cx: e.cx + 10, cy: y34 - SP / 2, r: 1.8, stroke: 'none' }, g);
+            if (e.dur.dots) el('circle', { cx: cx + 10, cy: mid - SP / 2, r: 1.8, stroke: 'none' }, g);
             return;
           }
 
-          const y = yOf(e.d), cx = e.cx;
+          const y = yOf(e), cx = e.col.cx;
           // ledger lines
           const ledger = ly => el('line', { x1: cx - 10, x2: cx + 10, y1: ly, y2: ly, stroke: '#999', 'stroke-width': 1 }, g);
-          if (staffOf(e.d) === 'treble') {
+          if (staffOf(e) === 'treble') {
             for (let L2 = 28; L2 >= e.d; L2 -= 2) ledger(yTreble(L2));
             for (let L2 = 40; L2 <= e.d; L2 += 2) ledger(yTreble(L2));
           } else {
             for (let L2 = 16; L2 >= e.d; L2 -= 2) ledger(yBass(L2));
+            for (let L2 = 28; L2 <= e.d; L2 += 2) ledger(yBass(L2));
           }
           if (e.accidental) text(e.accidental, { x: cx - 19, y: y + 5, 'font-size': 17, 'font-family': fontStack, stroke: 'none' }, g);
           const open = e.dur.kind === 'half' || e.dur.kind === 'whole';
@@ -1196,11 +1282,11 @@
           if (e.dur.kind === 'whole') return;
 
           const grp = groupOf.get(e);
-          const down = grp ? grp.down : e.d >= midOf(e.d);
+          const down = grp ? grp.down : e.d >= midOf(e);
           const sx = cx + (down ? -5.8 : 5.8);
           let tip;
           if (grp) {
-            const ys = grp.map(m => yOf(m.d));
+            const ys = grp.map(yOf);
             tip = down ? Math.max(...ys) + 3.5 * SP : Math.min(...ys) - 3.5 * SP;
           } else {
             tip = y + (down ? 3.5 : -3.5) * SP;
@@ -1243,13 +1329,13 @@
         scroller.appendChild(svg);
       }
 
-      function currentParsed() {
+      function currentTreble() {
         const s = sequenceInput.value.trim();
         return s ? parseNoteSequence(s) : [];
       }
       function refresh() {
         if (view.style.display === 'none') return;
-        render(currentParsed());
+        render(currentTreble(), getBassParsed());
       }
 
       function setMode(m) {
@@ -1270,21 +1356,41 @@
       beatsSel.addEventListener('change', () => { store.set('staff_beats', beatsSel.value); refresh(); });
       pickupIn.addEventListener('input', () => { store.set('staff_pickup', pickupIn.value); refresh(); });
       let typing = null;
-      sequenceInput.addEventListener('input', () => { clearTimeout(typing); typing = setTimeout(refresh, 250); });
+      const retype = () => { clearTimeout(typing); typing = setTimeout(refresh, 250); };
+      sequenceInput.addEventListener('input', retype);
+      document.getElementById('bassInput').addEventListener('input', retype);
 
-      window.renderStaff = parsed => { if (view.style.display !== 'none') render(parsed); };
+      window.renderStaff = parsed => { if (view.style.display !== 'none') render(parsed, getBassParsed()); };
       window.staffRefresh = refresh;
-      window.staffMark = i => {
-        view.querySelectorAll('.staff-note.playing').forEach(n => n.classList.remove('playing'));
-        const n = i >= 0 && document.getElementById('sn-' + i);
+      function mark(cls, prefix, i) {
+        view.querySelectorAll('.staff-note.' + cls + '.playing').forEach(n => n.classList.remove('playing'));
+        const n = i >= 0 && document.getElementById(prefix + i);
         if (!n) return;
         n.classList.add('playing');
         if (view.style.display !== 'none') {
           scroller.scrollTo({ left: Math.max(0, +n.getAttribute('data-x') - scroller.clientWidth / 2), behavior: 'smooth' });
         }
-      };
+      }
+      window.staffMark = i => mark('t', 'sn-', i);
+      window.staffMarkBass = i => mark('b', 'sb-', i);
 
       setMode(store.get('piano_view', 'staff') === 'keys' ? 'keys' : 'staff'); // staff unless Keys was chosen last
+    })();
+
+    // Bass hand: a second textarea that plays (and is drawn) together with the first. Closed = ignored.
+    (function () {
+      const btn = document.getElementById('bassToggleBtn');
+      function setOpen(open) {
+        document.getElementById('bassBox').style.display = open ? 'block' : 'none';
+        document.getElementById('trebleLabel').style.display = open ? 'block' : 'none';
+        btn.classList.toggle('view-on', open);
+        try { localStorage.setItem('piano_bass_open', open ? '1' : '0'); } catch (e) {}
+        if (window.staffRefresh) window.staffRefresh();
+      }
+      btn.addEventListener('click', () => setOpen(document.getElementById('bassBox').style.display === 'none'));
+      let saved = null;
+      try { saved = localStorage.getItem('piano_bass_open'); } catch (e) {}
+      if (saved === '1') setOpen(true);
     })();
 
     // Image picker
