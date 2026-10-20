@@ -478,6 +478,7 @@ B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+A3:0.5, B2+
           <input type="number" id="repeatInput" value="1" min="1" max="99" style="display:none;">
           <button class="play-btn" id="stopStripBtn" style="display:none; background:#b3261e;">&#9632; Stop</button>
           <button class="play-btn" onclick="openDbxModal()" style="font-size:15px; background:linear-gradient(45deg,#0061ff,#004bb5);">📂 Dropbox</button>
+          <button class="play-btn" id="autoplayBtn" style="font-size:15px; background:#444;" title="On: clicking a staff note starts playing from it. Off: it only plays that one note.">▶ Autoplay: off</button>
         </div>
       </div>
 
@@ -1185,6 +1186,7 @@ B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+A3:0.5, B2+
       const beatsSel = document.getElementById('staffBeats');
       const pickupIn = document.getElementById('staffPickup');
       let staffParsed = [], staffBass = [];
+      let autoplay = false, markTimer = null;   // autoplay: clicking a staff note starts the piece from it (off by default)
 
       const store = {
         get(k, d) { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } },
@@ -1195,6 +1197,18 @@ B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+A3:0.5, B2+
         scroller,
         // both voices start together from this note's moment, whichever staff it was clicked on
         onNoteClick({ voice, i, tick }) {
+          if (!autoplay) {
+            // autoplay off: just sound the clicked note (and mark it), don't start the piece
+            const item = (voice === 'bass' ? staffBass : staffParsed)[i];
+            const noteStr = item && typeof item === 'object' ? item.note : item;
+            const beats = item && typeof item === 'object' ? (item.beats || 1) : 1;
+            const bpm = parseFloat(document.getElementById('bpmInput').value) || 100;
+            if (noteStr) playNoteByChar(noteStr, Math.min(beats * 60 / bpm, 1.5), voice === 'bass' ? 0.7 : 1);
+            staff.mark(voice, i);
+            clearTimeout(markTimer);
+            markTimer = setTimeout(() => staff.mark(voice, -1), 700);
+            return;
+          }
           lastParsed = staffParsed;
           lastBass = staffBass;
           renderNoteStrip(lastParsed);
@@ -1254,6 +1268,16 @@ B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+A3:0.5, B2+
         e.preventDefault();   // no page scroll, and a focused button isn't "clicked" by the space bar
         staff.scrollBar(e.shiftKey ? -1 : 1);
       });
+      const autoplayBtn = document.getElementById('autoplayBtn');
+      function setAutoplay(on) {
+        autoplay = on;
+        autoplayBtn.textContent = on ? '▶ Autoplay: on' : '▶ Autoplay: off';
+        autoplayBtn.style.background = on ? '#0e6b3a' : '#444';
+        store.set('piano_autoplay', on ? '1' : '0');
+      }
+      autoplayBtn.addEventListener('click', () => setAutoplay(!autoplay));
+      setAutoplay(store.get('piano_autoplay', '0') === '1');
+
       window.staffMark = i => staff.mark('treble', i);
       window.staffMarkBass = i => staff.mark('bass', i);
 
