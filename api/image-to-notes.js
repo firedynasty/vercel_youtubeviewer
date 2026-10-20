@@ -222,7 +222,9 @@ export default async function handler(req, res) {
     const parsed = JSON.parse(data.choices?.[0]?.message?.content || '{}');
     const fifths = Number.isInteger(parsed.keySignature) ? parsed.keySignature : 0;
     const staves = Array.isArray(parsed.staves) ? parsed.staves : [];
-    const chosen = staves.find((s) => s && s.clef === wantClef && Array.isArray(s.measures));
+    // The model lists one staff per system, so join every staff of the wanted clef, in order, into one run of bars
+    const matching = staves.filter((s) => s && s.clef === wantClef && Array.isArray(s.measures));
+    const chosen = matching.length ? { ...matching[0], measures: matching.flatMap((s) => s.measures) } : null;
     if (!chosen) {
       return res.status(422).json({ error: `No ${wantClef}-clef staff found in the model's reply`, raw: parsed });
     }

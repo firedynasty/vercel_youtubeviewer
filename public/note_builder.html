@@ -276,9 +276,9 @@
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:13px;color:var(--muted);">
       <button class="action primary" id="readNotesBtn" title="Send the loaded image (or PDF page) to OpenAI and fill Output with the notes it reads">Read notes (AI)</button>
       <select id="readStaff" style="padding:6px;border-radius:8px;border:1px solid var(--border);font-size:13px;">
-        <option value="treble">Treble staff</option>
-        <option value="bass">Bass staff</option>
         <option value="both">Both hands (treble, then bass)</option>
+        <option value="treble">Treble only (right hand)</option>
+        <option value="bass">Bass only (left hand)</option>
       </select>
       <select id="readModel" title="OpenAI model used to read the page" style="padding:6px;border-radius:8px;border:1px solid var(--border);font-size:13px;">
         <option value="">Default model (gpt-6-astra)</option>
@@ -932,6 +932,13 @@ function readSummary(data){
   return data.bars + ' bars (' + data.model + ') · key: ' + keyTxt + (data.timeSignature ? ' · ' + data.timeSignature : '') + (data.lyricCount ? ' · lyrics on ' + data.lyricCount + ' of ' + data.noteCount + ' notes' : '') +
     (data.warnings && data.warnings.length ? ' ⚠ ' + data.warnings.join('; ') + '.' : '');
 }
+
+// The read mode (both hands / treble only / bass only) is remembered between visits; "both hands" is the default
+(function(){
+  const sel = document.getElementById('readStaff');
+  try { const saved = localStorage.getItem('notes_read_staff'); if(saved && [...sel.options].some(o => o.value === saved)) sel.value = saved; } catch(e) {}
+  sel.addEventListener('change', () => { try { localStorage.setItem('notes_read_staff', sel.value); } catch(e) {} });
+})();
 
 document.getElementById('readNotesBtn').addEventListener('click', async () => {
   const btn = document.getElementById('readNotesBtn');
