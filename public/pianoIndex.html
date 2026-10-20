@@ -527,7 +527,17 @@ B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+A3:0.5, B2+
       </div>
       <div class="sequence-container" style="padding:0;"><div id="staffView"><div id="staffScroll"></div></div></div>
 
-      <div class="keys-wrap">
+      <div class="sequence-container" style="padding:0;">
+        <div id="noteLadder" style="display:none; background:#111; border:1px solid #2a2a2a; border-radius:8px; margin:10px 0; padding:10px 12px;">
+          <div style="display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;">
+            <span style="color:#aaa; font-size:13px;">Press a key (or click a note) — it lights up here</span>
+            <span id="ladderReadout" style="font-family:monospace; color:#c4b5fd; font-size:15px; font-weight:700; min-height:20px;"></span>
+          </div>
+          <svg id="ladderSvg" viewBox="-30 0 530 330" xmlns="http://www.w3.org/2000/svg" style="width:100%; max-width:560px; display:block;"></svg>
+        </div>
+      </div>
+
+      <div class="keys-wrap" style="display:none;">
         <div class="keys" id="keysRow0"></div>
         <div class="keys" id="keysRow1"></div>
         <div class="keys" id="keysRow2"></div>
@@ -688,12 +698,13 @@ B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+A3:0.5, B2+
       source.stop(fadeStart + 1.0);
     }
 
-    // Physical keyboard letters → note names (treble row C4–E5)
+    // Physical keyboard letters → natural notes only (sharps and flats are mouse-only):
+    //   B N M = G3 A3 B3,  A S D F G H J K L ; = C4 D4 E4 F4 G4 A4 B4 C5 D5 E5,  Q W E R = F5 G5 A5 B5
     const keyToNote = {
-      'A': 'C4', 'W': 'C#4', 'S': 'D4', 'E': 'D#4', 'D': 'E4',
-      'F': 'F4', 'T': 'F#4', 'G': 'G4', 'Y': 'G#4', 'H': 'A4',
-      'U': 'A#4', 'J': 'B4', 'K': 'C5', 'O': 'C#5', 'L': 'D5',
-      'P': 'D#5', ';': 'E5'
+      'B': 'G3', 'N': 'A3', 'M': 'B3',
+      'A': 'C4', 'S': 'D4', 'D': 'E4', 'F': 'F4', 'G': 'G4', 'H': 'A4', 'J': 'B4',
+      'K': 'C5', 'L': 'D5', ';': 'E5',
+      'Q': 'F5', 'W': 'G5', 'E': 'A5', 'R': 'B5'
     };
 
     // Resolve a typed note string (e.g. "D", "C#", "Eb", "G3", "A#2") → canonical key in NOTE_SOURCES
@@ -750,16 +761,76 @@ B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+A3:0.5, B2+
     buildPianoRow('keysRow1', row1Notes);
     buildPianoRow('keysRow2', row2Notes);
 
+    // ---- Note ladder: the Note Builder staff layout, with the computer key (and its keyCode) beside each note ----
+    (function () {
+      const NS = 'http://www.w3.org/2000/svg';
+      const svg = document.getElementById('ladderSvg');
+      const readout = document.getElementById('ladderReadout');
+      const NAMES = ['B5','A5','G5','F5','E5','D5','C5','B4','A4','G4','F4','E4','D4','C4','B3','A3','G3'];   // top to bottom
+      const STAFF_LINES = ['F5','D5','B4','G4','E4'];
+      const LEDGERS = ['G5','A5','B5','D4','C4','B3','A3','G3'];
+      const X_LEFT = 75, X_RIGHT = 430, X_NOTE = 190, TOP = 20, STEP = 18;
+      // note -> the computer key that plays it, and that key's keyCode (what keydown reports)
+      const keyOf = {};
+      Object.keys(keyToNote).forEach(k => { keyOf[keyToNote[k]] = { label: k, code: k === ';' ? 186 : k.charCodeAt(0) }; });
+      const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+      const rows = {};   // note name -> { band, dot, timer }
+
+      const yOf = name => TOP + NAMES.indexOf(name) * STEP;
+      const clef = el('text', { x: 30, y: yOf('A4') + 2, 'font-size': 95, 'font-family': 'Georgia, serif', fill: '#ddd' }, svg);
+      clef.textContent = '𝄞';
+      NAMES.forEach(name => {
+        const y = yOf(name);
+        const band = el('rect', { x: X_LEFT - 2, y: y - 9, width: X_RIGHT - X_LEFT + 4, height: 18, fill: 'rgba(139,92,246,0.32)', opacity: 0 }, svg);
+        if (LEDGERS.includes(name)) el('line', { x1: X_NOTE - 22, y1: y, x2: X_NOTE + 22, y2: y, stroke: '#666', 'stroke-width': 1.5 }, svg);
+        if (STAFF_LINES.includes(name)) el('line', { x1: X_LEFT, y1: y, x2: X_RIGHT, y2: y, stroke: '#bbb', 'stroke-width': 1.6 }, svg);
+        const label = el('text', { x: X_LEFT - 45, y: y + 4, 'font-size': 12, fill: '#aaa', 'font-family': 'monospace' }, svg);
+        label.textContent = name;
+        const k = keyOf[name];
+        if (k) {
+          const hint = el('text', { x: X_LEFT - 98, y: y + 4, 'font-size': 12, fill: '#a78bfa', 'font-family': 'monospace', 'font-weight': '700' }, svg);
+          hint.textContent = k.label;
+          const code = el('text', { x: X_LEFT - 84, y: y + 4, 'font-size': 9, fill: '#8a8a8e', 'font-family': 'monospace' }, svg);
+          code.textContent = k.code;
+        }
+        const dot = el('ellipse', { cx: X_NOTE, cy: y, rx: 9, ry: 6.5, fill: '#8b5cf6', opacity: 0 }, svg);
+        const hit = el('rect', { x: X_LEFT - 2, y: y - 9, width: X_RIGHT - X_LEFT + 4, height: 18, fill: 'transparent', style: 'cursor:pointer' }, svg);
+        hit.addEventListener('click', () => triggerNote(name));
+        rows[name] = { band, dot, timer: null };
+      });
+
+      // Called for every note that sounds: a key press, a click, or the sequence playing
+      window.ladderShow = function (noteName) {
+        const m = /^([A-G])(#?)(\d)$/.exec(noteName);
+        if (!m) return;
+        const natural = m[1] + m[3];            // a sharp lights its natural's row
+        const row = rows[natural];
+        const lk = window.__lastKey, k = keyOf[noteName];
+        readout.textContent = lk ? 'key ' + lk.label + ' (' + lk.code + ') → ' + noteName : noteName + (k ? '  (key ' + k.label + ', ' + k.code + ')' : '');
+        if (!row) return;
+        clearTimeout(row.timer);
+        row.band.setAttribute('opacity', 1);
+        row.dot.setAttribute('opacity', 1);
+        row.timer = setTimeout(() => { row.band.setAttribute('opacity', 0); row.dot.setAttribute('opacity', 0); }, 600);
+      };
+    })();
+
     // Live keyboard → treble row (skip when typing in inputs)
     window.addEventListener('keydown', function(e) {
       if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;   // leave browser shortcuts (Cmd+N, Cmd+M, ...) alone
       const n = keyToNote[e.key.toUpperCase()] || keyToNote[e.key];
-      if (n) triggerNote(n);
+      if (n) {
+        window.__lastKey = { label: e.key === ';' ? ';' : e.key.toUpperCase(), code: e.keyCode };
+        triggerNote(n);
+        window.__lastKey = null;
+      }
     });
 
     function triggerNote(noteName, durationSeconds, level) {
       const key = document.querySelector(`.key[data-note="${noteName}"]`);
       if (key) key.classList.add('playing');
+      if (window.ladderShow) window.ladderShow(noteName);
       playBuffer(noteName, durationSeconds, level);
     }
 
@@ -1144,19 +1215,24 @@ B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+A3:0.5, B2+
         draw(currentTreble(), getBassParsed());
       }
 
-      function setMode(m) {
-        const staff = m === 'staff';
-        view.style.display = staff ? 'block' : 'none';
-        document.querySelector('.keys-wrap').style.display = staff ? 'none' : '';
-        document.getElementById('staffOpts').style.display = staff ? 'flex' : 'none';
-        document.getElementById('viewKeysBtn').classList.toggle('view-on', !staff);
-        document.getElementById('viewStaffBtn').classList.toggle('view-on', staff);
-        store.set('piano_view', m);
-        if (staff) refresh();
+      // The staff and the keyboard are two separate sections, staff on top and keys underneath. Both are shown
+      // by default; each button shows or hides its own section (and the choice is remembered).
+      function setShown(name, on) {
+        if (name === 'staff') {
+          view.style.display = on ? 'block' : 'none';
+          document.getElementById('staffOpts').style.display = on ? 'flex' : 'none';
+          document.getElementById('viewStaffBtn').classList.toggle('view-on', on);
+          store.set('piano_staff_on', on ? '1' : '0');
+          if (on) refresh();
+        } else {
+          document.getElementById('noteLadder').style.display = on ? 'block' : 'none';
+          document.getElementById('viewKeysBtn').classList.toggle('view-on', on);
+          store.set('piano_keys_on', on ? '1' : '0');
+        }
       }
 
-      document.getElementById('viewKeysBtn').addEventListener('click', () => setMode('keys'));
-      document.getElementById('viewStaffBtn').addEventListener('click', () => setMode('staff'));
+      document.getElementById('viewKeysBtn').addEventListener('click', () => setShown('keys', document.getElementById('noteLadder').style.display === 'none'));
+      document.getElementById('viewStaffBtn').addEventListener('click', () => setShown('staff', view.style.display === 'none'));
       beatsSel.value = store.get('staff_beats2', 'auto');   // auto: bar lines follow the lines of the text
       pickupIn.value = store.get('staff_pickup2', '0');   // only used when the text isn't one bar per line
       beatsSel.addEventListener('change', () => { store.set('staff_beats2', beatsSel.value); refresh(); });
@@ -1171,7 +1247,8 @@ B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+B3:0.5, B2+A3:0.5, B2+
       window.staffMark = i => staff.mark('treble', i);
       window.staffMarkBass = i => staff.mark('bass', i);
 
-      setMode(store.get('piano_view', 'staff') === 'keys' ? 'keys' : 'staff'); // staff unless Keys was chosen last
+      setShown('keys', store.get('piano_keys_on', '1') !== '0');
+      setShown('staff', store.get('piano_staff_on', '1') !== '0');
     })();
 
     // Bass hand: a second textarea that plays (and is drawn) together with the first. Closed = ignored.
