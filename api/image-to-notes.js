@@ -49,6 +49,7 @@ function keySignatureMap(fifths) {
 
 // Beats are computed in code (quarter = 1) rather than trusted from the model
 function beatsOf(ev) {
+  if (typeof ev.beatsOverride === 'number') return ev.beatsOverride;
   const base = VALUE_BEATS[ev.value];
   if (!base) return null;
   let beats = base * (ev.dots === 1 ? 1.5 : 1);
@@ -71,6 +72,10 @@ const barTotal = (bar) => bar.reduce((t, ev) => t + (beatsOf(ev) || 0), 0);
 // Models often forget the triplet flag on some groups. If a bar doesn't add up but does once its
 // plain eighth notes are treated as triplets, take that reading; otherwise leave the bar as read.
 function repairBar(bar, expected) {
+  // A bar holding only a "whole rest" is a whole-bar rest: it lasts the bar, which is 3 beats in 3/4, not 4
+  if (expected !== null && bar.length === 1 && bar[0].type === 'rest' && bar[0].value === 'whole' && !bar[0].dots && !bar[0].triplet) {
+    return [{ ...bar[0], beatsOverride: expected }];
+  }
   if (expected === null || Math.abs(barTotal(bar) - expected) < 0.02) return bar;
   const fits = (b) => Math.abs(barTotal(b) - expected) < 0.02;
   const tripled = bar.map((ev) => (ev.type !== 'rest' && ev.value === 'eighth' && !ev.dots && !ev.triplet ? { ...ev, triplet: true } : ev));
@@ -96,6 +101,7 @@ function staffToSequence(staff, fifths, timeSignature) {
   const keyMap = keySignatureMap(fifths);
   const expected = beatsPerBar(timeSignature);
   const tokens = [];
+  const barLines = []; // the tokens of each bar, so the text can put one bar on each line
   const lyrics = []; // one per token, aligned with tokens (rests and unsung notes get "")
   const warnings = [];
   for (let b = 0; b < staff.measures.length; b++) {
@@ -108,6 +114,7 @@ function staffToSequence(staff, fifths, timeSignature) {
       warnings.push(`bar ${b + 1} adds up to ${total} beats, expected ${expected}`);
     }
     const barAcc = {}; // letter+octave -> accidental, lasts until the barline
+    const barStart = tokens.length;
     for (const ev of bar) {
       const beats = beatsOf(ev);
       if (ev.type === 'rest') {
@@ -133,6 +140,7 @@ function staffToSequence(staff, fifths, timeSignature) {
       tokens.push(`${names.join('+')}:${beats}`);
       lyrics.push(cleanLyric(ev.lyric));
     }
+    barLines.push(tokens.slice(barStart));
   }
   // A lone "-" between syllables is a separator the model sometimes gives its own note. Drop that entry so the
   // later syllables move back up onto their notes (the last note is left without a syllable).
@@ -146,7 +154,9 @@ function staffToSequence(staff, fifths, timeSignature) {
   }
   const noteCount = tokens.filter((t) => !t.startsWith('_:')).length;
   const lyricCount = lyrics.filter(Boolean).length;
-  return { sequence: tokens.join(', '), lyrics: lyricCount ? lyrics : [], noteCount, lyricCount, warnings };
+  // One bar per line, each line but the last ending in a comma: the page parsers read the comma, the person reads the bars
+  const sequence = barLines.map((b) => b.join(', ')).filter(Boolean).join(',\n');
+  return { sequence, lyrics: lyricCount ? lyrics : [], noteCount, lyricCount, warnings };
 }
 
 // Each call spends OpenAI credit, so it needs the shared ACCESS_CODE. Fails closed if it isn't configured.

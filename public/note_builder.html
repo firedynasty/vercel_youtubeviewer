@@ -332,9 +332,10 @@
     <button class="action" id="editUndoBtn" type="button" disabled>↶ Undo</button>
     <label style="font-size:13px;color:var(--muted);">Bar
       <select id="staffBeats" style="padding:6px;border-radius:8px;border:1px solid var(--border);font-size:13px;">
+        <option value="auto" selected>Auto (a bar per line)</option>
         <option value="2">2 beats (2/4)</option>
         <option value="3">3 beats (3/4)</option>
-        <option value="4" selected>4 beats (4/4)</option>
+        <option value="4">4 beats (4/4)</option>
         <option value="5">5 beats</option>
         <option value="6">6 beats</option>
         <option value="0">no bar lines</option>
@@ -1023,12 +1024,15 @@ const editParse = voice => StaffView.parseSequence(editBox(voice).value);
 const fmtBeats = b => String(+(+b).toFixed(3));
 
 function editSerialize(items){
+  // one bar per line (items marked barBefore start a new line); every line but the last of a run ends with a comma
   const lines = []; let cur = [];
+  const flush = () => { if(cur.length){ lines.push(cur.join(', ')); cur = []; } };
   items.forEach(it => {
-    if(it.type === 'section'){ if(cur.length) lines.push(cur.join(', ')); cur = []; lines.push('[' + it.label + ']'); return; }
+    if(it.type === 'section'){ flush(); lines.push('[' + it.label + ']'); return; }
+    if(it.barBefore && cur.length){ lines.push(cur.join(', ') + ','); cur = []; }
     cur.push((it.lyric ? it.lyric + ':' : '') + it.note + ':' + fmtBeats(it.beats));
   });
-  if(cur.length) lines.push(cur.join(', '));
+  flush();
   return lines.join('\n');
 }
 
@@ -1139,9 +1143,10 @@ function editOp(op){
       item.note = item.note === '_' ? guessNoteFor(items, i, voice) : '_';
       sel.head = null;
       break;
-    case 'dup': items.splice(i + 1, 0, { ...item }); sel = { voice, i: i + 1, head: null }; lyricOp = ['ins', i + 1]; break;
+    case 'dup': { const copy = { ...item }; delete copy.barBefore; items.splice(i + 1, 0, copy); } sel = { voice, i: i + 1, head: null }; lyricOp = ['ins', i + 1]; break;
     case 'insrest': items.splice(i + 1, 0, { note: '_', beats: 1 }); sel = { voice, i: i + 1, head: null }; lyricOp = ['ins', i + 1]; sounded = null; break;
     case 'del':
+      if(item.barBefore && items[i + 1] && !items[i + 1].barBefore) items[i + 1].barBefore = true;   // keep the bar line
       items.splice(i, 1);
       lyricOp = ['del', i];
       sel = items.length ? { voice, i: Math.min(i, items.length - 1), head: null } : null;

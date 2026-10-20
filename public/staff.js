@@ -53,9 +53,9 @@
   }
 
   // One voice's events with integer start ticks (1/24 beat), so triplet sums never drift between voices
-  function buildVoice(parsed, voice, bpbT, shift) {
-    const evs = [], marks = [];
-    let t = 0, acc = {}, accBar = -1;
+  function buildVoice(parsed, voice, bpbT, shift, linesMode) {
+    const evs = [], marks = [], breaks = [];
+    let t = 0, acc = {}, accBar = -1, barNum = 0, barStart = 0;
     parsed.forEach((item, i) => {
       if (item && item.type === 'section') { marks.push({ tick: t, label: String(item.label) }); return; }
       const noteStr = item && typeof item === 'object' ? item.note : item;
@@ -63,8 +63,9 @@
       // "E3+G3+B3" is a chord: several noteheads on one stem
       const parts = noteStr === '_' ? [] : String(noteStr).split('+').map(pitchOf).filter(Boolean);
       const ev = { voice, i, beats, tick: t, dt: toTicks(beats), lyric: (item && item.lyric) || '', rest: noteStr === '_', p: parts[0] || null, dur: classify(beats) };
-      ev.bar = bpbT ? Math.floor((t + shift) / bpbT) : 0;
-      ev.bi = Math.floor((t + shift) / TICKS_PER_BEAT);
+      if (linesMode && item && item.barBefore) { barNum++; barStart = t; breaks.push(t); }   // a new line in the text is a new bar
+      ev.bar = linesMode ? barNum : (bpbT ? Math.floor((t + shift) / bpbT) : 0);
+      ev.bi = linesMode ? Math.floor((t - barStart) / TICKS_PER_BEAT) : Math.floor((t + shift) / TICKS_PER_BEAT);
       if (parts.length) {
         if (ev.bar !== accBar) { acc = {}; accBar = ev.bar; }
         ev.heads = parts.map(p => {
@@ -82,16 +83,21 @@
       t += ev.dt;
       evs.push(ev);
     });
-    return { evs, marks, total: t };
+    return { evs, marks, breaks, total: t };
   }
 
   function layout(trebleParsed, bassParsed, opts) {
-    const bpb = parseFloat(opts.beatsPerBar) || 0;
+    // "auto": when the text has one bar per line (as the reader writes it) the bar lines follow those lines, the same
+    // bars as the PDF; otherwise they fall every 4 beats (or the chosen number), after the pickup beats
+    const auto = String(opts.beatsPerBar) === 'auto';
+    const linesMode = auto && [...trebleParsed, ...bassParsed].some(it => it && it.barBefore);
+    const bpb = linesMode ? 0 : auto ? 4 : (parseFloat(opts.beatsPerBar) || 0);
     const bpbT = Math.round(bpb * TICKS_PER_BEAT);
     const pickupT = bpbT ? Math.min(Math.round((parseFloat(opts.pickup) || 0) * TICKS_PER_BEAT), bpbT - 1) : 0;
     const shift = pickupT > 0 ? bpbT - pickupT : 0;
-    const v1 = buildVoice(trebleParsed, 'treble', bpbT, shift);
-    const v2 = buildVoice(bassParsed, 'bass', bpbT, shift);
+    const v1 = buildVoice(trebleParsed, 'treble', bpbT, shift, linesMode);
+    const v2 = buildVoice(bassParsed, 'bass', bpbT, shift, linesMode);
+    const breakTicks = [...new Set([...v1.breaks, ...v2.breaks])].sort((a, b) => a - b);
     const total = Math.max(v1.total, v2.total);
 
     const colMap = new Map();
@@ -110,16 +116,18 @@
       c.w = c.evs.length ? Math.max(26 + 14 * Math.min(dBeats, 4) + (c.evs.some(e => e.dur.dots) ? 6 : 0), lyricW) + c.pad : 0;
     });
 
-    let x = 48, nextBar = bpbT ? (pickupT || bpbT) : Infinity;
+    let x = 48, nextBar = bpbT ? (pickupT || bpbT) : Infinity, bi = 0;
     const bars = [];
     cols.forEach(c => {
       while (nextBar <= c.tick) { bars.push(x + 2); x += 10; nextBar += bpbT; }
+      while (bi < breakTicks.length && breakTicks[bi] <= c.tick) { bars.push(x + 2); x += 10; bi++; }
       c.labX = x;
       c.x = x + c.labW;
       c.cx = c.x + c.pad + 10;
       x = c.x + c.w;
     });
     while (bpbT && nextBar <= total) { bars.push(x + 2); x += 10; nextBar += bpbT; }
+    if (linesMode && cols.length) { bars.push(x + 2); x += 10; }   // closing bar line after the last bar
     return { v1, v2, cols, bars, width: x + 30, twoVoice: v2.evs.length > 0 };
   }
 
@@ -317,13 +325,14 @@
 
 
   // Parses the comma format both pages use: "note:beats", "lyric:note:beats", a trailing "*N" repeat,
-  // chords joined with "+", and [section] lines.
+  // chords joined with "+", and [section] lines. The first note of every line after the first is marked
+  // barBefore: the reader writes one bar per line, and the staff draws bar lines where the lines break.
   function parseSequence(str) {
     const out = [];
-    let pending = [];
-    const flush = () => {
-      if (!pending.length) return;
-      pending.join(',').split(',').forEach(item => {
+    String(str || '').split('\n').map(l => l.trim()).filter(Boolean).forEach(line => {
+      if (/^\[.+\]$/.test(line)) { out.push({ type: 'section', label: line.slice(1, -1), beats: 1 }); return; }
+      const before = out.length;
+      line.split(',').forEach(item => {
         item = item.trim();
         if (!item) return;
         let times = 1;
@@ -336,13 +345,8 @@
         else ev = { note: item, beats: 1 };
         for (let k = 0; k < times; k++) out.push({ ...ev });
       });
-      pending = [];
-    };
-    String(str || '').split('\n').map(l => l.trim()).filter(Boolean).forEach(line => {
-      if (/^\[.+\]$/.test(line)) { flush(); out.push({ type: 'section', label: line.slice(1, -1), beats: 1 }); }
-      else pending.push(line);
+      if (out.length > before && before > 0 && out[before - 1].type !== 'section') out[before].barBefore = true;
     });
-    flush();
     return out;
   }
 
@@ -387,8 +391,28 @@
   }
 
   // How full is the bar that holds item `index`? { bar, pickup, total, expected } in beats, or null when there are no bar lines.
+  // In "auto" with one bar per line, the bars are the lines and "expected" is the most common bar length.
   function barInfo(parsed, index, settings) {
-    const bpbT = Math.round((parseFloat(settings && settings.beatsPerBar) || 0) * TICKS_PER_BEAT);
+    const mode = String(settings && settings.beatsPerBar);
+    if (mode === 'auto' && parsed.some(it => it && it.barBefore)) {
+      const bars = [];   // { ticks, first, last } per line
+      parsed.forEach((item, k) => {
+        if (item && item.type === 'section') return;
+        if (!bars.length || item.barBefore) bars.push({ ticks: 0, first: k, last: k });
+        const bar = bars[bars.length - 1];
+        bar.ticks += toTicks(item.beats || 1);
+        bar.last = k;
+      });
+      const counts = new Map();
+      bars.forEach(b => counts.set(b.ticks, (counts.get(b.ticks) || 0) + 1));
+      let expected = 0, best = 0;
+      counts.forEach((n, ticks) => { if (n > best || (n === best && ticks > expected)) { best = n; expected = ticks; } });
+      const at = bars.findIndex(b => index >= b.first && index <= b.last);
+      if (at < 0) return null;
+      const isPickup = at === 0 && bars[0].ticks < expected;
+      return { bar: isPickup ? 0 : (bars[0].ticks < expected ? at : at + 1), pickup: isPickup, total: bars[at].ticks / TICKS_PER_BEAT, expected: expected / TICKS_PER_BEAT };
+    }
+    const bpbT = Math.round((mode === 'auto' ? 4 : (parseFloat(settings && settings.beatsPerBar) || 0)) * TICKS_PER_BEAT);
     if (!bpbT) return null;
     const pickupT = Math.min(Math.round((parseFloat(settings && settings.pickup) || 0) * TICKS_PER_BEAT), bpbT - 1);
     const shift = pickupT > 0 ? bpbT - pickupT : 0;
