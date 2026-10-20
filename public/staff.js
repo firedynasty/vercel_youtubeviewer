@@ -136,7 +136,7 @@
     scroller.innerHTML = '';
     if (!trebleParsed.length && !bassParsed.length) {
       scroller.innerHTML = '<div style="color:#555;font-size:13px;padding:16px;">Enter a sequence — the staff appears here.</div>';
-      return;
+      return [];
     }
     const L = layout(trebleParsed, bassParsed, opts);
     const twoVoice = L.twoVoice;
@@ -321,6 +321,7 @@
     });
 
     scroller.appendChild(svg);
+    return L.bars;   // x of each bar line, for scrollBar()
   }
 
 
@@ -354,6 +355,8 @@
   // mark('treble'|'bass', i) puts the orange dot on that voice's note i (i < 0 clears) and scrolls to it.
   function create(config) {
     const scroller = config.scroller;
+    let barXs = [];   // x of each bar line from the last render
+    let pendingTo = null, pendingTimer = null;   // where the current smooth scroll is heading
     let sel = null;   // { voice, i, head } — drawn in blue, with a ring on the chosen notehead
     injectStyle();
     function applySelection() {
@@ -373,8 +376,27 @@
     }
     return {
       render(treble, bass, settings) {
-        render(scroller, treble || [], bass || [], { beatsPerBar: settings && settings.beatsPerBar, pickup: settings && settings.pickup, onNoteClick: config.onNoteClick });
+        barXs = render(scroller, treble || [], bass || [], { beatsPerBar: settings && settings.beatsPerBar, pickup: settings && settings.pickup, onNoteClick: config.onNoteClick }) || [];
         applySelection();
+      },
+      // Move the view one bar to the right (dir = 1) or left (dir = -1): the next bar line becomes the left edge.
+      // With no bar lines it moves most of a screen instead. Returns false when there's nowhere further to go.
+      scrollBar(dir) {
+        // while a smooth scroll is still moving, count from where it is heading, so quick taps move one bar each
+        const max = Math.max(0, scroller.scrollWidth - scroller.clientWidth), cur = pendingTo !== null ? pendingTo : scroller.scrollLeft;
+        const targets = barXs.map(x => Math.max(0, x - 40));   // leave the bar line a little in from the edge
+        let to;
+        if (!targets.length) to = cur + dir * scroller.clientWidth * 0.8;
+        else if (dir > 0) to = targets.find(t => t > cur + 5);
+        else to = [...targets].reverse().find(t => t < cur - 5);
+        if (to === undefined) to = dir > 0 ? max : 0;
+        to = Math.min(max, Math.max(0, to));
+        if (Math.abs(to - cur) < 1) return false;
+        scroller.scrollTo({ left: to, behavior: 'smooth' });
+        pendingTo = to;
+        clearTimeout(pendingTimer);
+        pendingTimer = setTimeout(() => { pendingTo = null; }, 900);
+        return true;
       },
       select(next) { sel = next || null; applySelection(); },
       mark(voice, i) {
