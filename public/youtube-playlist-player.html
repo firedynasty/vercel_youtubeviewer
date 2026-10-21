@@ -225,6 +225,18 @@
       border-top: 1px solid rgba(255,255,255,0.06);
       flex-wrap: wrap;
       min-height: 38px;
+      position: relative;
+    }
+
+    /* Spectrum strip along the bottom edge while birds or the loop timer run */
+    #activity-line {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 3px;
+      display: none;
+      pointer-events: none;
+      background: linear-gradient(90deg, #d32f2f, #e07b2e, #f5e050, #8fe03a, #4cb85a, #6ff2ff, #3f8fe0, #5a1fc4, #d32f2f);
+      background-size: 200% 100%;
     }
 
     .ctrl-btn {
@@ -298,6 +310,23 @@
       outline: none;
     }
     #loop2-ts-input:focus { border-color: #c9a84c; }
+
+    #loop2-len-input, #loop2-count-input {
+      padding: 3px 4px;
+      border: 1px solid #555;
+      border-radius: 5px;
+      background: #1a1a1a;
+      color: #ddd;
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+      outline: none;
+    }
+    #loop2-len-input   { width: 56px; }
+    #loop2-count-input { width: 42px; }
+    #loop2-len-input:focus, #loop2-count-input:focus { border-color: #c9a84c; }
+    .loop-x { color: #888; font-size: 12px; margin: 0 -3px; }
+
+    #birds-slider { width: 80px; cursor: pointer; }
 
     #loop2-btn {
       padding: 5px 12px;
@@ -520,10 +549,18 @@
       <button id="loop-pause-btn" title="Pause loop" disabled>⏸</button>
       <input id="loop2-ts-input" type="text" value="00:00:00" placeholder="00:00:00"
              title="Loop back to this timestamp (HH:MM:SS)" spellcheck="false">
+      <input id="loop2-len-input" type="number" min="1" value="180"
+             title="Loop length in seconds (180 = 3m). Applies from the next loop if the timer is running.">
+      <span class="loop-x">&times;</span>
+      <input id="loop2-count-input" type="number" min="1" max="99" value="8"
+             title="Number of repeats (1-99). Applies from the next loop if the timer is running.">
       <button id="loop2-btn" title="Play 3m, rewind, repeat x8">⏱️ 3m</button>
       <button id="loop2-pause-btn" title="Pause loop" disabled>⏸</button>
+      <button id="birds-btn" class="ctrl-btn" title="Toggle forest birdsong">🐦</button>
+      <input id="birds-slider" type="range" min="0" max="100" value="30" title="Birds volume">
       <a id="ytAnchor" href="#" target="_blank" rel="noopener" style="display:none; color:#FF4040; font-size:11px; text-decoration:none; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">&#9654; YouTube</a>
       <span id="loop-status"></span>
+      <div id="activity-line"></div>
     </div>
   </div>
 
@@ -873,47 +910,89 @@
   }
 
   // ── Loop engine (3m × 8, ported from yt-controls) ────────────────────────────
-  const T4_DURATION_MS = 3 * 60 * 1000; // 3 minutes
-  const T4_TOTAL_LOOPS = 8;
+  const T4_DEFAULT_SECS  = 180; // 3 minutes
+  const T4_DEFAULT_LOOPS = 8;
+  const T4_LEN_KEY   = 'ytpp_loop_secs';
+  const T4_LOOPS_KEY = 'ytpp_loop_count';
+  const loop2LenInput   = document.getElementById('loop2-len-input');
+  const loop2CountInput = document.getElementById('loop2-count-input');
+
+  // Loop length in seconds from the number box (falls back to 3m)
+  function t4Secs() {
+    const n = parseFloat(loop2LenInput.value);
+    return isFinite(n) && n >= 1 ? n : T4_DEFAULT_SECS;
+  }
+  // Repeats from the x-box (whole number 1-99, falls back to 8)
+  function t4Loops() {
+    const n = parseInt(loop2CountInput.value, 10);
+    return n >= 1 && n <= 99 ? n : T4_DEFAULT_LOOPS;
+  }
+  function t4Name(secs) {
+    return secs >= 60 && secs % 60 === 0 ? (secs / 60) + 'm' : secs + 's';
+  }
+  function updateT4Idle() {
+    const name = t4Name(t4Secs());
+    loop2Btn.textContent = '⏱️ ' + name;
+    loop2Btn.title = 'Play ' + name + ', rewind, repeat x' + t4Loops();
+  }
+  try {
+    const n = parseFloat(localStorage.getItem(T4_LEN_KEY));
+    if (isFinite(n) && n >= 1) loop2LenInput.value = n;
+    const c = parseInt(localStorage.getItem(T4_LOOPS_KEY), 10);
+    if (c >= 1 && c <= 99) loop2CountInput.value = c;
+  } catch (e) {}
+  loop2LenInput.addEventListener('input', () => {
+    try { localStorage.setItem(T4_LEN_KEY, loop2LenInput.value); } catch (e) {}
+    if (!t4Timeout && !t4Paused) updateT4Idle();
+  });
+  loop2CountInput.addEventListener('input', () => {
+    try { localStorage.setItem(T4_LOOPS_KEY, loop2CountInput.value); } catch (e) {}
+    if (!t4Timeout && !t4Paused) updateT4Idle();
+  });
+  [loop2LenInput, loop2CountInput].forEach(el => el.addEventListener('keydown', e => e.stopPropagation()));
 
   let t4Timeout        = null;
   let t4LoopsRemaining = 0;
+  let t4Done           = 0;
   let t4Generation     = 0;
   let t4Paused         = false;
 
   function runT4Loop(gen) {
-    const currentLoop = T4_TOTAL_LOOPS - t4LoopsRemaining + 1;
-    loop2Btn.textContent = `⏹️ ${currentLoop}/${T4_TOTAL_LOOPS}`;
-    setLoopStatus(`3m loop ${currentLoop}/${T4_TOTAL_LOOPS}`, '#ab47bc');
+    const total = t4Done + t4LoopsRemaining;
+    const currentLoop = t4Done + 1;
+    loop2Btn.textContent = `⏹️ ${currentLoop}/${total}`;
+    setLoopStatus(`${t4Name(t4Secs())} loop ${currentLoop}/${total}`, '#ab47bc');
 
     t4Timeout = setTimeout(() => {
       if (gen !== t4Generation) return;
       t4LoopsRemaining--;
+      t4Done++;
       ytSeekTo(parseHMS(loop2TsInput.value));
       if (t4LoopsRemaining > 0) {
         runT4Loop(gen);
       } else {
         t4Timeout = null;
-        loop2Btn.textContent           = '⏱️ 3m';
+        const total = t4Done;
         loop2Btn.style.background      = 'linear-gradient(45deg,#ab47bc,#8e24aa)';
         loop2PauseBtn.disabled         = true;
         loop2PauseBtn.textContent      = '⏸';
         loop2PauseBtn.style.background = '#546e7a';
         t4Paused = false;
-        flashLoopStatus(`3m complete (${T4_TOTAL_LOOPS}/${T4_TOTAL_LOOPS})`, '#2ecc71');
+        updateT4Idle();
+        flashLoopStatus(`${t4Name(t4Secs())} complete (${total}/${total})`, '#2ecc71');
       }
-    }, T4_DURATION_MS);
+    }, t4Secs() * 1000);
   }
 
   function cancelT4() {
     t4Generation++;
     if (t4Timeout) { clearTimeout(t4Timeout); t4Timeout = null; }
     t4Paused = false;
-    loop2Btn.textContent           = '⏱️ 3m';
     loop2Btn.style.background      = 'linear-gradient(45deg,#ab47bc,#8e24aa)';
     loop2PauseBtn.disabled         = true;
     loop2PauseBtn.textContent      = '⏸';
     loop2PauseBtn.style.background = '#546e7a';
+    updateT4Idle();
     flashLoopStatus('Timer cancelled', '#e74c3c');
   }
 
@@ -921,7 +1000,8 @@
     if (t4Timeout || t4Paused) { cancelT4(); return; }
     if (!activeYoutubeId) { flashLoopStatus('No video loaded', '#e74c3c'); return; }
     loop2TsInput.value             = secsToHMS(ytGetCurrentTime());
-    t4LoopsRemaining               = T4_TOTAL_LOOPS;
+    t4LoopsRemaining               = t4Loops();
+    t4Done                         = 0;
     t4Paused                       = false;
     t4Generation++;
     loop2PauseBtn.disabled         = false;
@@ -945,6 +1025,64 @@
       runT4Loop(t4Generation);
     }
   }
+
+  // ── Birds (ambient loop with its own volume slider) ──────────────────────────
+  const BIRDS_URL = 'https://www.dropbox.com/scl/fi/x09bfk82awmzt89r1oxtp/Forest-Birdsong-Nature-Sounds-trimmed-30min-loudnorm-2G8LAiHSCAs.mp3?rlkey=7pydzw8pia681zyfijrjszqwi&st=mowf7s9e&raw=1';
+  const BIRDS_VOL_KEY = 'ytpp_birds_vol';
+  const birdsBtn    = document.getElementById('birds-btn');
+  const birdsSlider = document.getElementById('birds-slider');
+  let _birds = null;
+  try {
+    const n = parseInt(localStorage.getItem(BIRDS_VOL_KEY), 10);
+    if (n >= 0 && n <= 100) birdsSlider.value = n;
+  } catch (e) {}
+
+  function stopBirds() {
+    if (_birds) { _birds.pause(); _birds.removeAttribute('src'); _birds.load(); _birds = null; }
+    birdsBtn.style.background = '';
+  }
+
+  birdsBtn.addEventListener('click', () => {
+    if (_birds) { stopBirds(); flashLoopStatus('Birds off', '#888'); return; }
+    const a = new Audio(BIRDS_URL);
+    a.loop = true;
+    a.volume = birdsSlider.value / 100;
+    a.addEventListener('error', () => {
+      if (_birds !== a) return;
+      stopBirds();
+      flashLoopStatus('Birds unavailable', '#e74c3c');
+    });
+    _birds = a;
+    birdsBtn.style.background = '#2e7d32';
+    a.play().then(() => flashLoopStatus('Birds on', '#2ecc71')).catch(() => {
+      if (_birds !== a) return;
+      stopBirds();
+      flashLoopStatus('Birds blocked', '#e74c3c');
+    });
+  });
+  birdsSlider.addEventListener('input', () => {
+    if (_birds) _birds.volume = birdsSlider.value / 100;
+    try { localStorage.setItem(BIRDS_VOL_KEY, birdsSlider.value); } catch (e) {}
+  });
+  birdsSlider.addEventListener('keydown', e => e.stopPropagation());
+
+  // ── Activity line (animated spectrum strip) ──────────────────────────────────
+  const activityLine = document.getElementById('activity-line');
+  let _activityAnim = null;
+  function updateActivityLine() {
+    const on = !!(_birds || t4Timeout);
+    activityLine.style.display = on ? 'block' : 'none';
+    if (on && !_activityAnim && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      _activityAnim = activityLine.animate(
+        [{ backgroundPosition: '0 0' }, { backgroundPosition: '-200% 0' }],
+        { duration: 5000, iterations: Infinity, easing: 'linear' }
+      );
+    } else if (!on && _activityAnim) {
+      _activityAnim.cancel();
+      _activityAnim = null;
+    }
+  }
+  setInterval(updateActivityLine, 500);
 
   // ── Live time clock ───────────────────────────────────────────────────────────
   let _clockInterval = null;
@@ -1082,7 +1220,9 @@
     cursorIndex = allAlbums.indexOf(albumEl);
     const youtubeId = albumEl.dataset.youtubeId;
     const name      = albumEl.dataset.name || '';
-    const tracks    = JSON.parse(albumEl.dataset.tracks || '[]');
+    let tracks      = JSON.parse(albumEl.dataset.tracks || '[]');
+    // Albums without chapters still get one entry (same as the extension popup)
+    if (!tracks.length && youtubeId) tracks = [{ time: '0:00', seconds: 0, title: name }];
     console.log('[album] selected', { name, youtubeId, trackCount: tracks.length });
     playerHeader.innerHTML = name ? `<span>${name}</span>` : 'Playlist Player';
     activeYoutubeId = youtubeId;
