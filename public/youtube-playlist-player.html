@@ -157,12 +157,12 @@
     }
 
     /* YT IFrame API container */
-    #yt-player {
+    #yt-wrap {
       position: absolute;
       inset: 0;
       display: none;
     }
-    #yt-player > iframe {
+    #yt-wrap > iframe {
       width: 100% !important;
       height: 100% !important;
       border: none;
@@ -529,7 +529,7 @@
       </div>
       <div id="no-video-msg">No video available for this album</div>
       <!-- YouTube IFrame API renders into this div -->
-      <div id="yt-player"></div>
+      <div id="yt-wrap"><div id="yt-player"></div></div>
     </div>
 
     <!-- Playback + Loop controls -->
@@ -597,7 +597,8 @@
   const errorState     = document.getElementById('error-state');
   const errText        = document.getElementById('err-text');
   const noVideoMsg     = document.getElementById('no-video-msg');
-  const ytPlayerDiv    = document.getElementById('yt-player');
+  // Toggle the wrapper, not #yt-player: YT.Player replaces that div with the iframe
+  const ytPlayerDiv    = document.getElementById('yt-wrap');
   const trackListEl    = document.getElementById('track-list');
   const trackListInner = document.getElementById('track-list-inner');
   const trackListEmpty = document.getElementById('track-list-empty');
